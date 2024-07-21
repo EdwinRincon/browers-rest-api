@@ -1,19 +1,30 @@
-# Use the official Golang image as a parent image
-FROM golang:1.21
+# Etapa de construcción
+FROM golang:1.21-alpine AS builder
 
-# Set the working directory inside the container
+# Instalar git, necesario para fetch de dependencias
+RUN apk add --no-cache git
+
 WORKDIR /usr/src/app
 
-# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
+# Pre-copiar/cache go.mod y go.sum para pre-descargar dependencias
 COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+RUN go mod download
 
-# Copy the Go application code to the container
+# Copiar el código de la aplicación y construir un binario estático
 COPY . .
-RUN go build -v -o /usr/local/bin/app ./...
+RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app -ldflags '-s -w' .
 
-# Expose the port that your Gin application will run on
-EXPOSE 8080
+# Etapa final
+FROM alpine:latest
 
-# Command to run the application
+# Copiar el binario estático desde la etapa de construcción
+COPY --from=builder /usr/local/bin/app /usr/local/bin/app
+
+# Set GIN_MODE to release to run Gin in production mode
+ENV GIN_MODE=release
+
+# Exponer el puerto que tu aplicación Gin usará
+EXPOSE 5050
+
+# Comando para ejecutar la aplicación
 CMD ["app"]

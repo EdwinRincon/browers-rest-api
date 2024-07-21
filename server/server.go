@@ -2,11 +2,13 @@ package server
 
 import (
 	"log"
-	"os"
+	"net/http"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/EdwinRincon/browersfc-api/pkg/orm"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -37,14 +39,16 @@ func NewServer() *Server {
 
 	api.InitializeRoutes(r, userHandler)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	// Modificación para leer el puerto desde un archivo
+	port := config.GetPort()
 
-	jwtSecret := os.Getenv("JWT_SECRET")
+	// Modificación para leer el JWTSecret desde un archivo
+	jwtSecret, err := config.GetJWTSecret()
+	if err != nil {
+		log.Fatalf("Failed to read JWT secret from file: %v", err)
+	}
 	if jwtSecret == "" {
-		log.Fatal("No se ha definido la variable de entorno para los tokens")
+		log.Fatal("JWT secret is not defined")
 	}
 
 	return &Server{
@@ -54,6 +58,20 @@ func NewServer() *Server {
 	}
 }
 
+// Start method is modified to use http.Server for more detailed configuration.
 func (s *Server) Start() {
-	s.Router.Run(":" + s.Port)
+	server := &http.Server{
+		Addr:    ":" + s.Port,
+		Handler: s.Router,
+
+		// Set timeouts to avoid Slowloris attacks
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Could not listen on %s: %v\n", s.Port, err)
+	}
 }

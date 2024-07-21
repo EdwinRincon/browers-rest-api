@@ -3,9 +3,8 @@ package handler
 import (
 	"net/http"
 	"strconv"
-	"time"
 
-	user "github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
@@ -22,38 +21,45 @@ func NewUserHandler(ur repository.UserRepository) *UserHandler {
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	var err error
-	pageStr := c.DefaultQuery("page", "0")
+	pageStr := c.DefaultQuery("page", "1") // Default to page 1 instead of 0
 
 	page, err := strconv.ParseUint(pageStr, 10, 64)
 	if err != nil {
-		page = 0
-	}
-
-	userRepo, err := h.UserRepository.ListUsers(c, page)
-	if err != nil {
-		helper.HandleError(c, http.StatusInternalServerError, "error al obtener usuarios", err)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid page number", err.Error()))
 		return
 	}
 
-	helper.ResponseJSONSuccess(c, "success", userRepo)
+	ctx := c.Request.Context()
+	users, err := h.UserRepository.ListUsers(ctx, page)
+	if err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to list users", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    users,
+	})
 }
 
 func (h *UserHandler) CreateUser(c *gin.Context) {
-	var user user.Users
+	var user model.Users
+	var createdUser *model.UsersResponse
+	var err error
 
-	if err := c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, http.StatusBadRequest, "datos erróneos para crear el usuario", err)
+	if err = c.ShouldBindJSON(&user); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()))
 		return
 	}
 
-	// Format Birthdate from YYYY-MM-DD to RFC3339
-	birthdate := user.Birthdate.Format("2006-01-02T15:04:05Z")
-	user.Birthdate, _ = time.Parse(time.RFC3339, birthdate)
-
-	ok := h.UserRepository.CreateUser(c, &user)
-	if !ok {
+	ctx := c.Request.Context()
+	if createdUser, err = h.UserRepository.CreateUser(ctx, &user); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create user", err.Error()))
 		return
 	}
-	helper.ResponseJSONSuccess(c, "success", user)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    createdUser,
+	})
 }

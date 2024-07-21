@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  webapp:
+    image: browers-api:1.0
+    build:
+      context: .
+    secrets:
+      - port
+      - jwt_secret
+      - db_url
+    environment:
+      PORT_FILE: /run/secrets/port
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      DB_URL_FILE: /run/secrets/db_url
+
+secrets:
+  port:
+    file: ./secrets/port.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  db_url:
+    file: ./secrets/db_url.txt

@@ -8,9 +8,16 @@ import (
 
 func InitializeRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 
-	authGroup := r.Group("/auth")
-	authGroup.Use(middleware.AuthMiddleware())
+	r.Use(middleware.SecurityHeadersMiddleware())
+	// Create the 'api' group
+	api := r.Group("/api")
+	{
+		// Create the 'auth' subgroup under the 'api' group
+		authGroup := api.Group("/auth")
+		authGroup.Use(middleware.AuthMiddleware())
 
-	authGroup.GET("/users", userHandler.ListUsers)
-	authGroup.POST("/users", userHandler.CreateUser)
+		// Define routes in the 'auth' subgroup
+		authGroup.GET("/users", userHandler.ListUsers)
+		authGroup.POST("/users", userHandler.CreateUser)
+	}
 }

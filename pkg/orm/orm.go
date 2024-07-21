@@ -3,15 +3,19 @@ package orm
 import (
 	"database/sql"
 	"log"
-	"os"
 
-	user "github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func NewConnectionDB() (*gorm.DB, error) {
-	dsn := os.Getenv("DATABASE_URL")
+	dsn, errorDBURL := config.GetDBURL()
+	if errorDBURL != nil {
+		log.Fatal("error getting database URL")
+		return nil, errorDBURL
+	}
 	sqlDB, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal("error initializing database connection")
@@ -26,16 +30,16 @@ func NewConnectionDB() (*gorm.DB, error) {
 	}
 
 	// Migración de esquema (creación de tablas)
-	gormDB.AutoMigrate(&user.Articles{})
-	gormDB.AutoMigrate(&user.Classifications{})
-	gormDB.AutoMigrate(&user.Lineups{})
-	gormDB.AutoMigrate(&user.Matches{})
-	gormDB.AutoMigrate(&user.Players{})
-	gormDB.AutoMigrate(&user.Roles{})
-	gormDB.AutoMigrate(&user.Seasons{})
-	gormDB.AutoMigrate(&user.TeamsStats{})
-	gormDB.AutoMigrate(&user.Teams{})
-	gormDB.AutoMigrate(&user.Users{})
+	gormDB.AutoMigrate(&model.Articles{})
+	gormDB.AutoMigrate(&model.Classifications{})
+	gormDB.AutoMigrate(&model.Lineups{})
+	gormDB.AutoMigrate(&model.Matches{})
+	gormDB.AutoMigrate(&model.Players{})
+	gormDB.AutoMigrate(&model.Roles{})
+	gormDB.AutoMigrate(&model.Seasons{})
+	gormDB.AutoMigrate(&model.TeamsStats{})
+	gormDB.AutoMigrate(&model.Teams{})
+	gormDB.AutoMigrate(&model.Users{})
 
 	return gormDB, nil
 }

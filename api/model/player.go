@@ -32,6 +32,7 @@ type Players struct {
 	Users         Users
 }
 
+// TODO: Pasar a BBDD como tabla nueva y hacer relación con Players
 // ValidPositions contiene una lista de posiciones válidas
 var validPositions = []string{"del", "mc", "def", "por"}
 
