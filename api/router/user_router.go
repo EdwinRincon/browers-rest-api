@@ -14,10 +14,17 @@ func InitializeRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 	{
 		// Create the 'auth' subgroup under the 'api' group
 		authGroup := api.Group("/auth")
-		authGroup.Use(middleware.AuthMiddleware())
+		{
+			//authGroup.Use(middleware.JwtAuthMiddleware())
 
-		// Define routes in the 'auth' subgroup
-		authGroup.GET("/users", userHandler.ListUsers)
-		authGroup.POST("/users", userHandler.CreateUser)
+			// Define routes in the 'auth' subgroup
+			authGroup.POST("/users", userHandler.CreateUser)
+			authGroup.GET("/users", userHandler.ListUsers)
+			authGroup.PUT("/users", userHandler.UpdateUser)
+			authGroup.DELETE("/users", userHandler.DeleteUser)
+
+		}
+
+		api.POST("/login", userHandler.Login)
 	}
 }

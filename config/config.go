@@ -5,12 +5,22 @@ import (
 	"os"
 )
 
+// Devuelvo el contenido del archivo como string
 func getSecretFromFile(filePath string) (string, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("error reading secret file: %v", err)
 	}
 	return string(data), nil
+}
+
+// Devuevlo el contenido del archivo como bytes
+func getSecretBytesFromFile(filePath string) ([]byte, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading secret file: %v", err)
+	}
+	return data, nil
 }
 
 func GetDBURL() (string, error) {
@@ -29,10 +39,10 @@ func GetPort() string {
 	return port
 }
 
-func GetJWTSecret() (string, error) {
+func GetJWTSecret() ([]byte, error) {
 	filePath := os.Getenv("JWT_SECRET_FILE")
 	if filePath == "" {
-		return "", fmt.Errorf("JWT_SECRET_FILE environment variable is not set")
+		return nil, fmt.Errorf("JWT_SECRET_FILE environment variable is not set")
 	}
-	return getSecretFromFile(filePath)
+	return getSecretBytesFromFile(filePath)
 }

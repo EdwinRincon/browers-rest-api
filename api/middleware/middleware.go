@@ -2,12 +2,53 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/EdwinRincon/browersfc-api/config"
+	jwtClaims "github.com/EdwinRincon/browersfc-api/pkg/jwt"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+// JwtAuthMiddleware es un middleware que verifica el token JWT
+func JwtAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
+			c.Abort()
+			return
+		}
+
+		tokenString := strings.TrimSpace(strings.Replace(authHeader, "Bearer", "", 1))
+
+		jwtSecret, err := config.GetJWTSecret()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JWT secret"})
+			c.Abort()
+			return
+		}
+
+		token, err := jwt.ParseWithClaims(tokenString, &jwtClaims.AppClaims{}, func(token *jwt.Token) (interface{}, error) {
+			return jwtSecret, nil
+		})
+
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		claims, ok := token.Claims.(*jwtClaims.AppClaims)
+		if !ok || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		c.Set("username", claims.Username)
+		c.Set("role", claims.Role)
+
 		c.Next()
 	}
 }

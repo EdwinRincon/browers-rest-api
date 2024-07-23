@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/api"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
+	router "github.com/EdwinRincon/browersfc-api/api/router"
 	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/EdwinRincon/browersfc-api/pkg/orm"
 	"github.com/gin-gonic/gin"
@@ -17,7 +17,7 @@ import (
 type Server struct {
 	Router    *gin.Engine
 	Port      string
-	JWTSecret string
+	JWTSecret []byte
 }
 
 func NewServer() *Server {
@@ -37,7 +37,7 @@ func NewServer() *Server {
 	userRepo := repository.NewUserRepository(db)
 	userHandler := handler.NewUserHandler(userRepo)
 
-	api.InitializeRoutes(r, userHandler)
+	router.InitializeRoutes(r, userHandler)
 
 	// Modificación para leer el puerto desde un archivo
 	port := config.GetPort()
@@ -47,7 +47,7 @@ func NewServer() *Server {
 	if err != nil {
 		log.Fatalf("Failed to read JWT secret from file: %v", err)
 	}
-	if jwtSecret == "" {
+	if jwtSecret == nil {
 		log.Fatal("JWT secret is not defined")
 	}
 

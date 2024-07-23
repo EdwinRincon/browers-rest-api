@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/EdwinRincon/browersfc-api/helper"
@@ -58,18 +59,29 @@ func (d *Date) Scan(value interface{}) error {
 }
 
 type Users struct {
-	ID         string `gorm:"type:char(36);primaryKey" json:"id"`
-	Name       string `gorm:"type:varchar(35);not null" json:"name" binding:"required"`
-	LastName   string `gorm:"type:varchar(35);not null" json:"lastname" binding:"required"`
-	Username   string `gorm:"type:varchar(15);not null;unique" json:"username" binding:"required"`
-	IsActive   string `gorm:"type:char(1)" json:"is_active" binding:"oneof=S N"`
-	Birthdate  Date   `json:"birthdate" binding:"required"`
-	ImgProfile string `gorm:"type:varchar(255)" json:"img_profile"`
-	ImgBanner  string `gorm:"type:varchar(255)" json:"img_banner"`
-	Password   string `gorm:"type:varchar(60);not null" json:"password" binding:"required"`
-	RolesID    uint64 `json:"roles_id" binding:"required"`
-	Roles      Roles
+	ID                  string `gorm:"type:char(36);primaryKey" json:"id"`
+	Name                string `gorm:"type:varchar(35);not null" json:"name" binding:"required"`
+	LastName            string `gorm:"type:varchar(35);not null" json:"lastname" binding:"required"`
+	Username            string `gorm:"type:varchar(15);not null;unique" json:"username" binding:"required"`
+	IsActive            string `gorm:"type:char(1)" json:"is_active" binding:"oneof=S N"`
+	Birthdate           Date   `json:"birthdate" binding:"required"`
+	ImgProfile          string `gorm:"type:varchar(255)" json:"img_profile"`
+	ImgBanner           string `gorm:"type:varchar(255)" json:"img_banner"`
+	Password            string `gorm:"type:varchar(60);not null" json:"password" binding:"required"`
+	FailedLoginAttempts uint8  `gorm:"default:0" json:"failed_login_attempts"`
+	RolesID             uint8  `json:"roles_id" binding:"required"`
+	Roles               Roles
 	gorm.Model
+}
+
+type UserLogin struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type UserMin struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
 }
 
 // UUID v4 Generator
@@ -89,7 +101,7 @@ func (user *Users) BeforeCreate(tx *gorm.DB) (err error) {
 
 	hash, err := helper.HashPassword(user.Password)
 	if err != nil {
-		fmt.Println("Error hashing password:", err)
+		log.Println("Error hashing password:", err)
 		return
 	}
 
