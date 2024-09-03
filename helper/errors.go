@@ -1,9 +1,6 @@
 package helper
 
 import (
-	"errors"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,12 +36,13 @@ func (e *AppError) Error() string {
 	return e.Message
 }
 
-func HandleError(c *gin.Context, err error) {
-	var appErr *AppError
-	if errors.As(err, &appErr) {
+func HandleError(c *gin.Context, appErr *AppError, exposeToUser bool) {
+	if exposeToUser {
+		// Respuesta genérica o mensaje seguro para el usuario
 		c.JSON(appErr.Code, appErr)
 	} else {
-		c.JSON(http.StatusInternalServerError, NewAppError(http.StatusInternalServerError, "Internal Server Error", err.Error()))
+		// Mensaje genérico al usuario, sin detalles tecnicos
+		c.JSON(appErr.Code, gin.H{"code": appErr.Code, "error": appErr.Message})
 	}
 }
 

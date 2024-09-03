@@ -1,9 +1,15 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Roles struct {
-	gorm.Model
-	ID   uint8  `gorm:"primaryKey"`
-	Name string `gorm:"type:char(10);not null"`
+	ID        uint8  `gorm:"primarykey"`
+	Name      string `gorm:"type:char(20);not null" json:"name"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }

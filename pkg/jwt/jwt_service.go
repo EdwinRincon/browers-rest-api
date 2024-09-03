@@ -1,25 +1,30 @@
 package jwt
 
 import (
-	"log"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// AppClaims define las reclamaciones del JWT
 type AppClaims struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
+// JWTService maneja la generación y validación de JWTs
+type JWTService struct {
+	SecretKey []byte
+}
+
+// NewJWTService crea una nueva instancia de JWTService
+func NewJWTService(secretKey string) *JWTService {
+	return &JWTService{SecretKey: []byte(secretKey)}
+}
+
 // GenerateToken genera un nuevo token JWT para un usuario dado
-func GenerateToken(username, role string) (string, error) {
-	jwtSecret, err := config.GetJWTSecret()
-	if err != nil {
-		log.Fatalf("Failed to read JWT secret from file: %v", err)
-	}
+func (s *JWTService) GenerateToken(username, role string) (string, error) {
 	claims := &AppClaims{
 		Username: username,
 		Role:     role,
@@ -29,5 +34,5 @@ func GenerateToken(username, role string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString(s.SecretKey)
 }

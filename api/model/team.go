@@ -7,7 +7,6 @@ import (
 )
 
 type Teams struct {
-	gorm.Model
 	ID           uint64    `gorm:"primaryKey"`
 	FullName     string    `gorm:"type:varchar(35);not null"`
 	ShortName    string    `gorm:"type:varchar(5);unique"`
@@ -17,4 +16,7 @@ type Teams struct {
 	NextMatch    time.Time `gorm:"type:date" form:"next_match"`
 	TeamsStatsID uint64    `form:"teams_stats_id"`
 	TeamsStats   TeamsStats
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }

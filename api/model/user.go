@@ -44,9 +44,7 @@ func (d *Date) Scan(value interface{}) error {
 		*d = Date(datatypes.Date(v))
 		return nil
 	case []byte:
-		// Convert byte slice to string
 		strValue := string(v)
-		// Parse string as time.Time
 		parsedTime, err := time.Parse(dateFormat, strValue)
 		if err != nil {
 			return err
@@ -70,8 +68,10 @@ type Users struct {
 	Password            string `gorm:"type:varchar(60);not null" json:"password" binding:"required"`
 	FailedLoginAttempts uint8  `gorm:"default:0" json:"failed_login_attempts"`
 	RolesID             uint8  `json:"roles_id" binding:"required"`
-	Roles               Roles
-	gorm.Model
+	Roles               Roles  `gorm:"foreignKey:RolesID;references:ID"` // Definición de la clave foránea
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	DeletedAt           gorm.DeletedAt `gorm:"index"`
 }
 
 type UserLogin struct {
@@ -102,12 +102,12 @@ func (user *Users) BeforeCreate(tx *gorm.DB) (err error) {
 	hash, err := helper.HashPassword(user.Password)
 	if err != nil {
 		log.Println("Error hashing password:", err)
-		return
+		return err // Cambié log.Println por return
 	}
 
 	user.ID = id
 	user.Password = hash
-	return
+	return nil
 }
 
 type UsersResponse struct {

@@ -7,7 +7,6 @@ import (
 )
 
 type Articles struct {
-	gorm.Model
 	ID        uint64    `gorm:"primaryKey"`
 	Title     string    `gorm:"type:varchar(50);not null" form:"title"`
 	Content   string    `gorm:"type:varchar(500);not null" form:"content"`
@@ -15,4 +14,7 @@ type Articles struct {
 	Date      time.Time `gorm:"type:date" form:"date"`
 	SeasonsID uint8     `form:"seasons_id"`
 	Seasons   Seasons
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }

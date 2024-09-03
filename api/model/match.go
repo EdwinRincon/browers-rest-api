@@ -7,7 +7,6 @@ import (
 )
 
 type Matches struct {
-	gorm.Model
 	ID          uint64    `gorm:"primaryKey"`
 	Date        time.Time `gorm:"not null;unique" form:"date"`
 	Time        string    `gorm:"type:varchar(5);not null" form:"time"`
@@ -20,4 +19,7 @@ type Matches struct {
 	Seasons     Seasons
 	MVPPlayerID uint64  `form:"players_id"`
 	Players     Players `gorm:"foreignKey:MVPPlayerID"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }

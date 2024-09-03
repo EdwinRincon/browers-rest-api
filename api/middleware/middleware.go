@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/EdwinRincon/browersfc-api/config"
+	"github.com/EdwinRincon/browersfc-api/helper"
 	jwtClaims "github.com/EdwinRincon/browersfc-api/pkg/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,37 +16,46 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
+			helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Authorization header is required", ""), false)
 			c.Abort()
 			return
 		}
 
-		tokenString := strings.TrimSpace(strings.Replace(authHeader, "Bearer", "", 1))
+		// Extraer el token del encabezado Authorization
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader { // Si no se elimina "Bearer ", tokenString será igual a authHeader
+			helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Invalid authorization header format", ""), false)
+			c.Abort()
+			return
+		}
 
+		// Obtener el secreto JWT
 		jwtSecret, err := config.GetJWTSecret()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read JWT secret"})
+			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to read JWT secret", err.Error()), false)
 			c.Abort()
 			return
 		}
 
+		// Parsear el token
 		token, err := jwt.ParseWithClaims(tokenString, &jwtClaims.AppClaims{}, func(token *jwt.Token) (interface{}, error) {
 			return jwtSecret, nil
 		})
-
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Invalid token", err.Error()), false)
 			c.Abort()
 			return
 		}
 
+		// Validar y extraer los claims
 		claims, ok := token.Claims.(*jwtClaims.AppClaims)
-		if !ok || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		if !ok {
+			helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Invalid token claims", ""), false)
 			c.Abort()
 			return
 		}
 
+		// Establecer los claims en el contexto
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
 

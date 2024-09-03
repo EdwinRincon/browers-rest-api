@@ -7,7 +7,9 @@ import (
 )
 
 type Seasons struct {
-	gorm.Model
-	ID   uint8     `gorm:"primaryKey"`
-	Year time.Time `gorm:"type:date;not null" form:"year"`
+	ID        uint8     `gorm:"primaryKey"`
+	Year      time.Time `gorm:"type:date;not null" form:"year"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }

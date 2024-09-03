@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,11 +10,15 @@ import (
 	"gorm.io/gorm"
 )
 
+// Definir el error para el usuario no encontrado
+var ErrUserNotFound = errors.New("user not found")
+
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *model.Users) (*model.UserMin, error)
 	GetUserByUsername(ctx context.Context, username string) (*model.Users, error)
 	ListUsers(ctx context.Context, page uint64) ([]*model.UsersResponse, error)
 	UpdateUser(ctx context.Context, user *model.Users) (*model.UserMin, error)
+	UpdateLoginAttemps(ctx context.Context, user *model.Users) (*model.UserMin, error)
 	DeleteUser(ctx context.Context, username string) error
 }
 
@@ -27,12 +32,19 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username string) (*model.Users, error) {
 	var user model.Users
-	if err := ur.db.WithContext(ctx).Preload("Roles").Where("username = ?", username).First(&user).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, err
+
+	// Buscar al usuario por nombre de usuario, ignorando eliminaciones lógicas si es necesario
+	result := ur.db.WithContext(ctx).Unscoped().Where("username = ?", username).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// No se encontró el usuario, retorna nil y nil como error
+			return nil, nil
 		}
-		return nil, err
+		// Ocurrió un error en la consulta, retorna el error
+		return nil, result.Error
 	}
+
+	// Usuario encontrado, retorna el usuario y nil como error
 	return &user, nil
 }
 
@@ -71,6 +83,21 @@ func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.Users)
 
 func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, user *model.Users) (*model.UserMin, error) {
 	err := ur.db.WithContext(ctx).Updates(user).Error
+	if err != nil {
+		return nil, err
+	}
+
+	userResponse := &model.UserMin{
+		ID:       user.ID,
+		Username: user.Username,
+	}
+
+	return userResponse, nil
+}
+
+func (ur *UserRepositoryImpl) UpdateLoginAttemps(ctx context.Context, user *model.Users) (*model.UserMin, error) {
+	// Actualizar solo el campo FailedLoginAttempts
+	err := ur.db.WithContext(ctx).Model(user).Update("failed_login_attempts", user.FailedLoginAttempts).Error
 	if err != nil {
 		return nil, err
 	}

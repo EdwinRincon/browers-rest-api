@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
+func InitializeRoleRoutes(r *gin.Engine, roleHandler *handler.RoleHandler) {
 
 	r.Use(middleware.SecurityHeadersMiddleware())
 	// Create the 'api' group
@@ -18,14 +18,7 @@ func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 			authGroup.Use(middleware.JwtAuthMiddleware())
 
 			// Define routes in the 'auth' subgroup
-			authGroup.POST("/users", userHandler.CreateUser)
-			authGroup.GET("/users/:username", userHandler.GetUserByUsername)
-			authGroup.GET("/users", userHandler.ListUsers)
-			authGroup.PUT("/users", userHandler.UpdateUser)
-			authGroup.DELETE("/users", userHandler.DeleteUser)
-
+			authGroup.GET("/role/:id", roleHandler.GetRoleByID)
 		}
-
-		api.POST("/login", userHandler.Login)
 	}
 }

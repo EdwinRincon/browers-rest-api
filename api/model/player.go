@@ -1,12 +1,13 @@
 package model
 
 import (
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
 type Players struct {
-	gorm.Model
 	ID            uint64 `gorm:"primaryKey"`
 	NickName      string `gorm:"type:varchar(20)"`
 	Height        float32
@@ -27,9 +28,12 @@ type Players struct {
 	CarrerSummary string `gorm:"type:varchar(1000);not null"`
 	TeamsID       uint64 `form:"teams_id"`
 	Teams         Teams
-	Mvp           uint8  `gorm:"type:int(2);not null;default:0"`
-	UsersID       uint64 `form:"users_id"`
+	Mvp           uint8 `gorm:"type:int(2);not null;default:0"`
+	UsersID       string
 	Users         Users
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
 }
 
 // TODO: Pasar a BBDD como tabla nueva y hacer relación con Players

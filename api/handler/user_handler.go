@@ -3,111 +3,79 @@ package handler
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
-	"github.com/EdwinRincon/browersfc-api/pkg/jwt"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserHandler struct {
-	UserRepository repository.UserRepository
+	AuthService service.AuthService
+	UserService service.UserService
 }
 
-func NewUserHandler(ur repository.UserRepository) *UserHandler {
+func NewUserHandler(authService service.AuthService, userService service.UserService) *UserHandler {
 	return &UserHandler{
-		UserRepository: ur,
+		AuthService: authService,
+		UserService: userService,
 	}
 }
 
 // LoginUser is a handler function to login a user
 func (h *UserHandler) Login(c *gin.Context) {
 	var user model.UserLogin
-	var token string
-	var err error
-
-	if err = c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()))
+	if err := c.ShouldBindJSON(&user); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
 		return
 	}
 
-	// Verificar credenciales
+	// Verificar credenciales usando AuthService
 	ctx := c.Request.Context()
-	storedUser, err := h.UserRepository.GetUserByUsername(ctx, user.Username)
+	token, err := h.AuthService.Authenticate(ctx, user.Username, user.Password)
 	if err != nil {
-		// no usar helper.HandleError porque no queremos mostrar el error real al usuario
-		c.JSON(http.StatusUnauthorized, gin.H{"code:": http.StatusUnauthorized, "error": "Invalid username or password"})
+		helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Invalid username or password", err.Error()), false)
 		return
 	}
 
-	// Verificar el numero de intentos fallidos de inicio de sesión (FailedLoginAttempts)
-	if storedUser.FailedLoginAttempts >= 5 {
-		// no usar helper.HandleError porque no queremos mostrar el error real al usuario
-		c.JSON(http.StatusUnauthorized, gin.H{"code:": http.StatusUnauthorized, "error": "Invalid username or password"})
-		return
-	}
-
-	// Comparar contraseñas
-	err = bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(user.Password))
-	if err != nil {
-		// Incrementar el número de intentos fallidos de inicio de sesión
-		storedUser.FailedLoginAttempts++
-		if _, err = h.UserRepository.UpdateUser(ctx, storedUser); err != nil {
-			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed login", err.Error()))
-			return
-		}
-		// no usar helper.HandleError porque no queremos mostrar el error real al usuario
-		c.JSON(http.StatusUnauthorized, gin.H{"code:": http.StatusUnauthorized, "error": "Invalid username or password"})
-		return
-	}
-
-	// Restablecer el número de intentos fallidos de inicio de sesión
-	storedUser.FailedLoginAttempts = 0
-	if _, err = h.UserRepository.UpdateUser(ctx, storedUser); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed update login", err.Error()))
-		return
-	}
-
-	// Generar token
-	if token, err = jwt.GenerateToken(user.Username, storedUser.Roles.Name); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to generate token", err.Error()))
-		return
-	}
-
-	// Configurar cookie
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "jwt",
-		Value:    token,
-		Expires:  time.Now().Add(2 * time.Hour),
-		HttpOnly: true,
-		Secure:   true, // Asegúrate de usar HTTPS en producción
-		SameSite: http.SameSiteStrictMode,
-	})
+	// Configurar encabezado Authorization
+	c.Header("Authorization", "Bearer "+token)
 
 	helper.HandleSuccess(c, http.StatusOK, gin.H{"token": token}, "User logged in successfully")
-
 }
 
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var user model.Users
-	var createdUser *model.UserMin
-	var err error
-
-	if err = c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()))
+	if err := c.ShouldBindJSON(&user); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
-	if createdUser, err = h.UserRepository.CreateUser(ctx, &user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create user", err.Error()))
+	createdUser, err := h.UserService.CreateUser(ctx, &user)
+	if err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create user", err.Error()), true)
 		return
 	}
 
 	helper.HandleSuccess(c, http.StatusCreated, createdUser, "User created successfully")
+}
+
+func (h *UserHandler) GetUserByUsername(c *gin.Context) {
+	username := c.Param("username")
+
+	ctx := c.Request.Context()
+	user, err := h.UserService.GetUserByUsername(ctx, username)
+	if err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to retrieve user", err.Error()), false)
+		return
+	}
+	if user == nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, "User not found", ""), false)
+		return
+	}
+
+	helper.HandleSuccess(c, http.StatusOK, user, "User retrieved successfully")
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
@@ -115,14 +83,14 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	page, err := strconv.ParseUint(pageStr, 10, 64)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid page number", err.Error()))
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid page number", err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
-	users, err := h.UserRepository.ListUsers(ctx, page)
+	users, err := h.UserService.ListUsers(ctx, page)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to list users", err.Error()))
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to list users", err.Error()), true)
 		return
 	}
 
@@ -130,21 +98,30 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	var user model.Users
+	var user model.Users // Modelo completo del usuario con todos los campos
 	var updatedUser *model.UserMin
 	var err error
 
+	// Bind JSON input to the user model
 	if err = c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()))
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
 		return
 	}
 
+	// Use UserService to update the user
 	ctx := c.Request.Context()
-	if updatedUser, err = h.UserRepository.UpdateUser(ctx, &user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to update user", err.Error()))
+	if updatedUser, err = h.UserService.UpdateUser(ctx, &user); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to update user", err.Error()), true)
 		return
 	}
 
+	// Check if updatedUser is nil, which might indicate the user was not found
+	if updatedUser == nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, "User not found", ""), true)
+		return
+	}
+
+	// Respond with success and the updated user information
 	helper.HandleSuccess(c, http.StatusOK, updatedUser, "User updated successfully")
 }
 
@@ -154,16 +131,19 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 	var err error
 
+	// Bind JSON input to the user struct
 	if err = c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()))
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
 		return
 	}
 
+	// Use UserService to delete the user
 	ctx := c.Request.Context()
-	if err = h.UserRepository.DeleteUser(ctx, user.Username); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete user", err.Error()))
+	if err = h.UserService.DeleteUser(ctx, user.Username); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete user", err.Error()), true)
 		return
 	}
 
+	// Respond with success
 	helper.HandleSuccess(c, http.StatusOK, nil, "User deleted successfully")
 }
