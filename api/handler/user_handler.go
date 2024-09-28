@@ -5,9 +5,11 @@ import (
 	"strconv"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/api/repository"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -126,24 +128,25 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	var user struct {
-		Username string `json:"username" binding:"required"`
-	}
-	var err error
+	id := c.Param("id")
 
-	// Bind JSON input to the user struct
-	if err = c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+	// validate uuid parse
+	if _, err := uuid.Parse(id); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input: ID must be valid", err.Error()), true)
 		return
 	}
 
 	// Use UserService to delete the user
 	ctx := c.Request.Context()
-	if err = h.UserService.DeleteUser(ctx, user.Username); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete user", err.Error()), true)
+	err := h.UserService.DeleteUser(ctx, id)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, "User not found", err.Error()), true)
+		} else {
+			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete user", err.Error()), true)
+		}
 		return
 	}
 
-	// Respond with success
 	helper.HandleSuccess(c, http.StatusOK, nil, "User deleted successfully")
 }

@@ -13,3 +13,8 @@ go.work
 
 # secrets for yml file
 secrets
+
+MOCK_DATA.sql
+
+.gitignore
+.gitattributes

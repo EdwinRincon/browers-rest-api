@@ -19,6 +19,10 @@ func InitializeRoleRoutes(r *gin.Engine, roleHandler *handler.RoleHandler) {
 
 			// Define routes in the 'auth' subgroup
 			authGroup.GET("/role/:id", roleHandler.GetRoleByID)
+			authGroup.POST("/role", roleHandler.CreateRole)
+			authGroup.PUT("/role/:id", roleHandler.UpdateRole)
+			authGroup.DELETE("/role/:id", roleHandler.DeleteRole)
+			authGroup.GET("/roles", roleHandler.GetAllRoles)
 		}
 	}
 }

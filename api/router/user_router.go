@@ -22,7 +22,7 @@ func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 			authGroup.GET("/users/:username", userHandler.GetUserByUsername)
 			authGroup.GET("/users", userHandler.ListUsers)
 			authGroup.PUT("/users", userHandler.UpdateUser)
-			authGroup.DELETE("/users", userHandler.DeleteUser)
+			authGroup.DELETE("/users/:id", userHandler.DeleteUser)
 
 		}
 
