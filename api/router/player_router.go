@@ -1,0 +1,30 @@
+package api
+
+import (
+	"github.com/EdwinRincon/browersfc-api/api/constants"
+	"github.com/EdwinRincon/browersfc-api/api/handler"
+	"github.com/EdwinRincon/browersfc-api/api/middleware"
+	"github.com/gin-gonic/gin"
+)
+
+func InitializePlayerRoutes(r *gin.Engine, playerHandler *handler.PlayerHandler) {
+	r.Use(middleware.SecurityHeadersMiddleware())
+
+	api := r.Group(constants.APIBasePath)
+	{
+		players := api.Group("/players")
+		{
+			players.Use(middleware.JwtAuthMiddleware())
+
+			players.GET("", playerHandler.ListPlayers)
+			players.GET("/:id", playerHandler.GetPlayerByID)
+
+			players.Use(middleware.RBACMiddleware(constants.RoleAdmin, constants.RoleCoach))
+			{
+				players.POST("", playerHandler.CreatePlayer)
+				players.PUT("/:id", playerHandler.UpdatePlayer)
+				players.DELETE("/:id", playerHandler.DeletePlayer)
+			}
+		}
+	}
+}

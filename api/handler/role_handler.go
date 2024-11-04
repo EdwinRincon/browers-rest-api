@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/api/repository"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
@@ -24,14 +27,14 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 8)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
 	role, err := h.RoleService.GetRoleByID(ctx, uint8(id))
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, "Role not found", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrRoleNotFound.Error(), err.Error()), true)
 		return
 	}
 
@@ -41,7 +44,7 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var role model.Roles
 	if err := c.ShouldBindJSON(&role); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
@@ -59,13 +62,13 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 8)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
 	var role model.Roles
 	if err := c.ShouldBindJSON(&role); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
@@ -84,13 +87,17 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 8)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
 	err = h.RoleService.DeleteRole(ctx, uint8(id))
 	if err != nil {
+		if errors.Is(err, repository.ErrRoleNotFound) {
+			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrRoleNotFound.Error(), ""), true)
+			return
+		}
 		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete role", err.Error()), true)
 		return
 	}

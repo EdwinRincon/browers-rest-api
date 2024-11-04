@@ -3,17 +3,12 @@ package helper
 import (
 	"unicode"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type ResponseJSON struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
-}
-
-func ResponseJSONSuccess(c *gin.Context, message string, data interface{}) {
-	c.JSON(200, ResponseJSON{message, data})
 }
 
 func IsStrongPassword(password string) bool {

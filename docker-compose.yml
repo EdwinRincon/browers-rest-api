@@ -1,23 +1,23 @@
 version: '3.8'
 
 services:
-  webapp:
-    image: browers-api:1.0
+  api:
     build:
       context: .
-    secrets:
-      - port
-      - jwt_secret
-      - db_url
+      dockerfile: Dockerfile
+    image: browers-api:1.0
+    container_name: browers-api
+    ports:
+      - "${PORT:-5050}:5050"
     environment:
-      PORT_FILE: /run/secrets/port
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
-      DB_URL_FILE: /run/secrets/db_url
-
-secrets:
-  port:
-    file: ./secrets/port.txt
-  jwt_secret:
-    file: ./secrets/jwt_secret.txt
-  db_url:
-    file: ./secrets/db_url.txt
+      - PORT=${PORT:-5050}
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_URL=${DB_URL}
+    volumes:
+      - ./api:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5050}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

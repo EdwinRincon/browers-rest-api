@@ -3,7 +3,6 @@ package model
 import (
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
@@ -23,31 +22,15 @@ type Players struct {
 	Goals         uint16         `gorm:"type:smallint(5);not null;default:0" json:"goals" form:"goals"`
 	Assists       uint16         `gorm:"type:smallint(5);not null;default:0" json:"assists" form:"assists"`
 	Saves         uint16         `gorm:"type:smallint(5);not null;default:0" json:"saves" form:"saves"`
-	Position      string         `gorm:"type:varchar(5);not null" json:"position" form:"position"`
+	Position      string         `gorm:"type:varchar(5);not null" json:"position" form:"position" binding:"required,oneof=por ceni cend lati med latd del deli deld"`
 	Injured       bool           `gorm:"default:false" json:"injured" form:"injured"`
 	CarrerSummary string         `gorm:"type:varchar(1000);not null" json:"carrer_summary" form:"carrer_summary"`
 	Teams         []Teams        `gorm:"many2many:player_teams;" json:"teams" form:"teams"`
+	Lineups       []Lineups      `gorm:"foreignKey:PlayerID" json:"lineups" form:"lineups"`
 	MVPCount      uint8          `gorm:"type:tinyint(3);not null;default:0" json:"mvp_count" form:"mvp_count"`
-	UsersID       string         `json:"users_id" form:"users_id"`
+	UsersID       string         `gorm:"index" json:"users_id" form:"users_id"`
 	Users         Users          `gorm:"foreignKey:UsersID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"users" form:"users"`
 	CreatedAt     time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
 	UpdatedAt     time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"deleted_at" form:"deleted_at"`
-}
-
-// TODO: Pasar a BBDD como tabla nueva y hacer relación con Players
-// ValidPositions contiene una lista de posiciones válidas
-var validPositions = []string{"del", "mc", "def", "por"}
-
-// PositionValidator es un validador personalizado para verificar si la posición es válida
-var PositionValidator validator.Func = func(fl validator.FieldLevel) bool {
-	position, ok := fl.Field().Interface().(string)
-	if ok {
-		for _, valid := range validPositions {
-			if position == valid {
-				return true
-			}
-		}
-	}
-	return false
 }

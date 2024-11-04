@@ -1,30 +1,37 @@
-# Etapa de construcción
+# Build stage
 FROM golang:1.21-alpine AS builder
 
-# Instalar git, necesario para fetch de dependencias
+# Install necessary build tools
 RUN apk add --no-cache git
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Pre-copiar/cache go.mod y go.sum para pre-descargar dependencias
+# Copy and download dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copiar el código de la aplicación y construir un binario estático
+# Copy the source code
 COPY . .
-RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app -ldflags '-s -w' .
 
-# Etapa final
-FROM alpine:latest
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app -ldflags="-w -s" .
 
-# Copiar el binario estático desde la etapa de construcción
-COPY --from=builder /usr/local/bin/app /usr/local/bin/app
+# Final stage
+FROM alpine:3.18
 
-# Set GIN_MODE to release to run Gin in production mode
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /root/
+
+# Copy the binary from the builder stage
+COPY --from=builder /app/app .
+
+# Set environment variables
 ENV GIN_MODE=release
+ENV TZ=Europe/Madrid
 
-# Exponer el puerto que tu aplicación Gin usará
+# Expose the application port
 EXPOSE 5050
 
-# Comando para ejecutar la aplicación
-CMD ["app"]
+# Run the application
+CMD ["./app"]

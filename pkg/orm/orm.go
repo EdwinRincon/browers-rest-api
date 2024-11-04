@@ -3,6 +3,8 @@ package orm
 import (
 	"database/sql"
 	"log"
+	"sync"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/config"
@@ -10,36 +12,52 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewConnectionDB() (*gorm.DB, error) {
-	dsn, errorDBURL := config.GetDBURL()
-	if errorDBURL != nil {
-		log.Fatal("error getting database URL")
-		return nil, errorDBURL
-	}
-	sqlDB, err := sql.Open("mysql", dsn)
-	if err != nil {
-		log.Fatal("error initializing database connection")
-		return nil, err
-	}
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn: sqlDB,
-	}), &gorm.Config{})
-	if err != nil {
-		log.Fatal("error initializing database connection gorm")
-		return nil, err
-	}
+var (
+	instance *gorm.DB
+	once     sync.Once
+)
 
-	// Migración de esquema (creación de tablas)
-	gormDB.AutoMigrate(&model.Articles{})
-	gormDB.AutoMigrate(&model.Classifications{})
-	gormDB.AutoMigrate(&model.Lineups{})
-	gormDB.AutoMigrate(&model.Matches{})
-	gormDB.AutoMigrate(&model.Players{})
-	gormDB.AutoMigrate(&model.Roles{})
-	gormDB.AutoMigrate(&model.Seasons{})
-	gormDB.AutoMigrate(&model.TeamsStats{})
-	gormDB.AutoMigrate(&model.Teams{})
-	gormDB.AutoMigrate(&model.Users{})
+func GetDBInstance() (*gorm.DB, error) {
+	var err error
+	once.Do(func() {
+		dsn, errorDBURL := config.GetDBURL()
+		if errorDBURL != nil {
+			log.Fatal("error getting database URL")
+			return
+		}
+		sqlDB, err := sql.Open("mysql", dsn)
+		if err != nil {
+			log.Fatal("error initializing database connection")
+			return
+		}
+		instance, err = gorm.Open(mysql.New(mysql.Config{
+			Conn: sqlDB,
+		}), &gorm.Config{})
+		if err != nil {
+			log.Fatal("error initializing database connection gorm")
+			return
+		}
 
-	return gormDB, nil
+		log.Println("Database connection established")
+
+		// Set connection pool parameters
+		sqlDB.SetMaxOpenConns(10)               // Maximum number of open connections
+		sqlDB.SetMaxIdleConns(5)                // Maximum number of idle connections
+		sqlDB.SetConnMaxLifetime(1 * time.Hour) // Maximum connection lifetime
+
+		// Migración de esquema (creación de tablas)
+		instance.AutoMigrate(&model.Articles{})
+		instance.AutoMigrate(&model.Classifications{})
+		instance.AutoMigrate(&model.Lineups{})
+		instance.AutoMigrate(&model.Matches{})
+		instance.AutoMigrate(&model.Players{})
+		instance.AutoMigrate(&model.Roles{})
+		instance.AutoMigrate(&model.Seasons{})
+		instance.AutoMigrate(&model.TeamsStats{})
+		instance.AutoMigrate(&model.Teams{})
+		instance.AutoMigrate(&model.Users{})
+
+	})
+
+	return instance, err
 }

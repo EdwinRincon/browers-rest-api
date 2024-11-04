@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -28,7 +30,7 @@ func NewUserHandler(authService service.AuthService, userService service.UserSer
 func (h *UserHandler) Login(c *gin.Context) {
 	var user model.UserLogin
 	if err := c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
@@ -43,13 +45,28 @@ func (h *UserHandler) Login(c *gin.Context) {
 	// Configurar encabezado Authorization
 	c.Header("Authorization", "Bearer "+token)
 
+	// Configurar cookie
+	c.SetCookie("token", token, 3600, "/", "", true, true)
+
 	helper.HandleSuccess(c, http.StatusOK, gin.H{"token": token}, "User logged in successfully")
 }
 
+// CreateUser godoc
+// @Summary Create a new user
+// @Description This endpoint allows for the creation of a new user with the specified details.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body model.Users true "User details"
+// @Success 201 {object} model.UserMin "User created successfully"
+// @Failure 400 {object} helper.AppError "Invalid input provided"
+// @Failure 500 {object} helper.AppError "Internal server error occurred"
+// @Router /users [post]
+// @Security Bearer
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var user model.Users
 	if err := c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
@@ -69,15 +86,31 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, err := h.UserService.GetUserByUsername(ctx, username)
 	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrUserNotFound.Error(), ""), false)
+			return
+		}
 		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to retrieve user", err.Error()), false)
 		return
 	}
 	if user == nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, "User not found", ""), false)
+		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrUserNotFound.Error(), ""), false)
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, user, "User retrieved successfully")
+	userResponse := model.UsersResponse{
+		ID:         user.ID,
+		Name:       user.Name,
+		LastName:   user.LastName,
+		Username:   user.Username,
+		IsActive:   user.IsActive,
+		Birthdate:  user.Birthdate,
+		ImgProfile: user.ImgProfile,
+		ImgBanner:  user.ImgBanner,
+		RoleName:   user.Roles.Name,
+	}
+
+	helper.HandleSuccess(c, http.StatusOK, userResponse, "User retrieved successfully")
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
@@ -100,53 +133,46 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	var user model.Users // Modelo completo del usuario con todos los campos
-	var updatedUser *model.UserMin
-	var err error
-
-	// Bind JSON input to the user model
-	if err = c.ShouldBindJSON(&user); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input", err.Error()), true)
+	var userUpdate model.UserUpdate
+	if err := c.ShouldBindJSON(&userUpdate); err != nil {
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
-	// Use UserService to update the user
 	ctx := c.Request.Context()
-	if updatedUser, err = h.UserService.UpdateUser(ctx, &user); err != nil {
+	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdate, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrUserNotFound.Error(), ""), true)
+			return
+		}
 		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to update user", err.Error()), true)
 		return
 	}
 
-	// Check if updatedUser is nil, which might indicate the user was not found
-	if updatedUser == nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, "User not found", ""), true)
-		return
-	}
-
-	// Respond with success and the updated user information
 	helper.HandleSuccess(c, http.StatusOK, updatedUser, "User updated successfully")
 }
 
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// validate uuid parse
+	// Validate UUID format
 	if _, err := uuid.Parse(id); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input: ID must be valid", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input: ID must be a valid UUID", err.Error()), true)
 		return
 	}
 
-	// Use UserService to delete the user
+	// Attempt to delete the user
 	ctx := c.Request.Context()
 	err := h.UserService.DeleteUser(ctx, id)
 	if err != nil {
-		if err == repository.ErrUserNotFound {
-			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, "User not found", err.Error()), true)
-		} else {
-			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete user", err.Error()), true)
+		if errors.Is(err, repository.ErrUserNotFound) {
+			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrUserNotFound.Error(), ""), true)
+			return
 		}
+		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete user", err.Error()), true)
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, nil, "User deleted successfully")
+	helper.HandleSuccess(c, http.StatusNoContent, nil, "User deleted successfully")
 }

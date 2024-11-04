@@ -18,3 +18,11 @@ MOCK_DATA.sql
 
 .gitignore
 .gitattributes
+
+# swagger
+docs
+
+# github
+/.github
+
+.vscode

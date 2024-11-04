@@ -11,5 +11,5 @@ type Roles struct {
 	Name      string         `gorm:"type:varchar(20);not null" json:"name" form:"name"`
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at" form:"deleted_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at" form:"deleted_at" swaggerignore:"true"`
 }

@@ -9,11 +9,10 @@ import (
 
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
-type Date datatypes.Date
+type Date time.Time
 
 const dateFormat = "2006-01-02"
 
@@ -26,7 +25,7 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*d = Date(datatypes.Date(t))
+	*d = Date(t)
 	return nil
 }
 
@@ -41,15 +40,14 @@ func (d Date) Value() (driver.Value, error) {
 func (d *Date) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case time.Time:
-		*d = Date(datatypes.Date(v))
+		*d = Date(v)
 		return nil
 	case []byte:
-		strValue := string(v)
-		parsedTime, err := time.Parse(dateFormat, strValue)
+		t, err := time.Parse(dateFormat, string(v))
 		if err != nil {
 			return err
 		}
-		*d = Date(datatypes.Date(parsedTime))
+		*d = Date(t)
 		return nil
 	default:
 		return fmt.Errorf("cannot scan type %T into Date", value)
@@ -62,7 +60,7 @@ type Users struct {
 	LastName            string `gorm:"type:varchar(35);not null" json:"lastname" binding:"required"`
 	Username            string `gorm:"type:varchar(15);not null;unique" json:"username" binding:"required"`
 	IsActive            string `gorm:"type:char(1)" json:"is_active" binding:"oneof=S N"`
-	Birthdate           Date   `json:"birthdate" binding:"required"`
+	Birthdate           Date   `json:"birthdate" binding:"required" example:"1990-01-01"`
 	ImgProfile          string `gorm:"type:varchar(255)" json:"img_profile"`
 	ImgBanner           string `gorm:"type:varchar(255)" json:"img_banner"`
 	Password            string `gorm:"type:varchar(60);not null" json:"password" binding:"required"`
@@ -71,7 +69,7 @@ type Users struct {
 	Roles               Roles  `gorm:"foreignKey:RolesID;references:ID"` // Definición de la clave foránea
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
-	DeletedAt           gorm.DeletedAt `gorm:"index"`
+	DeletedAt           gorm.DeletedAt `gorm:"index" swaggerignore:"true"`
 }
 
 type UserLogin struct {
@@ -110,6 +108,7 @@ func (user *Users) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
+// Use this struct to get a user without sensitive information
 type UsersResponse struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
@@ -120,4 +119,15 @@ type UsersResponse struct {
 	ImgProfile string `json:"img_profile"`
 	ImgBanner  string `json:"img_banner"`
 	RoleName   string `json:"role_name"`
+}
+
+// Use this struct to update a user
+type UserUpdate struct {
+	Name       *string `json:"name,omitempty"`
+	LastName   *string `json:"lastname,omitempty"`
+	Username   *string `json:"username,omitempty"`
+	Birthdate  *Date   `json:"birthdate,omitempty"`
+	IsActive   *string `json:"is_active,omitempty"`
+	ImgProfile *string `json:"img_profile,omitempty"`
+	ImgBanner  *string `json:"img_banner,omitempty"`
 }

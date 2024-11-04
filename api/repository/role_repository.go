@@ -2,10 +2,13 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
+
+var ErrRoleNotFound = errors.New("role not found")
 
 type RoleRepository interface {
 	GetRoleByID(ctx context.Context, id uint8) (*model.Roles, error)

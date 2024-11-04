@@ -14,6 +14,8 @@ type TeamsStats struct {
 	GoalsFor  uint16         `gorm:"type:int(3);not null" json:"goals_for" form:"goals_for"`
 	GoalsAg   uint16         `gorm:"type:int(3);not null" json:"goals_against" form:"goals_against"`
 	Points    uint16         `gorm:"type:int(3);not null" json:"points" form:"points"`
+	TeamID    uint64         `gorm:"uniqueIndex" json:"team_id" form:"team_id"`
+	Team      Teams          `gorm:"foreignKey:TeamID" json:"team" form:"team"`
 	SeasonsID uint8          `gorm:"not null" json:"seasons_id" form:"seasons_id"`
 	Seasons   Seasons        `gorm:"foreignKey:SeasonsID" json:"seasons" form:"seasons"`
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`

@@ -11,12 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// Definir el error para el usuario no encontrado
 var ErrUserNotFound = errors.New("user not found")
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *model.Users) (*model.UserMin, error)
 	GetUserByUsername(ctx context.Context, username string) (*model.Users, error)
+	GetUserByID(ctx context.Context, id string) (*model.Users, error)
 	ListUsers(ctx context.Context, page uint64) ([]*model.UsersResponse, error)
 	UpdateUser(ctx context.Context, user *model.Users) (*model.UserMin, error)
 	UpdateLoginAttemps(ctx context.Context, user *model.Users) (*model.UserMin, error)
@@ -46,6 +46,18 @@ func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username st
 	}
 
 	// Usuario encontrado, retorna el usuario y nil como error
+	return &user, nil
+}
+
+func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*model.Users, error) {
+	var user model.Users
+	result := ur.db.WithContext(ctx).Preload("Roles").Unscoped().Where("id = ?", id).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, result.Error
+	}
 	return &user, nil
 }
 
@@ -85,7 +97,7 @@ func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.Users)
 }
 
 func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, user *model.Users) (*model.UserMin, error) {
-	err := ur.db.WithContext(ctx).Updates(user).Error
+	err := ur.db.WithContext(ctx).Model(user).Updates(user).Error
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	jwtClaims "github.com/EdwinRincon/browersfc-api/pkg/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/time/rate"
 )
 
 // JwtAuthMiddleware es un middleware que verifica el token JWT
@@ -63,6 +65,39 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+func RBACMiddleware(allowedRoles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists {
+			helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Role not found in context", ""), false)
+			c.Abort()
+			return
+		}
+
+		userRole, ok := role.(string)
+		if !ok {
+			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Invalid role type", ""), false)
+			c.Abort()
+			return
+		}
+
+		// Logging the role check
+		log.Printf("User role: %s, Allowed roles: %v", userRole, allowedRoles)
+
+		for _, allowedRole := range allowedRoles {
+			if userRole == allowedRole {
+				c.Next()
+				return
+			}
+		}
+
+		// Log denied access attempt
+		log.Printf("Access denied for role: %s", userRole)
+		helper.HandleError(c, helper.NewAppError(http.StatusForbidden, "Access denied", ""), false)
+		c.Abort()
+	}
+}
+
 // SecurityHeadersMiddleware returns a middleware function that sets various security headers.
 //
 // X-Frame-Options: Prevents clickjacking attacks.
@@ -93,6 +128,18 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "strict-origin")
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("Permissions-Policy", "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self),payment=()")
+		c.Next()
+	}
+}
+
+var limiter = rate.NewLimiter(1, 5) // 1 request per second with a burst of 5
+
+func RateLimit() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !limiter.Allow() {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests"})
+			return
+		}
 		c.Next()
 	}
 }
