@@ -14,12 +14,12 @@ import (
 var ErrUserNotFound = errors.New("user not found")
 
 type UserRepository interface {
-	CreateUser(ctx context.Context, user *model.Users) (*model.UserMin, error)
-	GetUserByUsername(ctx context.Context, username string) (*model.Users, error)
-	GetUserByID(ctx context.Context, id string) (*model.Users, error)
-	ListUsers(ctx context.Context, page uint64) ([]*model.UsersResponse, error)
-	UpdateUser(ctx context.Context, user *model.Users) (*model.UserMin, error)
-	UpdateLoginAttemps(ctx context.Context, user *model.Users) (*model.UserMin, error)
+	CreateUser(ctx context.Context, user *model.User) (*model.UserMin, error)
+	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
+	GetUserByID(ctx context.Context, id string) (*model.User, error)
+	ListUsers(ctx context.Context, page uint64) ([]*model.UserResponse, error)
+	UpdateUser(ctx context.Context, user *model.User) (*model.UserMin, error)
+	UpdateLoginAttemps(ctx context.Context, user *model.User) (*model.UserMin, error)
 	DeleteUser(ctx context.Context, username string) error
 }
 
@@ -31,11 +31,11 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &UserRepositoryImpl{db: db}
 }
 
-func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username string) (*model.Users, error) {
-	var user model.Users
+func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username string) (*model.User, error) {
+	var user model.User
 
 	// Buscar al usuario por nombre de usuario y cargar el rol relacionado
-	result := ur.db.WithContext(ctx).Preload("Roles").Unscoped().Where("username = ?", username).First(&user)
+	result := ur.db.WithContext(ctx).Preload("Role").Unscoped().Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// No se encontró el usuario, retorna nil y nil como error
@@ -49,9 +49,9 @@ func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username st
 	return &user, nil
 }
 
-func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*model.Users, error) {
-	var user model.Users
-	result := ur.db.WithContext(ctx).Preload("Roles").Unscoped().Where("id = ?", id).First(&user)
+func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*model.User, error) {
+	var user model.User
+	result := ur.db.WithContext(ctx).Preload("Role").Unscoped().Where("id = ?", id).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
@@ -61,10 +61,9 @@ func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*mode
 	return &user, nil
 }
 
-func (ur *UserRepositoryImpl) ListUsers(ctx context.Context, page uint64) ([]*model.UsersResponse, error) {
-	var users []*model.UsersResponse
+func (ur *UserRepositoryImpl) ListUsers(ctx context.Context, page uint64) ([]*model.UserResponse, error) {
+	var users []*model.UserResponse
 
-	// Especifica las columnas que deseas recuperar
 	query := ur.db.Table("users").
 		Select("users.id, users.name, users.last_name, users.username, users.birthdate, users.is_active, users.img_profile, users.img_banner, roles.name AS role_name").
 		Joins("left join roles on users.roles_id = roles.id").
@@ -76,13 +75,13 @@ func (ur *UserRepositoryImpl) ListUsers(ctx context.Context, page uint64) ([]*mo
 		return nil, query.Error
 	}
 	if len(users) == 0 {
-		return []*model.UsersResponse{}, nil
+		return []*model.UserResponse{}, nil
 	}
 
 	return users, nil
 }
 
-func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.Users) (*model.UserMin, error) {
+func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.User) (*model.UserMin, error) {
 	err := ur.db.WithContext(ctx).Create(user).Error
 	if err != nil {
 		return nil, err
@@ -96,7 +95,7 @@ func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.Users)
 	return userResponse, nil
 }
 
-func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, user *model.Users) (*model.UserMin, error) {
+func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, user *model.User) (*model.UserMin, error) {
 	err := ur.db.WithContext(ctx).Model(user).Updates(user).Error
 	if err != nil {
 		return nil, err
@@ -110,7 +109,7 @@ func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, user *model.Users)
 	return userResponse, nil
 }
 
-func (ur *UserRepositoryImpl) UpdateLoginAttemps(ctx context.Context, user *model.Users) (*model.UserMin, error) {
+func (ur *UserRepositoryImpl) UpdateLoginAttemps(ctx context.Context, user *model.User) (*model.UserMin, error) {
 	// Actualizar solo el campo FailedLoginAttempts
 	err := ur.db.WithContext(ctx).Model(user).Update("failed_login_attempts", user.FailedLoginAttempts).Error
 	if err != nil {
@@ -148,7 +147,7 @@ func (ur *UserRepositoryImpl) DeleteUser(ctx context.Context, id string) error {
 
 	// Perform the update operation
 	result := ur.db.WithContext(ctx).
-		Model(&model.Users{}).
+		Model(&model.User{}).
 		Where("id = ?", id).
 		Updates(updateFields)
 

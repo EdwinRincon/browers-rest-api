@@ -46,16 +46,15 @@ func GetDBInstance() (*gorm.DB, error) {
 		sqlDB.SetConnMaxLifetime(1 * time.Hour) // Maximum connection lifetime
 
 		// Migración de esquema (creación de tablas)
-		instance.AutoMigrate(&model.Articles{})
-		instance.AutoMigrate(&model.Classifications{})
-		instance.AutoMigrate(&model.Lineups{})
-		instance.AutoMigrate(&model.Matches{})
-		instance.AutoMigrate(&model.Players{})
-		instance.AutoMigrate(&model.Roles{})
-		instance.AutoMigrate(&model.Seasons{})
-		instance.AutoMigrate(&model.TeamsStats{})
-		instance.AutoMigrate(&model.Teams{})
-		instance.AutoMigrate(&model.Users{})
+		instance.AutoMigrate(&model.Article{})
+		instance.AutoMigrate(&model.Lineup{})
+		instance.AutoMigrate(&model.Match{})
+		instance.AutoMigrate(&model.Player{})
+		instance.AutoMigrate(&model.Role{})
+		instance.AutoMigrate(&model.Season{})
+		instance.AutoMigrate(&model.TeamStat{})
+		instance.AutoMigrate(&model.Team{})
+		instance.AutoMigrate(&model.User{})
 
 	})
 

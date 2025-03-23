@@ -8,10 +8,10 @@ import (
 )
 
 type TeamStatsService interface {
-	CreateTeamStats(ctx context.Context, teamStats *model.TeamsStats) error
-	GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamsStats, error)
-	ListTeamStats(ctx context.Context, page uint64) ([]*model.TeamsStats, error)
-	UpdateTeamStats(ctx context.Context, teamStats *model.TeamsStats) error
+	CreateTeamStats(ctx context.Context, teamStats *model.TeamStat) error
+	GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamStat, error)
+	ListTeamStats(ctx context.Context, page uint64) ([]*model.TeamStat, error)
+	UpdateTeamStats(ctx context.Context, teamStats *model.TeamStat) error
 	DeleteTeamStats(ctx context.Context, id uint64) error
 }
 
@@ -25,19 +25,19 @@ func NewTeamStatsService(teamStatsRepo repository.TeamStatsRepository) TeamStats
 	}
 }
 
-func (s *teamStatsService) CreateTeamStats(ctx context.Context, teamStats *model.TeamsStats) error {
+func (s *teamStatsService) CreateTeamStats(ctx context.Context, teamStats *model.TeamStat) error {
 	return s.TeamStatsRepository.CreateTeamStats(ctx, teamStats)
 }
 
-func (s *teamStatsService) GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamsStats, error) {
+func (s *teamStatsService) GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamStat, error) {
 	return s.TeamStatsRepository.GetTeamStatsByID(ctx, id)
 }
 
-func (s *teamStatsService) ListTeamStats(ctx context.Context, page uint64) ([]*model.TeamsStats, error) {
+func (s *teamStatsService) ListTeamStats(ctx context.Context, page uint64) ([]*model.TeamStat, error) {
 	return s.TeamStatsRepository.ListTeamStats(ctx, page)
 }
 
-func (s *teamStatsService) UpdateTeamStats(ctx context.Context, teamStats *model.TeamsStats) error {
+func (s *teamStatsService) UpdateTeamStats(ctx context.Context, teamStats *model.TeamStat) error {
 	return s.TeamStatsRepository.UpdateTeamStats(ctx, teamStats)
 }
 

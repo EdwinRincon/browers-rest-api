@@ -16,7 +16,7 @@ func InitializeSeasonRoutes(r *gin.Engine, seasonHandler *handler.SeasonHandler)
 		{
 			seasons.Use(middleware.JwtAuthMiddleware())
 
-			seasons.GET("", seasonHandler.ListSeasons)
+			seasons.GET("", seasonHandler.GetAllSeasons)
 			seasons.GET("/:id", seasonHandler.GetSeasonByID)
 
 			seasons.Use(middleware.RBACMiddleware(constants.RoleAdmin))

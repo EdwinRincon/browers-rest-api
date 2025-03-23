@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
@@ -24,16 +22,16 @@ func NewTeamHandler(teamService service.TeamService) *TeamHandler {
 }
 
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
-	var team model.Teams
+	var team model.Team
 	if err := c.ShouldBindJSON(&team); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
+		helper.HandleValidationError(c, err)
 		return
 	}
 
 	ctx := c.Request.Context()
 	err := h.TeamService.CreateTeam(ctx, &team)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create team", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 
@@ -41,20 +39,21 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 }
 
 func (h *TeamHandler) GetTeamByID(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	teamID := c.Param("id")
+	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidTeamID, err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
 	team, err := h.TeamService.GetTeamByID(ctx, id)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrTeamNotFound.Error(), ""), false)
+		helper.HandleGormError(c, err)
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, team, "Team retrieved successfully")
+	helper.HandleSuccess(c, http.StatusOK, team, "Team found successfully")
 }
 
 func (h *TeamHandler) ListTeams(c *gin.Context) {
@@ -72,31 +71,28 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, teams, "Teams listed successfully")
+	helper.HandleSuccess(c, http.StatusOK, teams, "Team listed successfully")
 }
 
 func (h *TeamHandler) UpdateTeam(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	teamID := c.Param("id")
+	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidTeamID, err.Error()), true)
-		return
-	}
-
-	var team model.Teams
-	if err := c.ShouldBindJSON(&team); err != nil {
 		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
-	team.ID = id
+
+	var team model.Team
+	if err := c.ShouldBindJSON(&team); err != nil {
+		helper.HandleValidationError(c, err)
+		return
+	}
 
 	ctx := c.Request.Context()
+	team.ID = id
 	err = h.TeamService.UpdateTeam(ctx, &team)
 	if err != nil {
-		if errors.Is(err, repository.ErrTeamNotFound) {
-			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrTeamNotFound.Error(), ""), true)
-			return
-		}
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to update team", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 
@@ -104,20 +100,17 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 }
 
 func (h *TeamHandler) DeleteTeam(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	teamID := c.Param("id")
+	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidTeamID, err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
 	err = h.TeamService.DeleteTeam(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrTeamNotFound) {
-			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrTeamNotFound.Error(), ""), true)
-			return
-		}
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete team", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 

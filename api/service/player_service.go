@@ -8,10 +8,10 @@ import (
 )
 
 type PlayerService interface {
-	CreatePlayer(ctx context.Context, player *model.Players) error
-	GetPlayerByID(ctx context.Context, id uint64) (*model.Players, error)
-	ListPlayers(ctx context.Context, page uint64) ([]*model.Players, error)
-	UpdatePlayer(ctx context.Context, player *model.Players) error
+	CreatePlayer(ctx context.Context, player *model.Player) error
+	GetPlayerByID(ctx context.Context, id uint64) (*model.Player, error)
+	GetAllPlayers(ctx context.Context, page uint64) ([]*model.Player, error)
+	UpdatePlayer(ctx context.Context, player *model.Player) error
 	DeletePlayer(ctx context.Context, id uint64) error
 }
 
@@ -25,19 +25,19 @@ func NewPlayerService(playerRepo repository.PlayerRepository) PlayerService {
 	}
 }
 
-func (s *playerService) CreatePlayer(ctx context.Context, player *model.Players) error {
+func (s *playerService) CreatePlayer(ctx context.Context, player *model.Player) error {
 	return s.PlayerRepository.CreatePlayer(ctx, player)
 }
 
-func (s *playerService) GetPlayerByID(ctx context.Context, id uint64) (*model.Players, error) {
+func (s *playerService) GetPlayerByID(ctx context.Context, id uint64) (*model.Player, error) {
 	return s.PlayerRepository.GetPlayerByID(ctx, id)
 }
 
-func (s *playerService) ListPlayers(ctx context.Context, page uint64) ([]*model.Players, error) {
-	return s.PlayerRepository.ListPlayers(ctx, page)
+func (s *playerService) GetAllPlayers(ctx context.Context, page uint64) ([]*model.Player, error) {
+	return s.PlayerRepository.GetAllPlayers(ctx, page)
 }
 
-func (s *playerService) UpdatePlayer(ctx context.Context, player *model.Players) error {
+func (s *playerService) UpdatePlayer(ctx context.Context, player *model.Player) error {
 	return s.PlayerRepository.UpdatePlayer(ctx, player)
 }
 

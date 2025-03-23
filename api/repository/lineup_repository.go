@@ -11,12 +11,12 @@ import (
 var ErrLineupNotFound = errors.New("lineup not found")
 
 type LineupRepository interface {
-	CreateLineup(ctx context.Context, lineup *model.Lineups) error
-	GetLineupByID(ctx context.Context, id uint64) (*model.Lineups, error)
-	ListLineups(ctx context.Context, page uint64) ([]*model.Lineups, error)
-	UpdateLineup(ctx context.Context, lineup *model.Lineups) error
+	CreateLineup(ctx context.Context, lineup *model.Lineup) error
+	GetLineupByID(ctx context.Context, id uint64) (*model.Lineup, error)
+	ListLineups(ctx context.Context, page uint64) ([]*model.Lineup, error)
+	UpdateLineup(ctx context.Context, lineup *model.Lineup) error
 	DeleteLineup(ctx context.Context, id uint64) error
-	GetLineupsByMatch(ctx context.Context, matchID uint64) ([]*model.Lineups, error)
+	GetLineupsByMatch(ctx context.Context, matchID uint64) ([]*model.Lineup, error)
 }
 
 type LineupRepositoryImpl struct {
@@ -27,13 +27,13 @@ func NewLineupRepository(db *gorm.DB) LineupRepository {
 	return &LineupRepositoryImpl{db: db}
 }
 
-func (r *LineupRepositoryImpl) CreateLineup(ctx context.Context, lineup *model.Lineups) error {
+func (r *LineupRepositoryImpl) CreateLineup(ctx context.Context, lineup *model.Lineup) error {
 	return r.db.WithContext(ctx).Create(lineup).Error
 }
 
-func (r *LineupRepositoryImpl) GetLineupByID(ctx context.Context, id uint64) (*model.Lineups, error) {
-	var lineup model.Lineups
-	err := r.db.WithContext(ctx).Preload("Players").Preload("Matches").First(&lineup, id).Error
+func (r *LineupRepositoryImpl) GetLineupByID(ctx context.Context, id uint64) (*model.Lineup, error) {
+	var lineup model.Lineup
+	err := r.db.WithContext(ctx).Preload("Player").Preload("Match").First(&lineup, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrLineupNotFound
@@ -43,8 +43,8 @@ func (r *LineupRepositoryImpl) GetLineupByID(ctx context.Context, id uint64) (*m
 	return &lineup, nil
 }
 
-func (r *LineupRepositoryImpl) ListLineups(ctx context.Context, page uint64) ([]*model.Lineups, error) {
-	var lineups []*model.Lineups
+func (r *LineupRepositoryImpl) ListLineups(ctx context.Context, page uint64) ([]*model.Lineup, error) {
+	var lineups []*model.Lineup
 	const itemsPerPage = 10
 	offset := (page - 1) * itemsPerPage
 
@@ -63,7 +63,7 @@ func (r *LineupRepositoryImpl) ListLineups(ctx context.Context, page uint64) ([]
 	return lineups, nil
 }
 
-func (r *LineupRepositoryImpl) UpdateLineup(ctx context.Context, lineup *model.Lineups) error {
+func (r *LineupRepositoryImpl) UpdateLineup(ctx context.Context, lineup *model.Lineup) error {
 	result := r.db.WithContext(ctx).Save(lineup)
 	if result.Error != nil {
 		return result.Error
@@ -75,7 +75,7 @@ func (r *LineupRepositoryImpl) UpdateLineup(ctx context.Context, lineup *model.L
 }
 
 func (r *LineupRepositoryImpl) DeleteLineup(ctx context.Context, id uint64) error {
-	result := r.db.WithContext(ctx).Delete(&model.Lineups{}, id)
+	result := r.db.WithContext(ctx).Delete(&model.Lineup{}, id)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -85,9 +85,9 @@ func (r *LineupRepositoryImpl) DeleteLineup(ctx context.Context, id uint64) erro
 	return nil
 }
 
-func (r *LineupRepositoryImpl) GetLineupsByMatch(ctx context.Context, matchID uint64) ([]*model.Lineups, error) {
-	var lineups []*model.Lineups
-	err := r.db.WithContext(ctx).Preload("Players").Where("matches_id = ?", matchID).Find(&lineups).Error
+func (r *LineupRepositoryImpl) GetLineupsByMatch(ctx context.Context, matchID uint64) ([]*model.Lineup, error) {
+	var lineups []*model.Lineup
+	err := r.db.WithContext(ctx).Preload("Player").Where("match_id = ?", matchID).Find(&lineups).Error
 	if err != nil {
 		return nil, err
 	}

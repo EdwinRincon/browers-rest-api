@@ -11,10 +11,10 @@ import (
 var ErrTeamNotFound = errors.New("team not found")
 
 type TeamRepository interface {
-	CreateTeam(ctx context.Context, team *model.Teams) error
-	GetTeamByID(ctx context.Context, id uint64) (*model.Teams, error)
-	ListTeams(ctx context.Context, page uint64) ([]*model.Teams, error)
-	UpdateTeam(ctx context.Context, team *model.Teams) error
+	CreateTeam(ctx context.Context, team *model.Team) error
+	GetTeamByID(ctx context.Context, id uint64) (*model.Team, error)
+	ListTeams(ctx context.Context, page uint64) ([]*model.Team, error)
+	UpdateTeam(ctx context.Context, team *model.Team) error
 	DeleteTeam(ctx context.Context, id uint64) error
 }
 
@@ -26,12 +26,12 @@ func NewTeamRepository(db *gorm.DB) TeamRepository {
 	return &TeamRepositoryImpl{db: db}
 }
 
-func (tr *TeamRepositoryImpl) CreateTeam(ctx context.Context, team *model.Teams) error {
+func (tr *TeamRepositoryImpl) CreateTeam(ctx context.Context, team *model.Team) error {
 	return tr.db.WithContext(ctx).Create(team).Error
 }
 
-func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*model.Teams, error) {
-	var team model.Teams
+func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*model.Team, error) {
+	var team model.Team
 	err := tr.db.WithContext(ctx).First(&team, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -42,8 +42,8 @@ func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*mode
 	return &team, nil
 }
 
-func (tr *TeamRepositoryImpl) ListTeams(ctx context.Context, page uint64) ([]*model.Teams, error) {
-	var teams []*model.Teams
+func (tr *TeamRepositoryImpl) ListTeams(ctx context.Context, page uint64) ([]*model.Team, error) {
+	var teams []*model.Team
 	offset := (page - 1) * 10
 	err := tr.db.WithContext(ctx).Offset(int(offset)).Limit(10).Find(&teams).Error
 	if err != nil {
@@ -52,7 +52,7 @@ func (tr *TeamRepositoryImpl) ListTeams(ctx context.Context, page uint64) ([]*mo
 	return teams, nil
 }
 
-func (tr *TeamRepositoryImpl) UpdateTeam(ctx context.Context, team *model.Teams) error {
+func (tr *TeamRepositoryImpl) UpdateTeam(ctx context.Context, team *model.Team) error {
 	result := tr.db.WithContext(ctx).Save(team)
 	if result.Error != nil {
 		return result.Error
@@ -64,7 +64,7 @@ func (tr *TeamRepositoryImpl) UpdateTeam(ctx context.Context, team *model.Teams)
 }
 
 func (tr *TeamRepositoryImpl) DeleteTeam(ctx context.Context, id uint64) error {
-	result := tr.db.WithContext(ctx).Delete(&model.Teams{}, id)
+	result := tr.db.WithContext(ctx).Delete(&model.Team{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

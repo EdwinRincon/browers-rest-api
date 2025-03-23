@@ -12,7 +12,9 @@ func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 
 	api := r.Group(constants.APIBasePath)
 	{
-		api.POST("/login", userHandler.Login)
+		// OAuth2 endpoints
+		api.GET("/auth/google", userHandler.LoginWithGoogle)
+		api.GET("/auth/google/callback", userHandler.GoogleCallback)
 
 		users := api.Group("/users")
 		{

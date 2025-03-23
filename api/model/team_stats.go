@@ -6,19 +6,20 @@ import (
 	"gorm.io/gorm"
 )
 
-type TeamsStats struct {
-	ID        uint64         `gorm:"primaryKey" json:"id" form:"id"`
-	Wins      uint8          `gorm:"type:int(2);not null" json:"wins" form:"wins"`
-	Draws     uint8          `gorm:"type:int(2);not null" json:"draws" form:"draws"`
-	Losses    uint8          `gorm:"type:int(2);not null" json:"losses" form:"losses"`
-	GoalsFor  uint16         `gorm:"type:int(3);not null" json:"goals_for" form:"goals_for"`
-	GoalsAg   uint16         `gorm:"type:int(3);not null" json:"goals_against" form:"goals_against"`
-	Points    uint16         `gorm:"type:int(3);not null" json:"points" form:"points"`
-	TeamID    uint64         `gorm:"uniqueIndex" json:"team_id" form:"team_id"`
-	Team      Teams          `gorm:"foreignKey:TeamID" json:"team" form:"team"`
-	SeasonsID uint8          `gorm:"not null" json:"seasons_id" form:"seasons_id"`
-	Seasons   Seasons        `gorm:"foreignKey:SeasonsID" json:"seasons" form:"seasons"`
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at" form:"deleted_at"`
+type TeamStat struct {
+	ID           uint64         `gorm:"primaryKey" json:"id"`
+	Wins         uint8          `gorm:"not null;default:0" json:"wins" form:"wins" binding:"gte=0"`
+	Draws        uint8          `gorm:"not null;default:0" json:"draws" form:"draws" binding:"gte=0"`
+	Losses       uint8          `gorm:"not null;default:0" json:"losses" form:"losses" binding:"gte=0"`
+	GoalsFor     uint16         `gorm:"not null;default:0" json:"goals_for" form:"goals_for" binding:"gte=0"`
+	GoalsAgainst uint16         `gorm:"not null;default:0" json:"goals_against" form:"goals_against" binding:"gte=0"`
+	Points       uint16         `gorm:"not null;default:0" json:"points" form:"points" binding:"gte=0"`
+	Rank         uint8          `gorm:"not null;default:0" json:"rank" form:"rank" binding:"gte=0"`
+	TeamID       uint64         `gorm:"index;not null" json:"team_id" form:"team_id" binding:"required"`
+	Team         *Team          `gorm:"foreignKey:TeamID" json:"team,omitempty"`
+	SeasonID     uint           `gorm:"index;not null" json:"season_id" form:"season_id" binding:"required"`
+	Season       *Season        `gorm:"foreignKey:SeasonID" json:"season,omitempty"`
+	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }

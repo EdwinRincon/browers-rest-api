@@ -8,9 +8,9 @@ import (
 )
 
 type UserService interface {
-	CreateUser(ctx context.Context, user *model.Users) (*model.UserMin, error)
-	GetUserByUsername(ctx context.Context, username string) (*model.Users, error)
-	ListUsers(ctx context.Context, page uint64) ([]*model.UsersResponse, error)
+	CreateUser(ctx context.Context, user *model.User) (*model.UserMin, error)
+	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
+	ListUsers(ctx context.Context, page uint64) ([]*model.UserResponse, error)
 	UpdateUser(ctx context.Context, userUpdate *model.UserUpdate, userID string) (*model.UserMin, error)
 	DeleteUser(ctx context.Context, username string) error
 }
@@ -25,15 +25,15 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 	}
 }
 
-func (s *userService) CreateUser(ctx context.Context, user *model.Users) (*model.UserMin, error) {
+func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.UserMin, error) {
 	return s.UserRepository.CreateUser(ctx, user)
 }
 
-func (s *userService) GetUserByUsername(ctx context.Context, username string) (*model.Users, error) {
+func (s *userService) GetUserByUsername(ctx context.Context, username string) (*model.User, error) {
 	return s.UserRepository.GetUserByUsername(ctx, username)
 }
 
-func (s *userService) ListUsers(ctx context.Context, page uint64) ([]*model.UsersResponse, error) {
+func (s *userService) ListUsers(ctx context.Context, page uint64) ([]*model.UserResponse, error) {
 	return s.UserRepository.ListUsers(ctx, page)
 }
 

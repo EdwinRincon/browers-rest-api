@@ -69,7 +69,7 @@ func (s *authService) Authenticate(ctx context.Context, username, password strin
 	}
 
 	// Generar el token
-	token, err := s.JWTService.GenerateToken(username, storedUser.Roles.Name)
+	token, err := s.JWTService.GenerateToken(username, storedUser.Role.Name)
 	if err != nil {
 		return "", err
 	}

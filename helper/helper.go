@@ -1,8 +1,11 @@
 package helper
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"unicode"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -50,4 +53,23 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+// GenerateRandomState generates a cryptographically secure random state for OAuth
+func GenerateRandomState() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		logrus.WithError(err).Error("Failed to generate random state")
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+func GenerateRandomPassword() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		logrus.WithError(err).Error("Failed to generate random password")
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
 }

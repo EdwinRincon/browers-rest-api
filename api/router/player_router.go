@@ -16,7 +16,7 @@ func InitializePlayerRoutes(r *gin.Engine, playerHandler *handler.PlayerHandler)
 		{
 			players.Use(middleware.JwtAuthMiddleware())
 
-			players.GET("", playerHandler.ListPlayers)
+			players.GET("", playerHandler.GetAllPlayers)
 			players.GET("/:id", playerHandler.GetPlayerByID)
 
 			players.Use(middleware.RBACMiddleware(constants.RoleAdmin, constants.RoleCoach))

@@ -6,13 +6,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type Seasons struct {
-	ID         uint8          `gorm:"primaryKey" json:"id" form:"id"`
-	Year       uint16         `gorm:"type:int(4);not null" json:"year" form:"year"`
-	Matches    []Matches      `gorm:"foreignKey:SeasonsID" json:"matches" form:"matches"`         // Has Many (Matches)
-	Articles   []Articles     `gorm:"foreignKey:SeasonsID" json:"articles" form:"articles"`       // Has Many (Articles)
-	TeamsStats []TeamsStats   `gorm:"foreignKey:SeasonsID" json:"teams_stats" form:"teams_stats"` // Has Many (TeamsStats)
-	CreatedAt  time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
-	UpdatedAt  time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at" form:"deleted_at"`
+type Season struct {
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Year        uint16         `gorm:"not null;uniqueIndex;check:year >= 1999 AND year <= 2100" json:"year"`
+	StartDate   time.Time      `gorm:"not null" json:"start_date"`
+	EndDate     time.Time      `gorm:"not null" json:"end_date"`
+	IsCurrent   bool           `gorm:"default:false" json:"is_current"`
+	Matches     []Match        `gorm:"foreignKey:SeasonID" json:"matches"`
+	Articles    []Article      `gorm:"foreignKey:SeasonID" json:"articles"`
+	TeamStats   []TeamStat     `gorm:"foreignKey:SeasonID" json:"team_stats"`
+	PlayerTeams []PlayerTeam   `gorm:"foreignKey:SeasonID" json:"player_teams"`
+	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }

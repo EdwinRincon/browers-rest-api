@@ -8,10 +8,10 @@ import (
 )
 
 type MatchService interface {
-	CreateMatch(ctx context.Context, match *model.Matches) error
-	GetMatchByID(ctx context.Context, id uint64) (*model.Matches, error)
-	ListMatches(ctx context.Context, page, pageSize uint64) ([]*model.Matches, error)
-	UpdateMatch(ctx context.Context, match *model.Matches) error
+	CreateMatch(ctx context.Context, match *model.Match) error
+	GetMatchByID(ctx context.Context, id uint64) (*model.Match, error)
+	ListMatches(ctx context.Context, page, pageSize uint64) ([]*model.Match, error)
+	UpdateMatch(ctx context.Context, match *model.Match) error
 	DeleteMatch(ctx context.Context, id uint64) error
 }
 
@@ -25,19 +25,19 @@ func NewMatchService(matchRepo repository.MatchRepository) MatchService {
 	}
 }
 
-func (s *matchService) CreateMatch(ctx context.Context, match *model.Matches) error {
+func (s *matchService) CreateMatch(ctx context.Context, match *model.Match) error {
 	return s.MatchRepository.CreateMatch(ctx, match)
 }
 
-func (s *matchService) GetMatchByID(ctx context.Context, id uint64) (*model.Matches, error) {
+func (s *matchService) GetMatchByID(ctx context.Context, id uint64) (*model.Match, error) {
 	return s.MatchRepository.GetMatchByID(ctx, id)
 }
 
-func (s *matchService) ListMatches(ctx context.Context, page, pageSize uint64) ([]*model.Matches, error) {
+func (s *matchService) ListMatches(ctx context.Context, page, pageSize uint64) ([]*model.Match, error) {
 	return s.MatchRepository.ListMatches(ctx, page, pageSize)
 }
 
-func (s *matchService) UpdateMatch(ctx context.Context, match *model.Matches) error {
+func (s *matchService) UpdateMatch(ctx context.Context, match *model.Match) error {
 	return s.MatchRepository.UpdateMatch(ctx, match)
 }
 

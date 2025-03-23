@@ -16,22 +16,20 @@ type LineupHandler struct {
 }
 
 func NewLineupHandler(lineupService service.LineupService) *LineupHandler {
-	return &LineupHandler{
-		LineupService: lineupService,
-	}
+	return &LineupHandler{LineupService: lineupService}
 }
 
 func (h *LineupHandler) CreateLineup(c *gin.Context) {
-	var lineup model.Lineups
+	var lineup model.Lineup
 	if err := c.ShouldBindJSON(&lineup); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
+		helper.HandleValidationError(c, err)
 		return
 	}
 
 	ctx := c.Request.Context()
 	err := h.LineupService.CreateLineup(ctx, &lineup)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create lineup", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 
@@ -39,20 +37,21 @@ func (h *LineupHandler) CreateLineup(c *gin.Context) {
 }
 
 func (h *LineupHandler) GetLineupByID(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	lineupID := c.Param("id")
+	id, err := strconv.ParseUint(lineupID, 10, 8)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid ID", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
 	lineup, err := h.LineupService.GetLineupByID(ctx, id)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to retrieve lineup", err.Error()), false)
+		helper.HandleGormError(c, err)
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, lineup, "Lineup retrieved successfully")
+	helper.HandleSuccess(c, http.StatusOK, lineup, "Lineup found successfully")
 }
 
 func (h *LineupHandler) ListLineups(c *gin.Context) {
@@ -70,20 +69,28 @@ func (h *LineupHandler) ListLineups(c *gin.Context) {
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, lineups, "Lineups listed successfully")
+	helper.HandleSuccess(c, http.StatusOK, lineups, "Lineup listed successfully")
 }
 
 func (h *LineupHandler) UpdateLineup(c *gin.Context) {
-	var lineup model.Lineups
-	if err := c.ShouldBindJSON(&lineup); err != nil {
+	lineupID := c.Param("id")
+	id, err := strconv.ParseUint(lineupID, 10, 8)
+	if err != nil {
 		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
+	var lineup model.Lineup
+	if err := c.ShouldBindJSON(&lineup); err != nil {
+		helper.HandleValidationError(c, err)
+		return
+	}
+
 	ctx := c.Request.Context()
-	err := h.LineupService.UpdateLineup(ctx, &lineup)
+	lineup.ID = uint64(id)
+	err = h.LineupService.UpdateLineup(ctx, &lineup)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to update lineup", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 
@@ -91,16 +98,17 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 }
 
 func (h *LineupHandler) DeleteLineup(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	lineupID := c.Param("id")
+	id, err := strconv.ParseUint(lineupID, 10, 8)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid ID", err.Error()), true)
+		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
 		return
 	}
 
 	ctx := c.Request.Context()
-	err = h.LineupService.DeleteLineup(ctx, id)
+	err = h.LineupService.DeleteLineup(ctx, uint64(id))
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete lineup", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 
@@ -121,5 +129,5 @@ func (h *LineupHandler) GetLineupsByMatch(c *gin.Context) {
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, lineups, "Lineups by match retrieved successfully")
+	helper.HandleSuccess(c, http.StatusOK, lineups, "Lineup by match retrieved successfully")
 }

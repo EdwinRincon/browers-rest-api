@@ -6,15 +6,16 @@ import (
 	"gorm.io/gorm"
 )
 
-type Articles struct {
-	ID        uint64         `gorm:"primaryKey" json:"id" form:"id"`
-	Title     string         `gorm:"type:varchar(100);not null" json:"title" form:"title"`
-	Content   string         `gorm:"type:text;not null" json:"content" form:"content"`
-	ImgBanner string         `gorm:"type:varchar(255);not null" json:"img_banner" form:"img_banner"`
-	Date      time.Time      `gorm:"type:date;not null" json:"date" form:"date"`
-	SeasonsID uint8          `gorm:"not null" json:"seasons_id" form:"seasons_id"`
-	Seasons   Seasons        `gorm:"foreignKey:SeasonsID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"seasons" form:"seasons"`
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at" form:"deleted_at"`
+type Article struct {
+	ID        uint      `gorm:"primaryKey" json:"id" form:"id"`
+	Title     string    `gorm:"type:varchar(100);not null;uniqueIndex" json:"title" form:"title" binding:"required,max=100"`
+	Content   string    `gorm:"type:text;not null" json:"content" form:"content" binding:"required"`
+	ImgBanner string    `gorm:"type:varchar(255);default:null" json:"img_banner,omitempty" form:"img_banner" binding:"omitempty,url"`
+	Date      time.Time `gorm:"type:date;not null;index" json:"date" form:"date" binding:"required"`
+	SeasonID  uint      `gorm:"not null;index" json:"season_id" form:"season_id" binding:"required"`
+	Season    *Season   `gorm:"foreignKey:SeasonID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"season,omitempty"`
+
+	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }

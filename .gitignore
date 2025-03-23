@@ -1,28 +1,69 @@
-# Environment variable files
+# Environment and secret files
 *.env
+.env*
+!.env.example
+secrets/
+*.pem
+*.key
 
-# Binaries for programs and plugins
+# Docker
+docker-compose.yml
+docker-compose.override.yml
+
+# Go specific
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Go workspace file
+*.test
+*.out
 go.work
 
-# secrets for yml file
-secrets
+# Binaries and build output
+/bin/
+/build/
 
+# Dependency directories
+/vendor/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
 MOCK_DATA.sql
+docs/
 
-.gitignore
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Version control
+.git/
 .gitattributes
 
-# swagger
-docs
+# CI/CD
+/.github/
 
-# github
-/.github
-
-.vscode
+# Misc
+*.cache
+*.bak
+*.old

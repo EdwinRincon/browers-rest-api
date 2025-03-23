@@ -1,37 +1,39 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+# syntax=docker/dockerfile:1.4
 
-# Install necessary build tools
-RUN apk add --no-cache git
+ARG TARGETARCH
+
+# =========================
+# STAGE 1: Builder
+# =========================
+FROM --platform=$BUILDPLATFORM golang:1.23.1-alpine AS builder
+
+RUN apk add --no-cache git && \
+    apk del --purge git && \
+    rm -rf /var/cache/apk/*
 
 WORKDIR /app
-
-# Copy and download dependencies
 COPY go.mod go.sum ./
 RUN go mod download
-
-# Copy the source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app -ldflags="-w -s" .
+ENV CGO_ENABLED=0
+ARG TARGETARCH
+RUN GOOS=linux GOARCH="$TARGETARCH" go build -ldflags="-s -w" -o /app/app . && \
+    test -f /app/app || exit 1
 
-# Final stage
-FROM alpine:3.18
+# =========================
+# STAGE 2: Production
+# =========================
+FROM --platform=$BUILDPLATFORM alpine:3.19
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup && \
+    rm -rf /var/cache/apk/*
 
-WORKDIR /root/
-
-# Copy the binary from the builder stage
-COPY --from=builder /app/app .
-
-# Set environment variables
-ENV GIN_MODE=release
-ENV TZ=Europe/Madrid
-
-# Expose the application port
+COPY --from=builder /app/app /usr/local/bin/app
+WORKDIR /home/appuser
+ENV GIN_MODE=release TZ=Europe/Madrid
 EXPOSE 5050
+USER appuser
 
-# Run the application
-CMD ["./app"]
+ENTRYPOINT ["/usr/local/bin/app"]

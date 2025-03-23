@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/EdwinRincon/browersfc-api/helper"
@@ -16,13 +15,9 @@ type Date time.Time
 
 const dateFormat = "2006-01-02"
 
-func (d *Date) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	t, err := time.Parse(dateFormat, s)
-	if err != nil {
+func (d *Date) UnmarshalJSON(data []byte) error {
+	var t time.Time
+	if err := json.Unmarshal(data, &t); err != nil {
 		return err
 	}
 	*d = Date(t)
@@ -30,46 +25,74 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 }
 
 func (d Date) MarshalJSON() ([]byte, error) {
-	return json.Marshal(time.Time(d).Format(dateFormat))
+	return json.Marshal(time.Time(d))
 }
 
 func (d Date) Value() (driver.Value, error) {
 	return time.Time(d).Format(dateFormat), nil
 }
 
-func (d *Date) Scan(value interface{}) error {
-	switch v := value.(type) {
+func (d *Date) Scan(v interface{}) error {
+	switch value := v.(type) {
 	case time.Time:
-		*d = Date(v)
+		*d = Date(value)
 		return nil
 	case []byte:
-		t, err := time.Parse(dateFormat, string(v))
+		// Parse the string date from the byte slice
+		t, err := time.Parse(dateFormat, string(value))
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse date from []byte: %w", err)
 		}
 		*d = Date(t)
 		return nil
+	case string:
+		// Handle string values
+		t, err := time.Parse(dateFormat, value)
+		if err != nil {
+			return fmt.Errorf("failed to parse date from string: %w", err)
+		}
+		*d = Date(t)
+		return nil
+	case nil:
+		// Handle NULL values
+		return nil
 	default:
-		return fmt.Errorf("cannot scan type %T into Date", value)
+		return fmt.Errorf("can't scan %T into Date", v)
 	}
 }
 
-type Users struct {
-	ID                  string `gorm:"type:char(36);primaryKey" json:"id"`
-	Name                string `gorm:"type:varchar(35);not null" json:"name" binding:"required"`
-	LastName            string `gorm:"type:varchar(35);not null" json:"lastname" binding:"required"`
-	Username            string `gorm:"type:varchar(15);not null;unique" json:"username" binding:"required"`
-	IsActive            string `gorm:"type:char(1)" json:"is_active" binding:"oneof=S N"`
-	Birthdate           Date   `json:"birthdate" binding:"required" example:"1990-01-01"`
-	ImgProfile          string `gorm:"type:varchar(255)" json:"img_profile"`
-	ImgBanner           string `gorm:"type:varchar(255)" json:"img_banner"`
-	Password            string `gorm:"type:varchar(60);not null" json:"password" binding:"required"`
-	FailedLoginAttempts uint8  `gorm:"default:0" json:"failed_login_attempts"`
-	RolesID             uint8  `json:"roles_id" binding:"required"`
-	Roles               Roles  `gorm:"foreignKey:RolesID;references:ID"` // Definición de la clave foránea
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	DeletedAt           gorm.DeletedAt `gorm:"index" swaggerignore:"true"`
+type User struct {
+	ID                  string         `gorm:"type:char(36);primaryKey" json:"id"`
+	Name                string         `gorm:"type:varchar(35);not null" json:"name" binding:"required"`
+	LastName            string         `gorm:"type:varchar(35);not null" json:"last_name" binding:"required"`
+	Username            string         `gorm:"type:varchar(50);not null;uniqueIndex" json:"username" binding:"required"`
+	IsActive            bool           `gorm:"default:true" json:"is_active"`
+	Birthdate           Date           `json:"birthdate" example:"1990-01-01"`
+	ImgProfile          string         `gorm:"type:varchar(255)" json:"img_profile,omitempty"`
+	ImgBanner           string         `gorm:"type:varchar(255)" json:"img_banner,omitempty"`
+	Password            string         `gorm:"type:varchar(60);not null" json:"-" binding:"required"`
+	FailedLoginAttempts uint8          `gorm:"default:0" json:"-"`
+	RoleID              uint8          `json:"role_id" binding:"required"`
+	Role                Role           `gorm:"foreignKey:RoleID" json:"role,omitempty"`
+	CreatedAt           time.Time      `json:"created_at,omitempty"`
+	UpdatedAt           time.Time      `json:"updated_at,omitempty"`
+	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (user *User) BeforeCreate(tx *gorm.DB) error {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return fmt.Errorf("failed to generate UUID: %w", err)
+	}
+
+	hash, err := helper.HashPassword(user.Password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	user.ID = id.String()
+	user.Password = hash
+	return nil
 }
 
 type UserLogin struct {
@@ -82,52 +105,24 @@ type UserMin struct {
 	Username string `json:"username"`
 }
 
-// UUID v4 Generator
-func generateUUID() (string, error) {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return "", err
-	}
-	return id.String(), nil
-}
-
-func (user *Users) BeforeCreate(tx *gorm.DB) (err error) {
-	id, err := generateUUID()
-	if err != nil {
-		return err
-	}
-
-	hash, err := helper.HashPassword(user.Password)
-	if err != nil {
-		log.Println("Error hashing password:", err)
-		return err // Cambié log.Println por return
-	}
-
-	user.ID = id
-	user.Password = hash
-	return nil
-}
-
-// Use this struct to get a user without sensitive information
-type UsersResponse struct {
+type UserResponse struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	LastName   string `json:"last_name"`
 	Username   string `json:"username"`
-	IsActive   string `json:"is_active"`
+	IsActive   bool   `json:"is_active"`
 	Birthdate  Date   `json:"birthdate"`
-	ImgProfile string `json:"img_profile"`
-	ImgBanner  string `json:"img_banner"`
+	ImgProfile string `json:"img_profile,omitempty"`
+	ImgBanner  string `json:"img_banner,omitempty"`
 	RoleName   string `json:"role_name"`
 }
 
-// Use this struct to update a user
 type UserUpdate struct {
 	Name       *string `json:"name,omitempty"`
-	LastName   *string `json:"lastname,omitempty"`
+	LastName   *string `json:"last_name,omitempty"`
 	Username   *string `json:"username,omitempty"`
 	Birthdate  *Date   `json:"birthdate,omitempty"`
-	IsActive   *string `json:"is_active,omitempty"`
+	IsActive   *bool   `json:"is_active,omitempty"`
 	ImgProfile *string `json:"img_profile,omitempty"`
 	ImgBanner  *string `json:"img_banner,omitempty"`
 }

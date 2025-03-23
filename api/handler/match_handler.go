@@ -22,16 +22,16 @@ func NewMatchHandler(matchService service.MatchService) *MatchHandler {
 }
 
 func (h *MatchHandler) CreateMatch(c *gin.Context) {
-	var match model.Matches
+	var match model.Match
 	if err := c.ShouldBindJSON(&match); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
+		helper.HandleValidationError(c, err)
 		return
 	}
 
 	ctx := c.Request.Context()
 	err := h.MatchService.CreateMatch(ctx, &match)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create match", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 
@@ -39,7 +39,8 @@ func (h *MatchHandler) CreateMatch(c *gin.Context) {
 }
 
 func (h *MatchHandler) GetMatchByID(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	matchID := c.Param("id")
+	id, err := strconv.ParseUint(matchID, 10, 64)
 	if err != nil {
 		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidMatchID, err.Error()), true)
 		return
@@ -48,11 +49,11 @@ func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	match, err := h.MatchService.GetMatchByID(ctx, id)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrMatchNotFound.Error(), ""), false)
+		helper.HandleGormError(c, err)
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, match, "Match retrieved successfully")
+	helper.HandleSuccess(c, http.StatusOK, match, "Match found successfully")
 }
 
 func (h *MatchHandler) ListMatches(c *gin.Context) {
@@ -75,27 +76,28 @@ func (h *MatchHandler) ListMatches(c *gin.Context) {
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, matches, "Matches listed successfully")
+	helper.HandleSuccess(c, http.StatusOK, matches, "Match listed successfully")
 }
 
 func (h *MatchHandler) UpdateMatch(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	matchID := c.Param("id")
+	id, err := strconv.ParseUint(matchID, 10, 64)
 	if err != nil {
 		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidMatchID, err.Error()), true)
 		return
 	}
 
-	var match model.Matches
+	var match model.Match
 	if err := c.ShouldBindJSON(&match); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidInput, err.Error()), true)
+		helper.HandleValidationError(c, err)
 		return
 	}
-	match.ID = id
 
 	ctx := c.Request.Context()
+	match.ID = id
 	err = h.MatchService.UpdateMatch(ctx, &match)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to update match", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 
@@ -103,7 +105,8 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 }
 
 func (h *MatchHandler) DeleteMatch(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	matchID := c.Param("id")
+	id, err := strconv.ParseUint(matchID, 10, 64)
 	if err != nil {
 		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, constants.ErrInvalidMatchID, err.Error()), true)
 		return
@@ -112,7 +115,7 @@ func (h *MatchHandler) DeleteMatch(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = h.MatchService.DeleteMatch(ctx, id)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to delete match", err.Error()), true)
+		helper.HandleGormError(c, err)
 		return
 	}
 

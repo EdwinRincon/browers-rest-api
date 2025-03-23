@@ -8,10 +8,10 @@ import (
 )
 
 type TeamService interface {
-	CreateTeam(ctx context.Context, team *model.Teams) error
-	GetTeamByID(ctx context.Context, id uint64) (*model.Teams, error)
-	ListTeams(ctx context.Context, page uint64) ([]*model.Teams, error)
-	UpdateTeam(ctx context.Context, team *model.Teams) error
+	CreateTeam(ctx context.Context, team *model.Team) error
+	GetTeamByID(ctx context.Context, id uint64) (*model.Team, error)
+	ListTeams(ctx context.Context, page uint64) ([]*model.Team, error)
+	UpdateTeam(ctx context.Context, team *model.Team) error
 	DeleteTeam(ctx context.Context, id uint64) error
 }
 
@@ -25,19 +25,19 @@ func NewTeamService(teamRepo repository.TeamRepository) TeamService {
 	}
 }
 
-func (s *teamService) CreateTeam(ctx context.Context, team *model.Teams) error {
+func (s *teamService) CreateTeam(ctx context.Context, team *model.Team) error {
 	return s.TeamRepository.CreateTeam(ctx, team)
 }
 
-func (s *teamService) GetTeamByID(ctx context.Context, id uint64) (*model.Teams, error) {
+func (s *teamService) GetTeamByID(ctx context.Context, id uint64) (*model.Team, error) {
 	return s.TeamRepository.GetTeamByID(ctx, id)
 }
 
-func (s *teamService) ListTeams(ctx context.Context, page uint64) ([]*model.Teams, error) {
+func (s *teamService) ListTeams(ctx context.Context, page uint64) ([]*model.Team, error) {
 	return s.TeamRepository.ListTeams(ctx, page)
 }
 
-func (s *teamService) UpdateTeam(ctx context.Context, team *model.Teams) error {
+func (s *teamService) UpdateTeam(ctx context.Context, team *model.Team) error {
 	return s.TeamRepository.UpdateTeam(ctx, team)
 }
 

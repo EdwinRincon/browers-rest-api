@@ -8,12 +8,13 @@ import (
 )
 
 func InitializeArticleRoutes(r *gin.Engine, articleHandler *handler.ArticleHandler) {
+	r.Use(middleware.CORSMiddleware())
 	r.Use(middleware.SecurityHeadersMiddleware())
 	api := r.Group(constants.APIBasePath)
 	{
 		articles := api.Group("/articles")
 		{
-			articles.GET("", articleHandler.ListArticles)
+			articles.GET("", articleHandler.GetAllArticles)
 			articles.GET("/:id", articleHandler.GetArticleByID)
 			articles.Use(middleware.JwtAuthMiddleware())
 			articles.Use(middleware.RBACMiddleware(constants.RoleAdmin))
