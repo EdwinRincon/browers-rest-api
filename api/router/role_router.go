@@ -15,18 +15,14 @@ func InitializeRoleRoutes(r *gin.Engine, roleHandler *handler.RoleHandler) {
 		roles := api.Group("/roles")
 		{
 			roles.Use(middleware.JwtAuthMiddleware())
-			// Rutas accesibles por todos los usuarios autenticados
-			roles.GET("/:id", roleHandler.GetRoleByID)
-			roles.GET("", roleHandler.GetAllRoles)
-
-			// Rutas accesibles solo por administradores
-			roles.Use(middleware.RBACMiddleware(constants.RoleAdmin)) // Ensure this is applied before sensitive routes
+			roles.Use(middleware.RBACMiddleware(constants.RoleAdmin))
 			{
 				roles.POST("", roleHandler.CreateRole)
 				roles.PUT("/:id", roleHandler.UpdateRole)
-				roles.DELETE("/:id", roleHandler.DeleteRole) // This should be protected
+				roles.DELETE("/:id", roleHandler.DeleteRole)
+				roles.GET("/:id", roleHandler.GetRoleByID)
+				roles.GET("", roleHandler.GetAllRoles)
 			}
-
 		}
 	}
 }

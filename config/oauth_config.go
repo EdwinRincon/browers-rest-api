@@ -24,7 +24,15 @@ type PKCEParams struct {
 
 func InitOAuth() error {
 	clientID := os.Getenv("OAUTH_CLIENT_ID")
-	clientSecret := os.Getenv("OAUTH_CLIENT_SECRET")
+	clientSecretFile := os.Getenv("OAUTH_CLIENT_SECRET_FILE")
+	var clientSecret string
+	if clientSecretFile != "" {
+		secretBytes, err := os.ReadFile(clientSecretFile)
+		if err != nil {
+			return errors.New("failed to read OAuth client secret file: " + err.Error())
+		}
+		clientSecret = string(secretBytes)
+	}
 	redirectURL := os.Getenv("OAUTH_REDIRECT_URL")
 
 	if clientID == "" || clientSecret == "" || redirectURL == "" {
@@ -38,7 +46,6 @@ func InitOAuth() error {
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
-			"openid",
 		},
 		Endpoint: google.Endpoint,
 	}
@@ -47,7 +54,7 @@ func InitOAuth() error {
 }
 
 func GeneratePKCE() (*PKCEParams, error) {
-	verifier, err := generateRandomString(32)
+	verifier, err := generateRandomString(43)
 	if err != nil {
 		return nil, err
 	}

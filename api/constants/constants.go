@@ -1,12 +1,14 @@
 package constants
 
-import "errors"
+import (
+	"errors"
+)
 
 // User Roles
 const (
-	RoleAdmin  = "Admin"
-	RolePlayer = "Player"
-	RoleCoach  = "Coach"
+	RoleAdmin   = "admin"
+	RolePlayer  = "player"
+	RoleDefault = "fan"
 )
 
 // Pagination
@@ -15,14 +17,25 @@ const (
 )
 
 // Error Variables
-var ErrUserNotFound = errors.New("user not found")
-var ErrArticleNotFound = errors.New("article not found")
-var ErrPlayerNotFound = errors.New("player not found")
-var ErrRoleNotFound = errors.New("role not found")
-var ErrTeamNotFound = errors.New("team not found")
-var ErrMatchNotFound = errors.New("match not found")
-var ErrSeasonNotFound = errors.New("season not found")
-var ErrClassificationNotFound = errors.New("classification not found")
+var (
+	ErrUserNotFound           = errors.New("user not found")
+	ErrArticleNotFound        = errors.New("article not found")
+	ErrPlayerNotFound         = errors.New("player not found")
+	ErrRoleNotFound           = errors.New("role not found")
+	ErrTeamNotFound           = errors.New("team not found")
+	ErrMatchNotFound          = errors.New("match not found")
+	ErrSeasonNotFound         = errors.New("season not found")
+	ErrClassificationNotFound = errors.New("classification not found")
+	ErrLineupNotFound         = errors.New("lineup not found")
+	ErrTeamStatsNotFound      = errors.New("team stats not found")
+
+	ErrInvalidUUID        = errors.New("invalid UUID")
+	ErrTimezoneLoad       = errors.New("failed to load location")
+	ErrUserUpdate         = errors.New("failed to update user")
+	ErrUserDelete         = errors.New("failed to delete user")
+	ErrCreateUser         = errors.New("failed to create user")
+	ErrDuplicatedUsername = errors.New("duplicated username")
+)
 
 // Common Error Messages
 const (

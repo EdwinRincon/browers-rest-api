@@ -18,7 +18,7 @@ type Match struct {
 	HomeTeam    *Team     `gorm:"foreignKey:HomeTeamID" json:"home_team,omitempty" form:"home_team"`
 	AwayTeamID  uint64    `gorm:"index;not null" json:"away_team_id" form:"away_team_id" binding:"required"`
 	AwayTeam    *Team     `gorm:"foreignKey:AwayTeamID" json:"away_team,omitempty" form:"away_team"`
-	Lineups     []Lineup  `gorm:"foreignKey:MatchID" json:"lineups,omitempty" form:"lineups"`
+	Lineups     []Lineup  `gorm:"foreignKey:MatchID" json:"lineups,omitempty" form:"lineups" swaggerignore:"true"`
 	SeasonID    uint      `gorm:"index;not null" json:"season_id" form:"season_id" binding:"required"`
 	Season      *Season   `gorm:"foreignKey:SeasonID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"season,omitempty" form:"season"`
 	MVPPlayerID *uint64   `gorm:"index" json:"mvp_player_id" form:"mvp_player_id"`
@@ -26,5 +26,5 @@ type Match struct {
 
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" form:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" form:"-" swaggerignore:"true"`
 }

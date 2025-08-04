@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
-
-var ErrTeamNotFound = errors.New("team not found")
 
 type TeamRepository interface {
 	CreateTeam(ctx context.Context, team *model.Team) error
@@ -35,7 +34,7 @@ func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*mode
 	err := tr.db.WithContext(ctx).First(&team, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTeamNotFound
+			return nil, constants.ErrTeamNotFound
 		}
 		return nil, err
 	}
@@ -58,7 +57,7 @@ func (tr *TeamRepositoryImpl) UpdateTeam(ctx context.Context, team *model.Team) 
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrTeamNotFound
+		return constants.ErrTeamNotFound
 	}
 	return nil
 }
@@ -69,7 +68,7 @@ func (tr *TeamRepositoryImpl) DeleteTeam(ctx context.Context, id uint64) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrTeamNotFound
+		return constants.ErrTeamNotFound
 	}
 	return nil
 }

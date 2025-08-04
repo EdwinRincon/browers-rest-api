@@ -3,12 +3,13 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
-
-var ErrArticleNotFound = errors.New("article not found")
 
 type ArticleRepository interface {
 	CreateArticle(ctx context.Context, article *model.Article) error
@@ -32,19 +33,38 @@ func (ar *ArticleRepositoryImpl) CreateArticle(ctx context.Context, article *mod
 
 func (ar *ArticleRepositoryImpl) GetArticleByID(ctx context.Context, id uint64) (*model.Article, error) {
 	var article model.Article
-	err := ar.db.WithContext(ctx).Preload("Season").First(&article, id).Error
+	err := ar.db.WithContext(ctx).
+		Preload("Season").
+		First(&article, id).
+		Error
+
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrArticleNotFound
+			return nil, constants.ErrArticleNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get article: %w", err)
 	}
 	return &article, nil
 }
 
 func (ar *ArticleRepositoryImpl) GetAllArticles(ctx context.Context, page, pageSize uint64) ([]*model.Article, error) {
-	var articles []*model.Article
+	if page < 1 {
+		page = 1
+	}
+	if pageSize == 0 {
+		pageSize = 25 // Default page size
+	}
+	if pageSize > 100 {
+		pageSize = 100 // Maximum page size
+	}
+
 	offset := (page - 1) * pageSize
+	// Guard against integer overflow
+	if offset > math.MaxInt32 || pageSize > math.MaxInt32 {
+		return nil, fmt.Errorf("pagination parameters too large")
+	}
+
+	var articles []*model.Article
 	err := ar.db.WithContext(ctx).
 		Order("date DESC").
 		Offset(int(offset)).
@@ -62,7 +82,7 @@ func (ar *ArticleRepositoryImpl) UpdateArticle(ctx context.Context, article *mod
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrArticleNotFound
+		return constants.ErrArticleNotFound
 	}
 	return nil
 }
@@ -73,7 +93,7 @@ func (ar *ArticleRepositoryImpl) DeleteArticle(ctx context.Context, id uint64) e
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrArticleNotFound
+		return constants.ErrArticleNotFound
 	}
 	return nil
 }

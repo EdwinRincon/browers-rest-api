@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
 )
@@ -12,7 +13,7 @@ type UserService interface {
 	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
 	ListUsers(ctx context.Context, page uint64) ([]*model.UserResponse, error)
 	UpdateUser(ctx context.Context, userUpdate *model.UserUpdate, userID string) (*model.UserMin, error)
-	DeleteUser(ctx context.Context, username string) error
+	DeleteUser(ctx context.Context, id string) error
 }
 
 type userService struct {
@@ -44,7 +45,7 @@ func (s *userService) UpdateUser(ctx context.Context, userUpdate *model.UserUpda
 		return nil, err
 	}
 	if user == nil {
-		return nil, repository.ErrUserNotFound
+		return nil, constants.ErrUserNotFound
 	}
 
 	// Actualizar solo los campos que no son nil

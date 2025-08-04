@@ -19,7 +19,7 @@ func InitializePlayerRoutes(r *gin.Engine, playerHandler *handler.PlayerHandler)
 			players.GET("", playerHandler.GetAllPlayers)
 			players.GET("/:id", playerHandler.GetPlayerByID)
 
-			players.Use(middleware.RBACMiddleware(constants.RoleAdmin, constants.RoleCoach))
+			players.Use(middleware.RBACMiddleware(constants.RoleAdmin))
 			{
 				players.POST("", playerHandler.CreatePlayer)
 				players.PUT("/:id", playerHandler.UpdatePlayer)

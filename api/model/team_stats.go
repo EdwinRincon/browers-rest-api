@@ -21,5 +21,5 @@ type TeamStat struct {
 	Season       *Season        `gorm:"foreignKey:SeasonID" json:"season,omitempty"`
 	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`
 }

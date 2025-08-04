@@ -16,5 +16,5 @@ type Lineup struct {
 	Starting  bool           `gorm:"default:false" json:"starting" form:"starting"`
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" form:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" form:"-" swaggerignore:"true"`
 }

@@ -12,11 +12,11 @@ type Season struct {
 	StartDate   time.Time      `gorm:"not null" json:"start_date"`
 	EndDate     time.Time      `gorm:"not null" json:"end_date"`
 	IsCurrent   bool           `gorm:"default:false" json:"is_current"`
-	Matches     []Match        `gorm:"foreignKey:SeasonID" json:"matches"`
-	Articles    []Article      `gorm:"foreignKey:SeasonID" json:"articles"`
-	TeamStats   []TeamStat     `gorm:"foreignKey:SeasonID" json:"team_stats"`
-	PlayerTeams []PlayerTeam   `gorm:"foreignKey:SeasonID" json:"player_teams"`
+	Matches     []Match        `gorm:"foreignKey:SeasonID" json:"matches" swaggerignore:"true"`
+	Articles    []Article      `gorm:"foreignKey:SeasonID" json:"articles" swaggerignore:"true"`
+	TeamStats   []TeamStat     `gorm:"foreignKey:SeasonID" json:"team_stats" swaggerignore:"true"`
+	PlayerTeams []PlayerTeam   `gorm:"foreignKey:SeasonID" json:"player_teams" swaggerignore:"true"`
 	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`
 }

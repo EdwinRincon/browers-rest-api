@@ -4,87 +4,108 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-var ErrUserNotFound = errors.New("user not found")
+// init initializes the Europe/Madrid timezone.
+var defaultTimezone = os.Getenv("DEFAULT_TIMEZONE")
+var europeMadrid *time.Location
 
+func init() {
+	var err error
+	if defaultTimezone == "" {
+		defaultTimezone = "Europe/Madrid"
+	}
+	europeMadrid, err = time.LoadLocation(defaultTimezone)
+	if err != nil {
+		// Fallback to UTC if the timezone cannot be loaded
+		slog.Error("failed to load timezone, falling back to UTC", "timezone", defaultTimezone, "error", err)
+		europeMadrid = time.UTC
+	}
+}
+
+// UserRepository defines the interface for user data access.
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *model.User) (*model.UserMin, error)
 	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
 	GetUserByID(ctx context.Context, id string) (*model.User, error)
 	ListUsers(ctx context.Context, page uint64) ([]*model.UserResponse, error)
 	UpdateUser(ctx context.Context, user *model.User) (*model.UserMin, error)
-	UpdateLoginAttemps(ctx context.Context, user *model.User) (*model.UserMin, error)
-	DeleteUser(ctx context.Context, username string) error
+	DeleteUser(ctx context.Context, id string) error
 }
 
+// UserRepositoryImpl implements the UserRepository interface using GORM.
 type UserRepositoryImpl struct {
 	db *gorm.DB
 }
 
+// NewUserRepository creates a new UserRepository instance.
 func NewUserRepository(db *gorm.DB) UserRepository {
 	return &UserRepositoryImpl{db: db}
 }
 
+// GetUserByUsername retrieves a user by their username, preloading the Role.
 func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username string) (*model.User, error) {
 	var user model.User
-
-	// Buscar al usuario por nombre de usuario y cargar el rol relacionado
 	result := ur.db.WithContext(ctx).Preload("Role").Unscoped().Where("username = ?", username).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// No se encontró el usuario, retorna nil y nil como error
-			return nil, nil
-		}
-		// Ocurrió un error en la consulta, retorna el error
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, constants.ErrUserNotFound
+	} else if result.Error != nil {
 		return nil, result.Error
 	}
-
-	// Usuario encontrado, retorna el usuario y nil como error
 	return &user, nil
 }
 
+// GetUserByID retrieves a user by their ID, preloading the Role.
 func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*model.User, error) {
 	var user model.User
 	result := ur.db.WithContext(ctx).Preload("Role").Unscoped().Where("id = ?", id).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, ErrUserNotFound
-		}
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, constants.ErrUserNotFound
+	} else if result.Error != nil {
 		return nil, result.Error
 	}
 	return &user, nil
 }
 
+// ListUsers retrieves a paginated list of users with their roles.
 func (ur *UserRepositoryImpl) ListUsers(ctx context.Context, page uint64) ([]*model.UserResponse, error) {
+	pageSize := 10
+	if page == 0 {
+		page = 1
+	}
+	offset := int((page - 1) * uint64(pageSize))
 	var users []*model.UserResponse
-
-	query := ur.db.Table("users").
+	query := ur.db.WithContext(ctx).Table("users").
 		Select("users.id, users.name, users.last_name, users.username, users.birthdate, users.is_active, users.img_profile, users.img_banner, roles.name AS role_name").
-		Joins("left join roles on users.roles_id = roles.id").
-		Limit(10).
-		Offset(int((page - 1) * 10)).
+		Joins("left join roles on users.role_id = roles.id").
+		Limit(pageSize).
+		Offset(offset).
 		Scan(&users)
 
 	if query.Error != nil {
 		return nil, query.Error
 	}
-	if len(users) == 0 {
-		return []*model.UserResponse{}, nil
-	}
+	// No need to check for empty slice; return the (possibly empty) slice.
 
 	return users, nil
 }
 
+// CreateUser creates a new user in the database.  Returns specific errors.
 func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.User) (*model.UserMin, error) {
 	err := ur.db.WithContext(ctx).Create(user).Error
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrDuplicatedKey) { // Check for *specific* GORM error
+			return nil, constants.ErrDuplicatedUsername
+		}
+		return nil, fmt.Errorf("%w: %v", constants.ErrCreateUser, err) // Wrap the original error
 	}
 
 	userResponse := &model.UserMin{
@@ -95,68 +116,60 @@ func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.User) 
 	return userResponse, nil
 }
 
+// UpdateUser updates an existing user's information.
 func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, user *model.User) (*model.UserMin, error) {
-	err := ur.db.WithContext(ctx).Model(user).Updates(user).Error
-	if err != nil {
-		return nil, err
-	}
-
-	userResponse := &model.UserMin{
-		ID:       user.ID,
-		Username: user.Username,
-	}
-
-	return userResponse, nil
-}
-
-func (ur *UserRepositoryImpl) UpdateLoginAttemps(ctx context.Context, user *model.User) (*model.UserMin, error) {
-	// Actualizar solo el campo FailedLoginAttempts
-	err := ur.db.WithContext(ctx).Model(user).Update("failed_login_attempts", user.FailedLoginAttempts).Error
-	if err != nil {
-		return nil, err
-	}
-
-	userResponse := &model.UserMin{
-		ID:       user.ID,
-		Username: user.Username,
-	}
-
-	return userResponse, nil
-}
-
-func (ur *UserRepositoryImpl) DeleteUser(ctx context.Context, id string) error {
-	// Validate the UUID
-	if _, err := uuid.Parse(id); err != nil {
-		return fmt.Errorf("invalid UUID: %w", err)
-	}
-
-	// Load the location for Europe/Madrid
-	location, err := time.LoadLocation("Europe/Madrid")
-	if err != nil {
-		return fmt.Errorf("failed to load location: %w", err)
-	}
-
-	// Get the current time in the Europe/Madrid timezone
-	nowLocal := time.Now().In(location)
-
-	// Prepare the update map with the current time
+	// Only update specific fields to avoid updating relationships
 	updateFields := map[string]interface{}{
-		"is_active":  "N",
+		"name":        user.Name,
+		"last_name":   user.LastName,
+		"username":    user.Username,
+		"is_active":   user.IsActive,
+		"birthdate":   user.Birthdate,
+		"img_profile": user.ImgProfile,
+		"img_banner":  user.ImgBanner,
+	}
+
+	result := ur.db.WithContext(ctx).Model(user).Updates(updateFields)
+	if result.Error != nil {
+		return nil, fmt.Errorf("%w: %v", constants.ErrUserUpdate, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, constants.ErrUserNotFound
+	}
+
+	userResponse := &model.UserMin{
+		ID:       user.ID,
+		Username: user.Username,
+	}
+
+	return userResponse, nil
+}
+
+// DeleteUser soft-deletes a user by setting their is_active to false and deleted_at to the current time.
+func (ur *UserRepositoryImpl) DeleteUser(ctx context.Context, id string) error {
+	_, err := uuid.Parse(id)
+	if err != nil {
+		return fmt.Errorf("%w: %v", constants.ErrInvalidUUID, err) // Wrap original error for context
+	}
+
+	nowLocal := time.Now().In(europeMadrid) // Use preloaded timezone
+
+	updateFields := map[string]interface{}{
+		"is_active":  false,
 		"deleted_at": gorm.DeletedAt{Time: nowLocal, Valid: true},
 	}
 
-	// Perform the update operation
 	result := ur.db.WithContext(ctx).
 		Model(&model.User{}).
 		Where("id = ?", id).
 		Updates(updateFields)
 
 	if result.Error != nil {
-		return fmt.Errorf("failed to delete user: %w", result.Error)
+		return fmt.Errorf("%w: %v", constants.ErrUserDelete, result.Error) // Wrap the original error
 	}
 
 	if result.RowsAffected == 0 {
-		return ErrUserNotFound
+		return constants.ErrUserNotFound
 	}
 
 	return nil

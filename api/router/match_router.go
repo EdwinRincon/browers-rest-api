@@ -14,12 +14,12 @@ func InitializeMatchRoutes(r *gin.Engine, matchHandler *handler.MatchHandler) {
 	{
 		matches := api.Group("/matches")
 		{
-			matches.Use(middleware.JwtAuthMiddleware())
-
 			matches.GET("", matchHandler.ListMatches)
+
+			matches.Use(middleware.JwtAuthMiddleware())
 			matches.GET("/:id", matchHandler.GetMatchByID)
 
-			matches.Use(middleware.RBACMiddleware(constants.RoleAdmin, constants.RoleCoach))
+			matches.Use(middleware.RBACMiddleware(constants.RoleAdmin))
 			{
 				matches.POST("", matchHandler.CreateMatch)
 				matches.PUT("/:id", matchHandler.UpdateMatch)

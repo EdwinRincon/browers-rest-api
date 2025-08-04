@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
-
-var ErrLineupNotFound = errors.New("lineup not found")
 
 type LineupRepository interface {
 	CreateLineup(ctx context.Context, lineup *model.Lineup) error
@@ -36,7 +35,7 @@ func (r *LineupRepositoryImpl) GetLineupByID(ctx context.Context, id uint64) (*m
 	err := r.db.WithContext(ctx).Preload("Player").Preload("Match").First(&lineup, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrLineupNotFound
+			return nil, constants.ErrLineupNotFound
 		}
 		return nil, err
 	}
@@ -69,7 +68,7 @@ func (r *LineupRepositoryImpl) UpdateLineup(ctx context.Context, lineup *model.L
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrLineupNotFound
+		return constants.ErrLineupNotFound
 	}
 	return nil
 }
@@ -80,7 +79,7 @@ func (r *LineupRepositoryImpl) DeleteLineup(ctx context.Context, id uint64) erro
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrLineupNotFound
+		return constants.ErrLineupNotFound
 	}
 	return nil
 }

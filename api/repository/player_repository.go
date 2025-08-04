@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
-
-var ErrPlayerNotFound = errors.New("player not found")
 
 type PlayerRepository interface {
 	CreatePlayer(ctx context.Context, player *model.Player) error
@@ -35,7 +34,7 @@ func (pr *PlayerRepositoryImpl) GetPlayerByID(ctx context.Context, id uint64) (*
 	err := pr.db.WithContext(ctx).First(&player, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrPlayerNotFound
+			return nil, constants.ErrPlayerNotFound
 		}
 		return nil, err
 	}
@@ -58,7 +57,7 @@ func (pr *PlayerRepositoryImpl) UpdatePlayer(ctx context.Context, player *model.
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrPlayerNotFound
+		return constants.ErrPlayerNotFound
 	}
 	return nil
 }
@@ -69,7 +68,7 @@ func (pr *PlayerRepositoryImpl) DeletePlayer(ctx context.Context, id uint64) err
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrPlayerNotFound
+		return constants.ErrPlayerNotFound
 	}
 	return nil
 }

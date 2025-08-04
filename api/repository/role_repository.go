@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
 
-var ErrRoleNotFound = errors.New("role not found")
-
 type RoleRepository interface {
 	GetRoleByID(ctx context.Context, id uint8) (*model.Role, error)
+	GetRoleByName(ctx context.Context, name string) (*model.Role, error)
 	CreateRole(ctx context.Context, role *model.Role) error
 	UpdateRole(ctx context.Context, role *model.Role) error
 	DeleteRole(ctx context.Context, id uint8) error
@@ -24,6 +24,17 @@ type RoleRepositoryImpl struct {
 
 func NewRoleRepository(db *gorm.DB) RoleRepository {
 	return &RoleRepositoryImpl{db: db}
+}
+
+func (rr *RoleRepositoryImpl) GetRoleByName(ctx context.Context, name string) (*model.Role, error) {
+	var role model.Role
+	if err := rr.db.WithContext(ctx).Where("name = ?", name).First(&role).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, constants.ErrRoleNotFound
+		}
+		return nil, err
+	}
+	return &role, nil
 }
 
 func (rr *RoleRepositoryImpl) GetRoleByID(ctx context.Context, id uint8) (*model.Role, error) {

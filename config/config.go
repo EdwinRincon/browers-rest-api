@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// Devuelvo el contenido del archivo como string
+// getSecretFromFile reads and returns the content of a secret file as a string
 func getSecretFromFile(filePath string) (string, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -14,7 +14,7 @@ func getSecretFromFile(filePath string) (string, error) {
 	return string(data), nil
 }
 
-// Devuevlo el contenido del archivo como bytes
+// getSecretBytesFromFile reads and returns the content of a secret file as bytes
 func getSecretBytesFromFile(filePath string) ([]byte, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {

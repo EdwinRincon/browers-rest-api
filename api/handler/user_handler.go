@@ -4,100 +4,376 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
+	"log/slog"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/api/auth"
+	"gorm.io/gorm"
+
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
 
+// UserHandler handles user-related HTTP requests.
 type UserHandler struct {
-	AuthService service.AuthService
-	UserService service.UserService
+	AuthService  service.AuthService
+	UserService  service.UserService
+	RoleService  service.RoleService
+	googleClient *http.Client // Pre-initialized Google API client for OAuth.
 }
 
-func NewUserHandler(authService service.AuthService, userService service.UserService) *UserHandler {
+// GoogleUserInfo represents the user information returned by the Google API.
+type GoogleUserInfo struct {
+	Email      string `json:"email"`
+	Name       string `json:"name"`
+	Picture    string `json:"picture"`
+	FamilyName string `json:"family_name"`
+}
+
+// NewUserHandler creates a new UserHandler with a pre-configured HTTP client.
+func NewUserHandler(authService service.AuthService, userService service.UserService, roleService service.RoleService) *UserHandler {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
+		},
+	}
+
 	return &UserHandler{
-		AuthService: authService,
-		UserService: userService,
+		AuthService:  authService,
+		UserService:  userService,
+		RoleService:  roleService,
+		googleClient: client,
 	}
 }
 
-// LoginUser is a handler function to login a user
-func (h *UserHandler) Login(c *gin.Context) {
-	var user model.UserLogin
-	if err := c.ShouldBindJSON(&user); err != nil {
-		helper.HandleValidationError(c, err)
-		return
+// setAuthenticationResponse generates a JWT token and sets it in the response headers and cookies.
+func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *model.User) {
+	roleName := ""
+	if user.Role != nil {
+		roleName = user.Role.Name
 	}
-
-	// Verificar credenciales usando AuthService
-	ctx := c.Request.Context()
-	token, err := h.AuthService.Authenticate(ctx, user.Username, user.Password)
+	jwtToken, err := h.AuthService.GenerateToken(user.Username, roleName)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Invalid username or password", err.Error()), false)
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
-	// Configurar encabezado Authorization
-	c.Header("Authorization", "Bearer "+token)
+	authUserResponse := model.AuthUserResponse{
+		ID:         user.ID,
+		Name:       user.Name,
+		LastName:   user.LastName,
+		Username:   user.Username,
+		ImgProfile: user.ImgProfile,
+		RoleName:   roleName,
+	}
 
-	// Configurar cookie
-	c.SetCookie("token", token, 3600, "/", "", true, true)
+	c.Header("Authorization", "Bearer "+jwtToken)
+	auth.SetSecureCookie(c, "token", jwtToken, int(time.Hour/time.Second))
 
-	helper.HandleSuccess(c, http.StatusOK, gin.H{"token": token}, "User logged in successfully")
+	helper.HandleSuccess(c, http.StatusOK, gin.H{
+		"token": jwtToken,
+		"user":  authUserResponse,
+	}, "User logged in successfully")
+}
+
+// fetchGoogleUserInfo retrieves user information from Google using the provided OAuth2 token.
+func (h *UserHandler) fetchGoogleUserInfo(ctx context.Context, token *oauth2.Token) (*GoogleUserInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://www.googleapis.com/oauth2/v3/userinfo", nil)
+	if err != nil {
+		return nil, err
+	}
+	token.SetAuthHeader(req)
+
+	resp, err := h.googleClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("Google API error: " + resp.Status)
+	}
+
+	var googleUser GoogleUserInfo
+	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
+		return nil, err
+	}
+
+	return &googleUser, nil
+}
+
+// exchangeCodeForToken exchanges the authorization code for an OAuth2 token.
+func (h *UserHandler) exchangeCodeForToken(c *gin.Context) (*oauth2.Token, error) {
+	code := c.Query("code")
+	pkceParams := c.MustGet("pkce_params").(*config.PKCEParams)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	token, err := config.OAuthConfig.Exchange(ctx, code,
+		oauth2.SetAuthURLParam("code_verifier", pkceParams.Verifier))
+	if err != nil {
+		slog.Error("code exchange failed", "error", err)
+		return nil, err
+	}
+
+	if !token.Valid() {
+		return nil, errors.New("invalid token received")
+	}
+
+	return token, nil
+}
+
+// validateOAuthState validates the OAuth state parameter and retrieves PKCE parameters.
+func (h *UserHandler) validateOAuthState(c *gin.Context) bool {
+	state := c.Query("state")
+	storedState, _ := c.Cookie("oauth_state")
+
+	slog.Info("oauth state validation", "query", state, "cookie", storedState)
+
+	if state == "" || state != storedState {
+		slog.Error("invalid oauth state")
+		helper.RespondWithError(c, helper.Unauthorized("Invalid OAuth state"))
+		return false
+	}
+
+	pkceParams, ok := config.GetAndDeletePKCE(state)
+	if !ok {
+		slog.Error("pkce parameters not found")
+		helper.RespondWithError(c, helper.Unauthorized("Invalid request"))
+		return false
+	}
+
+	// Clear the state cookie immediately after successful validation
+	//TODO: modify the cookie to be secure and HttpOnly when in production
+	c.SetCookie("oauth_state", "", -1, "/", "", false, true)
+	c.Set("pkce_params", pkceParams)
+	return true
+}
+
+// performGoogleOAuth orchestrates the OAuth flow: state validation, token exchange, and user info retrieval.
+func (h *UserHandler) performGoogleOAuth(c *gin.Context) (*GoogleUserInfo, error) {
+	if !h.validateOAuthState(c) {
+		return nil, errors.New("invalid OAuth state")
+	}
+
+	token, err := h.exchangeCodeForToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return h.fetchGoogleUserInfo(c.Request.Context(), token)
+}
+
+// GoogleCallback godoc
+// @Summary      Google OAuth2 callback
+// @Description  Handles the OAuth2 callback from Google and logs in or registers the user
+// @Tags         users
+// @ID           googleCallback
+// @Produce      json
+// @Success      200  {object}  model.UserResponse "Successful authentication and user data"
+// @Failure      401  {object}  helper.AppError "Authentication failed or invalid state"
+// @Failure      500  {object}  helper.AppError "Internal server error"
+// @Router       /users/auth/google/callback [get]
+func (h *UserHandler) GoogleCallback(c *gin.Context) {
+	googleUser, err := h.performGoogleOAuth(c)
+	if err != nil {
+		slog.Error("google oauth failed", "error", err)
+		helper.RespondWithError(c, helper.Unauthorized("Authentication failed"))
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, err := h.UserService.GetUserByUsername(ctx, googleUser.Email)
+	if err != nil && !errors.Is(err, constants.ErrUserNotFound) {
+		helper.RespondWithError(c, helper.InternalError(err))
+		return
+	}
+
+	if user == nil {
+		// Validate email domain
+		if !auth.ValidateEmailDomain(googleUser.Email) {
+			helper.RespondWithError(c, helper.StatusForbidden("Email domain not allowed"))
+			return
+		}
+
+		// Note: Rate limiting for new accounts is now handled by middleware.RateLimitNewAccounts
+
+		// Get the default role for new Google users
+		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
+		if err != nil {
+			helper.RespondWithError(c, helper.InternalError(err))
+			return
+		}
+
+		newUser := &model.User{
+			Username:   googleUser.Email,
+			Name:       googleUser.Name,
+			ImgProfile: googleUser.Picture,
+			LastName:   googleUser.FamilyName,
+			IsActive:   true,
+			RoleID:     defaultRole.ID,
+		}
+
+		_, err = h.UserService.CreateUser(ctx, newUser)
+		if err != nil {
+			helper.RespondWithError(c, helper.InternalError(err))
+			return
+		}
+
+		slog.Info("new user created via OAuth", "username", newUser.Username)
+
+		user, err = h.UserService.GetUserByUsername(ctx, newUser.Username)
+		if err != nil {
+			helper.RespondWithError(c, helper.InternalError(err))
+			return
+		}
+	}
+
+	h.setAuthenticationResponse(c, user)
+}
+
+// LoginWithGoogle godoc
+// @Summary      Initiate Google OAuth2 login
+// @Description  Initiates the OAuth2 flow with Google and returns the authorization URL
+// @Tags         users
+// @ID           loginWithGoogle
+// @Produce      json
+// @Success      200  {object}  map[string]string "Authorization URL generated"
+// @Failure      500  {object}  helper.AppError "Internal server error"
+// @Router       /users/auth/google [get]
+func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
+	state, err := helper.GenerateRandomState()
+	if err != nil {
+		helper.RespondWithError(c, helper.InternalError(err))
+		return
+	}
+
+	pkceParams, err := config.GeneratePKCE()
+	if err != nil {
+		slog.Error("failed to generate pkce parameters", "error", err)
+		helper.RespondWithError(c, helper.InternalError(err))
+		return
+	}
+
+	config.StorePKCE(state, pkceParams)
+
+	auth.SetSecureCookie(c, "oauth_state", state, int(10*time.Minute/time.Second))
+	opts := []oauth2.AuthCodeOption{
+		oauth2.SetAuthURLParam("code_challenge", pkceParams.Challenge),
+		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+	}
+	url := config.OAuthConfig.AuthCodeURL(state, opts...)
+
+	helper.HandleSuccess(c, http.StatusOK, gin.H{"url": url}, "OAuth URL generated")
 }
 
 // CreateUser godoc
-// @Summary Create a new user
-// @Description This endpoint allows for the creation of a new user with the specified details.
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param user body model.User true "User details"
-// @Success 201 {object} model.UserMin "User created successfully"
-// @Failure 400 {object} helper.AppError "Invalid input provided"
-// @Failure 500 {object} helper.AppError "Internal server error occurred"
-// @Router /users [post]
-// @Security Bearer
+// @Summary      Create a new user
+// @Description  Creates a new user with the provided data. If role_id is not provided, assigns the default user role.
+// @Tags         users
+// @ID           createUser
+// @Accept       json
+// @Produce      json
+// @Param        user  body      model.CreateUserRequest  true  "User data"
+// @Success      201   {object}  model.UserMin  "User created successfully"
+// @Failure      400   {object}  helper.AppError "Invalid input"
+// @Failure      409   {object}  helper.AppError "Conflict (e.g., username exists)"
+// @Failure      500   {object}  helper.AppError "Internal server error"
+// @Router       /users [post]
+// @Security     ApiKeyAuth
 func (h *UserHandler) CreateUser(c *gin.Context) {
-	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	var createRequest model.CreateUserRequest
+	if err := c.ShouldBindJSON(&createRequest); err != nil {
 		helper.HandleValidationError(c, err)
 		return
 	}
 
 	ctx := c.Request.Context()
-	createdUser, err := h.UserService.CreateUser(ctx, &user)
+
+	var roleID uint8
+	if createRequest.RoleID > 0 {
+		// If role_id is provided, verify it exists
+		role, err := h.RoleService.GetRoleByID(ctx, createRequest.RoleID)
+		if err != nil {
+			helper.RespondWithError(c, helper.BadRequest("role_id", "Role not found"))
+			return
+		}
+		roleID = role.ID
+	} else {
+		// Get the default role if no role_id provided
+		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
+		if err != nil {
+			helper.RespondWithError(c, helper.InternalError(err))
+			return
+		}
+		roleID = defaultRole.ID
+	}
+
+	// Map the request to User model with default values
+	user := &model.User{
+		Name:     createRequest.Name,
+		LastName: createRequest.LastName,
+		Username: createRequest.Username,
+		IsActive: true, // Set default active status
+		RoleID:   roleID,
+	}
+
+	createdUser, err := h.UserService.CreateUser(ctx, user)
 	if err != nil {
-		helper.HandleGormError(c, err)
-		return
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			helper.RespondWithError(c, helper.Conflict("username", "Username already exists"))
+			return
+		} else {
+			helper.RespondWithError(c, helper.InternalError(err))
+			return
+		}
 	}
 
 	helper.HandleSuccess(c, http.StatusCreated, createdUser, "User created successfully")
 }
 
+// GetUserByUsername godoc
+// @Summary      Get a user by username
+// @Description  Retrieves a user by their username
+// @Tags         users
+// @ID           getUserByUsername
+// @Param        username  path      string  true  "Username"
+// @Success      200      {object}  model.UserResponse "User retrieved successfully"
+// @Failure      400      {object}  helper.AppError "Invalid input"
+// @Failure      404      {object}  helper.AppError "User not found"
+// @Failure      500      {object}  helper.AppError "Internal server error"
+// @Router       /users/{username} [get]
+// @Security     ApiKeyAuth
 func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 	username := c.Param("username")
 
 	ctx := c.Request.Context()
 	user, err := h.UserService.GetUserByUsername(ctx, username)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			helper.RespondWithError(c, helper.NotFound("user"))
+		} else {
+			helper.RespondWithError(c, helper.InternalError(err))
+		}
 		return
 	}
 	if user == nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrUserNotFound.Error(), ""), false)
+		helper.RespondWithError(c, helper.NotFound("user"))
 		return
 	}
 
@@ -116,25 +392,59 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 	helper.HandleSuccess(c, http.StatusOK, userResponse, "User retrieved successfully")
 }
 
+// ListUsers godoc
+// @Summary      List users
+// @Description  Retrieves a paginated list of users
+// @Tags         users
+// @ID           listUsers
+// @Param        page  query     int  false  "Page number"
+// @Success      200   {array}   model.UserResponse "Users listed successfully"
+// @Failure      400   {object}  helper.AppError "Invalid input"
+// @Failure      500   {object}  helper.AppError "Internal server error"
+// @Router       /users [get]
+// @Security     ApiKeyAuth
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1") // Default to page 1 instead of 0
+	pageStr := c.DefaultQuery("page", "1")
 
 	page, err := strconv.ParseUint(pageStr, 10, 64)
 	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid page number", err.Error()), true)
+		helper.RespondWithError(c, helper.BadRequest("page", "Invalid page number"))
 		return
+	}
+
+	if page < 1 {
+		page = 1
 	}
 
 	ctx := c.Request.Context()
 	users, err := h.UserService.ListUsers(ctx, page)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			helper.RespondWithError(c, helper.NotFound("users"))
+			return
+		}
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
 	helper.HandleSuccess(c, http.StatusOK, users, "Users listed successfully")
 }
 
+// UpdateUser godoc
+// @Summary      Update an existing user
+// @Description  Updates an existing user's information by ID
+// @Tags         users
+// @ID           updateUser
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string           true  "User ID (UUID)"
+// @Param        user  body      model.UserUpdate true  "Updated user data"
+// @Success      200   {object}  model.User  "User updated successfully"
+// @Failure      400   {object}  helper.AppError "Invalid input or UUID format"
+// @Failure      404   {object}  helper.AppError "User not found"
+// @Failure      500   {object}  helper.AppError "Internal server error"
+// @Router       /users/{id} [put]
+// @Security     ApiKeyAuth
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	var userUpdate model.UserUpdate
 	if err := c.ShouldBindJSON(&userUpdate); err != nil {
@@ -142,238 +452,59 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdate, c.Param("id"))
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
-			helper.HandleError(c, helper.NewAppError(http.StatusNotFound, constants.ErrUserNotFound.Error(), ""), true)
+		helper.RespondWithError(c, helper.BadRequest("id", "Invalid user ID format"))
+		return
+	}
+
+	ctx := c.Request.Context()
+	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdate, userID.String())
+	if err != nil {
+		if errors.Is(err, constants.ErrUserNotFound) {
+			helper.RespondWithError(c, helper.NotFound("user"))
 			return
 		}
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to update user", err.Error()), true)
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
 	helper.HandleSuccess(c, http.StatusOK, updatedUser, "User updated successfully")
 }
 
+// DeleteUser godoc
+// @Summary      Delete a user
+// @Description  Deletes a user by their ID
+// @Tags         users
+// @ID           deleteUser
+// @Param        id   path      string  true  "User ID (UUID)"
+// @Success      204  {object}  nil  "User deleted successfully"
+// @Failure      400  {object}  helper.AppError "Invalid UUID format"
+// @Failure      404  {object}  helper.AppError "User not found"
+// @Failure      500  {object}  helper.AppError "Internal server error"
+// @Router       /users/{id} [delete]
+// @Security     ApiKeyAuth
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	id := c.Param("id")
-
-	// Validate UUID format
-	if _, err := uuid.Parse(id); err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusBadRequest, "Invalid input: ID must be a valid UUID", err.Error()), true)
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		helper.RespondWithError(c, helper.BadRequest("id", "Invalid UUID format"))
 		return
 	}
 
-	// Attempt to delete the user
 	ctx := c.Request.Context()
-	err := h.UserService.DeleteUser(ctx, id)
-	if err != nil {
-		helper.HandleGormError(c, err)
-		return
-	}
-
-	helper.HandleSuccess(c, http.StatusNoContent, nil, "User deleted successfully")
-}
-
-// LoginWithGoogle initiates OAuth2 flow with Google
-func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
-	// Generate random state
-	state, err := helper.GenerateRandomState()
-	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Authentication initialization failed", err.Error()), false)
-		return
-	}
-
-	// Generate PKCE parameters
-	pkceParams, err := config.GeneratePKCE()
-	if err != nil {
-		logrus.WithError(err).Error("Failed to generate PKCE parameters")
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Authentication initialization failed", err.Error()), false)
-		return
-	}
-
-	// Store PKCE parameters
-	config.StorePKCE(state, pkceParams)
-
-	// Set state cookie with secure parameters
-	c.SetCookie("oauth_state", state, 600, "/", "", true, true) // 10 minutes expiry
-
-	// Generate authorization URL with PKCE
-	opts := []oauth2.AuthCodeOption{
-		oauth2.SetAuthURLParam("code_challenge", pkceParams.Challenge),
-		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
-	}
-	url := config.OAuthConfig.AuthCodeURL(state, opts...)
-
-	helper.HandleSuccess(c, http.StatusOK, gin.H{"url": url}, "OAuth URL generated")
-}
-
-type GoogleUserInfo struct {
-	Email      string `json:"email"`
-	Name       string `json:"name"`
-	Picture    string `json:"picture"`
-	FamilyName string `json:"family_name"`
-}
-
-// GoogleCallback handles the OAuth2 callback
-func (h *UserHandler) GoogleCallback(c *gin.Context) {
-	// Validate OAuth state
-	if !h.validateOAuthState(c) {
-		return
-	}
-
-	// Get token from OAuth exchange
-	token, err := h.exchangeCodeForToken(c)
-	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Authentication failed", err.Error()), false)
-		return
-	}
-
-	// Get Google user info
-	googleUser, err := h.fetchGoogleUserInfo(c.Request.Context(), token)
-	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Failed to get user info", err.Error()), false)
-		return
-	}
-
-	// Check if user exists or create new one
-	ctx := c.Request.Context()
-	user, err := h.UserService.GetUserByUsername(ctx, googleUser.Email)
-	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to check user", err.Error()), false)
-		return
-	}
-
-	if user == nil {
-		// Generate random password for new user
-		randomPass, err := helper.GenerateRandomPassword()
-		if err != nil {
-			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create user", err.Error()), false)
-			return
+	if err := h.UserService.DeleteUser(ctx, id.String()); err != nil {
+		switch {
+		case errors.Is(err, constants.ErrUserNotFound):
+			helper.RespondWithError(c, helper.NotFound("user"))
+		case errors.Is(err, constants.ErrInvalidUUID):
+			helper.RespondWithError(c, helper.BadRequest("id", "Invalid UUID format"))
+		default:
+			helper.RespondWithError(c, helper.InternalError(err))
 		}
-
-		// Create new user
-		newUser := &model.User{
-			Username:   googleUser.Email,
-			Name:       googleUser.Name,
-			ImgProfile: googleUser.Picture,
-			LastName:   googleUser.FamilyName,
-			IsActive:   true,
-			RoleID:     4,
-			Password:   randomPass,
-			CreatedAt:  time.Now(),
-			UpdatedAt:  time.Now(),
-		}
-
-		var createdUserMin *model.UserMin
-		createdUserMin, err = h.UserService.CreateUser(ctx, newUser)
-		if err != nil {
-			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create user", err.Error()), false)
-			return
-		}
-
-		user, err = h.UserService.GetUserByUsername(ctx, createdUserMin.Username)
-		if err != nil {
-			helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to retrieve user", err.Error()), false)
-			return
-		}
-	}
-
-	if user == nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to create or retrieve user", ""), false)
 		return
 	}
 
-	// Now proceed with authentication
-	h.setAuthenticationResponse(c, user)
-}
-
-func (h *UserHandler) validateOAuthState(c *gin.Context) bool {
-	state := c.Query("state")
-	storedState, _ := c.Cookie("oauth_state")
-
-	if state == "" || state != storedState {
-		logrus.Error("Invalid OAuth state")
-		helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Invalid OAuth state", ""), false)
-		return false
-	}
-
-	pkceParams, ok := config.GetAndDeletePKCE(state)
-	if !ok {
-		logrus.Error("PKCE parameters not found")
-		helper.HandleError(c, helper.NewAppError(http.StatusUnauthorized, "Invalid request", ""), false)
-		return false
-	}
-
-	c.Set("pkce_params", pkceParams)
-	return true
-}
-
-func (h *UserHandler) exchangeCodeForToken(c *gin.Context) (*oauth2.Token, error) {
-	code := c.Query("code")
-	pkceParams := c.MustGet("pkce_params").(*config.PKCEParams)
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
-
-	token, err := config.OAuthConfig.Exchange(ctx, code,
-		oauth2.SetAuthURLParam("code_verifier", pkceParams.Verifier))
-	if err != nil {
-		logrus.WithError(err).Error("Code exchange failed")
-		return nil, err
-	}
-
-	if !token.Valid() {
-		return nil, errors.New("invalid token received")
-	}
-
-	return token, nil
-}
-
-func (h *UserHandler) fetchGoogleUserInfo(ctx context.Context, token *oauth2.Token) (*GoogleUserInfo, error) {
-	client := config.OAuthConfig.Client(ctx, token)
-	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	userData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var googleUser GoogleUserInfo
-	if err := json.Unmarshal(userData, &googleUser); err != nil {
-		return nil, err
-	}
-
-	return &googleUser, nil
-}
-
-func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *model.User) {
-	jwtToken, err := h.AuthService.GenerateToken(user.Username, user.Role.Name)
-	if err != nil {
-		helper.HandleError(c, helper.NewAppError(http.StatusInternalServerError, "Failed to generate token", err.Error()), false)
-		return
-	}
-
-	userResponse := model.UserResponse{
-		ID:         user.ID,
-		Name:       user.Name,
-		LastName:   user.LastName,
-		Username:   user.Username,
-		IsActive:   user.IsActive,
-		ImgProfile: user.ImgProfile,
-		RoleName:   user.Role.Name,
-	}
-
-	c.Header("Authorization", "Bearer "+jwtToken)
-	c.SetCookie("token", jwtToken, 3600, "/", "", true, true)
-
-	helper.HandleSuccess(c, http.StatusOK, gin.H{
-		"token": jwtToken,
-		"user":  userResponse,
-	}, "User logged in successfully")
+	c.Status(http.StatusNoContent)
 }

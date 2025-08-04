@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -16,10 +15,16 @@ type Date time.Time
 const dateFormat = "2006-01-02"
 
 func (d *Date) UnmarshalJSON(data []byte) error {
-	var t time.Time
-	if err := json.Unmarshal(data, &t); err != nil {
+	var dateStr string
+	if err := json.Unmarshal(data, &dateStr); err != nil {
 		return err
 	}
+
+	t, err := time.Parse(dateFormat, dateStr)
+	if err != nil {
+		return fmt.Errorf("invalid date format, expected YYYY-MM-DD: %w", err)
+	}
+
 	*d = Date(t)
 	return nil
 }
@@ -62,47 +67,50 @@ func (d *Date) Scan(v interface{}) error {
 }
 
 type User struct {
-	ID                  string         `gorm:"type:char(36);primaryKey" json:"id"`
-	Name                string         `gorm:"type:varchar(35);not null" json:"name" binding:"required"`
-	LastName            string         `gorm:"type:varchar(35);not null" json:"last_name" binding:"required"`
-	Username            string         `gorm:"type:varchar(50);not null;uniqueIndex" json:"username" binding:"required"`
-	IsActive            bool           `gorm:"default:true" json:"is_active"`
-	Birthdate           Date           `json:"birthdate" example:"1990-01-01"`
-	ImgProfile          string         `gorm:"type:varchar(255)" json:"img_profile,omitempty"`
-	ImgBanner           string         `gorm:"type:varchar(255)" json:"img_banner,omitempty"`
-	Password            string         `gorm:"type:varchar(60);not null" json:"-" binding:"required"`
-	FailedLoginAttempts uint8          `gorm:"default:0" json:"-"`
-	RoleID              uint8          `json:"role_id" binding:"required"`
-	Role                Role           `gorm:"foreignKey:RoleID" json:"role,omitempty"`
-	CreatedAt           time.Time      `json:"created_at,omitempty"`
-	UpdatedAt           time.Time      `json:"updated_at,omitempty"`
-	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
+	ID         string         `gorm:"type:char(36);primaryKey" json:"id"`
+	Name       string         `gorm:"type:varchar(35);not null" json:"name" binding:"required,min=2,max=35"`
+	LastName   string         `gorm:"type:varchar(35);not null" json:"last_name" binding:"required,min=2,max=35"`
+	Username   string         `gorm:"type:varchar(50);not null;uniqueIndex" json:"username" binding:"required,safe_email,allowed_domain"`
+	IsActive   bool           `gorm:"default:true" json:"is_active"`
+	Birthdate  Date           `json:"birthdate" example:"1990-01-01"`
+	ImgProfile string         `gorm:"type:varchar(255)" json:"img_profile,omitempty" binding:"omitempty,url"`
+	ImgBanner  string         `gorm:"type:varchar(255)" json:"img_banner,omitempty" binding:"omitempty,url"`
+	RoleID     uint8          `json:"role_id" binding:"required,min=1"`
+	Role       *Role          `gorm:"foreignKey:RoleID" json:"role,omitempty" binding:"-"`
+	CreatedAt  time.Time      `json:"created_at,omitempty"`
+	UpdatedAt  time.Time      `json:"updated_at,omitempty"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`
 }
 
-func (user *User) BeforeCreate(tx *gorm.DB) error {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return fmt.Errorf("failed to generate UUID: %w", err)
-	}
+// BeforeCreate will set a UUID rather than numeric ID.
+func (u *User) BeforeCreate(tx *gorm.DB) error {
 
-	hash, err := helper.HashPassword(user.Password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
+	if u.ID == "" {
+		u.ID = uuid.New().String()
 	}
-
-	user.ID = id.String()
-	user.Password = hash
 	return nil
 }
 
-type UserLogin struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+// CreateUserRequest represents the allowed fields for creating a new user
+type CreateUserRequest struct {
+	Name     string `json:"name" binding:"required,min=2,max=35"`
+	LastName string `json:"last_name" binding:"required,min=2,max=35"`
+	Username string `json:"username" binding:"required,min=3,max=50,alphanum"`
+	RoleID   uint8  `json:"role_id,omitempty" binding:"omitempty,gte=0,lte=255"`
 }
 
 type UserMin struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
+}
+
+type AuthUserResponse struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	LastName   string `json:"last_name"`
+	Username   string `json:"username"`
+	ImgProfile string `json:"img_profile,omitempty"`
+	RoleName   string `json:"role_name"`
 }
 
 type UserResponse struct {

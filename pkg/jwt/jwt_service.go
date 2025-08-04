@@ -6,30 +6,30 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// AppClaims define las reclamaciones del JWT
+// AppClaims defines JWT token claims structure
 type AppClaims struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// JWTService maneja la generación y validación de JWTs
+// JWTService handles JWT token generation and validation
 type JWTService struct {
 	SecretKey []byte
 }
 
-// NewJWTService crea una nueva instancia de JWTService
+// NewJWTService creates a new instance of JWTService
 func NewJWTService(secretKey string) *JWTService {
 	return &JWTService{SecretKey: []byte(secretKey)}
 }
 
-// GenerateToken genera un nuevo token JWT para un usuario dado
+// GenerateToken creates a new JWT token for a given user
 func (s *JWTService) GenerateToken(username, role string) (string, error) {
 	claims := &AppClaims{
 		Username: username,
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 1)), // Token válido por 1 hora
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 1)), // Token expires in 1 hour
 		},
 	}
 

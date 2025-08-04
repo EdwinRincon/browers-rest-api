@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,21 +24,63 @@ import (
 	"gorm.io/gorm"
 )
 
-// @BasePath	/api
-// @title BrowersFC API
-// @version 1.0
-// @description API para la gestión de la liga de fútbol BrowersFC
-
 type Server struct {
 	Router    *gin.Engine
 	Port      string
 	JWTSecret []byte
 }
 
-// NewServer configura y devuelve una instancia del servidor.
+// Dependency containers for type-safe injection
+type Repositories struct {
+	User      repository.UserRepository
+	Role      repository.RoleRepository
+	Team      repository.TeamRepository
+	Player    repository.PlayerRepository
+	Season    repository.SeasonRepository
+	Article   repository.ArticleRepository
+	Lineup    repository.LineupRepository
+	Match     repository.MatchRepository
+	TeamStats repository.TeamStatsRepository
+}
+
+type Services struct {
+	JWT       *jwt.JWTService
+	Auth      service.AuthService
+	User      service.UserService
+	Role      service.RoleService
+	Team      service.TeamService
+	Player    service.PlayerService
+	Season    service.SeasonService
+	Article   service.ArticleService
+	Lineup    service.LineupService
+	Match     service.MatchService
+	TeamStats service.TeamStatsService
+}
+
+type Handlers struct {
+	User      *handler.UserHandler
+	Role      *handler.RoleHandler
+	Team      *handler.TeamHandler
+	Player    *handler.PlayerHandler
+	Season    *handler.SeasonHandler
+	Article   *handler.ArticleHandler
+	Lineup    *handler.LineupHandler
+	Match     *handler.MatchHandler
+	TeamStats *handler.TeamStatsHandler
+}
+
+// NewServer creates and configures a new server instance with middleware and security settings.
 func NewServer() *Server {
-	// Configura el enrutador Gin
-	r := gin.Default()
+	// Create a new Gin instance without any middleware
+	r := gin.New()
+
+	// Add recovery middleware
+	r.Use(gin.Recovery())
+
+	// Add our structured logger middleware
+	r.Use(middleware.StructuredLogger())
+
+	// Apply generic rate limiting for all routes
 	r.Use(middleware.RateLimit())
 
 	// Configurar Swagger
@@ -60,7 +102,7 @@ func NewServer() *Server {
 	}
 }
 
-// SetupRouter configura las rutas del servidor.
+// SetupRouter configures all API routes and their handlers.
 func (s *Server) SetupRouter() {
 	// Obtener conexión a la base de datos
 	db := getDBConnection()
@@ -77,7 +119,7 @@ func (s *Server) SetupRouter() {
 	s.Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
-// Start inicia el servidor con la configuración de HTTP detallada.
+// Start initializes the server with HTTP configuration and handles graceful shutdown.
 func (s *Server) Start() {
 	// Configurar las rutas antes de iniciar el servidor
 	s.SetupRouter()
@@ -86,7 +128,7 @@ func (s *Server) Start() {
 	server := createHTTPServer(s.Port, s.Router)
 
 	// Iniciar el servidor en una goroutine
-	go startServer(server, s.Port)
+	go startServer(server)
 
 	// Esperar señal de apagado y realizar shutdown graceful
 	gracefulShutdown(server)
@@ -105,10 +147,12 @@ func setupSwagger() {
 func getJWTSecret() []byte {
 	jwtSecret, err := config.GetJWTSecret()
 	if err != nil {
-		log.Fatalf("Failed to read JWT secret from file: %v", err)
+		slog.Error("Failed to read JWT secret", "error", err)
+		os.Exit(1)
 	}
 	if jwtSecret == nil {
-		log.Fatal("JWT secret is not defined")
+		slog.Error("JWT secret is not defined")
+		os.Exit(1)
 	}
 	return jwtSecret
 }
@@ -116,9 +160,10 @@ func getJWTSecret() []byte {
 func setupPprofServer() {
 	if os.Getenv("GIN_MODE") != "release" {
 		go func() {
-			log.Println("Starting pprof server on :6060")
+			slog.Info("Starting pprof server", "address", ":6060")
 			if err := http.ListenAndServe(":6060", nil); err != nil {
-				log.Fatalf("Could not start pprof server: %v", err)
+				slog.Error("Could not start pprof server", "error", err)
+				os.Exit(1)
 			}
 		}()
 	}
@@ -127,7 +172,8 @@ func setupPprofServer() {
 func getDBConnection() *gorm.DB {
 	db, err := orm.GetDBInstance()
 	if err != nil {
-		log.Fatalf("Error al conectar con la base de datos: %v", err)
+		slog.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	return db
 }
@@ -143,88 +189,87 @@ func createHTTPServer(port string, handler http.Handler) *http.Server {
 	}
 }
 
-func startServer(server *http.Server, port string) {
+func startServer(server *http.Server) {
+	slog.Info("Server starting", "address", server.Addr)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Could not listen on %s: %v\n", port, err)
+		slog.Error("Could not start server", "error", err)
+		os.Exit(1)
 	}
 }
 
 func gracefulShutdown(server *http.Server) {
-	// Channel that listens for termination signals
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM) // SIGINT for Ctrl+C, SIGTERM for termination
-	<-quit                                             // Wait until we receive a termination signal
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
 
-	log.Println("Shutting down server...")
+	slog.Info("Shutting down server...")
 
-	// Context with timeout for graceful shutdown (e.g., 10 seconds)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Attempt graceful shutdown
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Error("Server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server exiting")
+	slog.Info("Server exiting")
 }
 
 // Funciones para inicializar componentes
 
-func initializeRepositories(db *gorm.DB) map[string]interface{} {
-	return map[string]interface{}{
-		"user":      repository.NewUserRepository(db),
-		"role":      repository.NewRoleRepository(db),
-		"team":      repository.NewTeamRepository(db),
-		"player":    repository.NewPlayerRepository(db),
-		"season":    repository.NewSeasonRepository(db),
-		"article":   repository.NewArticleRepository(db),
-		"lineup":    repository.NewLineupRepository(db),
-		"match":     repository.NewMatchRepository(db),
-		"teamStats": repository.NewTeamStatsRepository(db),
+func initializeRepositories(db *gorm.DB) *Repositories {
+	return &Repositories{
+		User:      repository.NewUserRepository(db),
+		Role:      repository.NewRoleRepository(db),
+		Team:      repository.NewTeamRepository(db),
+		Player:    repository.NewPlayerRepository(db),
+		Season:    repository.NewSeasonRepository(db),
+		Article:   repository.NewArticleRepository(db),
+		Lineup:    repository.NewLineupRepository(db),
+		Match:     repository.NewMatchRepository(db),
+		TeamStats: repository.NewTeamStatsRepository(db),
 	}
 }
 
-func initializeServices(repos map[string]interface{}, jwtSecret []byte) map[string]interface{} {
+func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	jwtService := jwt.NewJWTService(string(jwtSecret))
-
-	return map[string]interface{}{
-		"jwt":       jwtService,
-		"auth":      service.NewAuthService(repos["user"].(repository.UserRepository), jwtService),
-		"user":      service.NewUserService(repos["user"].(repository.UserRepository)),
-		"role":      service.NewRoleService(repos["role"].(repository.RoleRepository)),
-		"team":      service.NewTeamService(repos["team"].(repository.TeamRepository)),
-		"player":    service.NewPlayerService(repos["player"].(repository.PlayerRepository)),
-		"season":    service.NewSeasonService(repos["season"].(repository.SeasonRepository)),
-		"article":   service.NewArticleService(repos["article"].(repository.ArticleRepository)),
-		"lineup":    service.NewLineupService(repos["lineup"].(repository.LineupRepository)),
-		"match":     service.NewMatchService(repos["match"].(repository.MatchRepository)),
-		"teamStats": service.NewTeamStatsService(repos["teamStats"].(repository.TeamStatsRepository)),
+	return &Services{
+		JWT:       jwtService,
+		Auth:      service.NewAuthService(repos.User, jwtService),
+		User:      service.NewUserService(repos.User),
+		Role:      service.NewRoleService(repos.Role),
+		Team:      service.NewTeamService(repos.Team),
+		Player:    service.NewPlayerService(repos.Player),
+		Season:    service.NewSeasonService(repos.Season),
+		Article:   service.NewArticleService(repos.Article),
+		Lineup:    service.NewLineupService(repos.Lineup),
+		Match:     service.NewMatchService(repos.Match),
+		TeamStats: service.NewTeamStatsService(repos.TeamStats),
 	}
 }
 
-func initializeHandlers(services map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"user":      handler.NewUserHandler(services["auth"].(service.AuthService), services["user"].(service.UserService)),
-		"role":      handler.NewRoleHandler(services["role"].(service.RoleService)),
-		"team":      handler.NewTeamHandler(services["team"].(service.TeamService)),
-		"player":    handler.NewPlayerHandler(services["player"].(service.PlayerService)),
-		"season":    handler.NewSeasonHandler(services["season"].(service.SeasonService)),
-		"article":   handler.NewArticleHandler(services["article"].(service.ArticleService)),
-		"lineup":    handler.NewLineupHandler(services["lineup"].(service.LineupService)),
-		"match":     handler.NewMatchHandler(services["match"].(service.MatchService)),
-		"teamStats": handler.NewTeamStatsHandler(services["teamStats"].(service.TeamStatsService)),
+func initializeHandlers(services *Services) *Handlers {
+	return &Handlers{
+		User:      handler.NewUserHandler(services.Auth, services.User, services.Role),
+		Role:      handler.NewRoleHandler(services.Role),
+		Team:      handler.NewTeamHandler(services.Team),
+		Player:    handler.NewPlayerHandler(services.Player),
+		Season:    handler.NewSeasonHandler(services.Season),
+		Article:   handler.NewArticleHandler(services.Article),
+		Lineup:    handler.NewLineupHandler(services.Lineup),
+		Match:     handler.NewMatchHandler(services.Match),
+		TeamStats: handler.NewTeamStatsHandler(services.TeamStats),
 	}
 }
 
-func initializeRoutes(r *gin.Engine, handlers map[string]interface{}) {
-	router.InitializeUserRoutes(r, handlers["user"].(*handler.UserHandler))
-	router.InitializeRoleRoutes(r, handlers["role"].(*handler.RoleHandler))
-	router.InitializeTeamRoutes(r, handlers["team"].(*handler.TeamHandler))
-	router.InitializePlayerRoutes(r, handlers["player"].(*handler.PlayerHandler))
-	router.InitializeSeasonRoutes(r, handlers["season"].(*handler.SeasonHandler))
-	router.InitializeArticleRoutes(r, handlers["article"].(*handler.ArticleHandler))
-	router.InitializeLineupRoutes(r, handlers["lineup"].(*handler.LineupHandler))
-	router.InitializeMatchRoutes(r, handlers["match"].(*handler.MatchHandler))
-	router.InitializeTeamStatsRoutes(r, handlers["teamStats"].(*handler.TeamStatsHandler))
+func initializeRoutes(r *gin.Engine, handlers *Handlers) {
+	router.InitializeUserRoutes(r, handlers.User)
+	router.InitializeRoleRoutes(r, handlers.Role)
+	router.InitializeTeamRoutes(r, handlers.Team)
+	router.InitializePlayerRoutes(r, handlers.Player)
+	router.InitializeSeasonRoutes(r, handlers.Season)
+	router.InitializeArticleRoutes(r, handlers.Article)
+	router.InitializeLineupRoutes(r, handlers.Lineup)
+	router.InitializeMatchRoutes(r, handlers.Match)
+	router.InitializeTeamStatsRoutes(r, handlers.TeamStats)
 }

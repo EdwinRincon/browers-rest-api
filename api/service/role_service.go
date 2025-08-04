@@ -10,6 +10,7 @@ import (
 // RoleService es la interfaz que define los métodos relacionados con roles
 type RoleService interface {
 	GetRoleByID(ctx context.Context, id uint8) (*model.Role, error)
+	GetRoleByName(ctx context.Context, name string) (*model.Role, error)
 	CreateRole(ctx context.Context, role *model.Role) error
 	UpdateRole(ctx context.Context, role *model.Role) error
 	DeleteRole(ctx context.Context, id uint8) error
@@ -31,6 +32,10 @@ func NewRoleService(roleRepo repository.RoleRepository) RoleService {
 // GetRoleByID obtiene un rol por su ID
 func (s *roleService) GetRoleByID(ctx context.Context, id uint8) (*model.Role, error) {
 	return s.RoleRepository.GetRoleByID(ctx, id)
+}
+
+func (s *roleService) GetRoleByName(ctx context.Context, name string) (*model.Role, error) {
+	return s.RoleRepository.GetRoleByName(ctx, name)
 }
 
 func (s *roleService) CreateRole(ctx context.Context, role *model.Role) error {

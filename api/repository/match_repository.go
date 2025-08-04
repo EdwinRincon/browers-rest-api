@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
-
-var ErrMatchNotFound = errors.New("match not found")
 
 type MatchRepository interface {
 	CreateMatch(ctx context.Context, match *model.Match) error
@@ -35,7 +34,7 @@ func (mr *MatchRepositoryImpl) GetMatchByID(ctx context.Context, id uint64) (*mo
 	err := mr.db.WithContext(ctx).Preload("Season").Preload("MVPPlayer").First(&match, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrMatchNotFound
+			return nil, constants.ErrMatchNotFound
 		}
 		return nil, err
 	}
@@ -48,7 +47,7 @@ func (mr *MatchRepositoryImpl) ListMatches(ctx context.Context, page, pageSize u
 	err := mr.db.WithContext(ctx).
 		Preload("HomeTeam").
 		Preload("AwayTeam").
-		Preload("Lineup").
+		Preload("Lineups").
 		Preload("Season").
 		Offset(int(offset)).
 		Limit(int(pageSize)).
@@ -70,7 +69,7 @@ func (mr *MatchRepositoryImpl) GetNextScheduledMatch(ctx context.Context) (*mode
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrMatchNotFound
+			return nil, constants.ErrMatchNotFound
 		}
 		return nil, err
 	}
@@ -83,7 +82,7 @@ func (mr *MatchRepositoryImpl) UpdateMatch(ctx context.Context, match *model.Mat
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrMatchNotFound
+		return constants.ErrMatchNotFound
 	}
 	return nil
 }
@@ -94,7 +93,7 @@ func (mr *MatchRepositoryImpl) DeleteMatch(ctx context.Context, id uint64) error
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrMatchNotFound
+		return constants.ErrMatchNotFound
 	}
 	return nil
 }

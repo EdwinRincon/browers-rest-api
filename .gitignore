@@ -9,6 +9,7 @@ secrets/
 # Docker
 docker-compose.yml
 docker-compose.override.yml
+.dockerignore
 
 # Go specific
 *.exe
@@ -62,6 +63,7 @@ logs/
 
 # CI/CD
 /.github/
+sonar-project.properties
 
 # Misc
 *.cache
