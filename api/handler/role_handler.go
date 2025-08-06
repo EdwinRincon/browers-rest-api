@@ -2,15 +2,21 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
+	"github.com/EdwinRincon/browersfc-api/api/dto"
+	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+)
+
+const (
+	msgInvalidRoleID = "Invalid role ID"
 )
 
 type RoleHandler struct {
@@ -18,9 +24,7 @@ type RoleHandler struct {
 }
 
 func NewRoleHandler(roleService service.RoleService) *RoleHandler {
-	return &RoleHandler{
-		RoleService: roleService,
-	}
+	return &RoleHandler{RoleService: roleService}
 }
 
 // GetRoleByID godoc
@@ -29,31 +33,31 @@ func NewRoleHandler(roleService service.RoleService) *RoleHandler {
 // @Tags         roles
 // @ID           getRoleByID
 // @Param        id   path      int  true  "Role ID"
-// @Success      200  {object}  model.Role  "Success"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Role not found"
+// @Success      200  {object}  dto.RoleResponse
+// @Failure      400  {object}  helper.AppError
+// @Failure      404  {object}  helper.AppError
 // @Router       /roles/{id} [get]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 8)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid role ID"))
+		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
 		return
 	}
 
-	ctx := c.Request.Context()
-	role, err := h.RoleService.GetRoleByID(ctx, uint8(id))
+	role, err := h.RoleService.GetRoleByID(c.Request.Context(), uint8(id))
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("role"))
-		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			return
 		}
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, role, "Role retrieved successfully")
+	response := mapper.ToRoleResponse(role)
+	helper.HandleSuccess(c, http.StatusOK, response, "Role retrieved successfully")
 }
 
 // CreateRole godoc
@@ -63,27 +67,36 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 // @ID           createRole
 // @Accept       json
 // @Produce      json
-// @Param        role  body      model.Role  true  "Role data"
-// @Success      201   {object}  model.Role  "Created"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      409   {object}  helper.AppError "Role already exists"
+// @Param        role  body      dto.CreateRoleRequest  true  "Role data"
+// @Success      201   {object}  dto.RoleResponse
+// @Failure      400   {object}  helper.AppError
+// @Failure      409   {object}  helper.AppError
 // @Router       /roles [post]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) CreateRole(c *gin.Context) {
-	var role model.Role
-	if err := c.ShouldBindJSON(&role); err != nil {
-		helper.HandleValidationError(c, err)
+	var roleDTO dto.CreateRoleRequest
+	if err := c.ShouldBindJSON(&roleDTO); err != nil {
+		slog.Error("failed to bind role create request", "error", err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid role data"))
 		return
 	}
 
 	ctx := c.Request.Context()
-	err := h.RoleService.CreateRole(ctx, &role)
+	role := mapper.ToRole(&roleDTO)
+
+	createdRole, err := h.RoleService.CreateRole(ctx, role)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		switch {
+		case errors.Is(err, constants.ErrRecordAlreadyExists):
+			helper.RespondWithError(c, helper.Conflict("role", "A role with this name already exists"))
+		default:
+			helper.RespondWithError(c, helper.InternalError(err))
+		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, role, "Role created successfully")
+	response := mapper.ToRoleResponse(createdRole)
+	helper.HandleSuccess(c, http.StatusCreated, response, "Role created successfully")
 }
 
 // UpdateRole godoc
@@ -93,56 +106,54 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 // @ID           updateRole
 // @Accept       json
 // @Produce      json
-// @Param        id    path      int        true  "Role ID"
-// @Param        role  body      model.Role true  "Updated role data"
-// @Success      200   {object}  model.Role  "Updated"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      404   {object}  helper.AppError "Role not found"
+// @Param        id    path      int  true  "Role ID"
+// @Param        role  body      dto.UpdateRoleRequest  true  "Updated role data"
+// @Success      200   {object}  dto.RoleResponse
+// @Failure      400   {object}  helper.AppError
+// @Failure      404   {object}  helper.AppError
+// @Failure      409   {object}  helper.AppError
 // @Router       /roles/{id} [put]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 8)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid role ID"))
+		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
+		return
+	}
+
+	var updateRoleDTO dto.UpdateRoleRequest
+	if err := c.ShouldBindJSON(&updateRoleDTO); err != nil {
+		slog.Error("failed to bind role update request", "error", err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid role data"))
 		return
 	}
 
 	ctx := c.Request.Context()
-	existingRole, err := h.RoleService.GetRoleByID(ctx, uint8(id))
+
+	// Convert DTO to domain model
+	updateRole := mapper.ToRoleFromUpdate(&updateRoleDTO)
+	err = h.RoleService.UpdateRole(ctx, uint8(id), updateRole)
 	if err != nil {
-		helper.RespondWithError(c, helper.NotFound("role"))
-		return
-	}
-
-	var updateRole model.Role
-	if err := c.ShouldBindJSON(&updateRole); err != nil {
-		helper.HandleValidationError(c, err)
-		return
-	}
-
-	updateRole.ID = existingRole.ID
-	updateRole.CreatedAt = existingRole.CreatedAt
-	updateRole.UpdatedAt = time.Now()
-
-	if id > 255 {
-		helper.RespondWithError(c, helper.BadRequest("id", "Role ID too large"))
-		return
-	}
-
-	err = h.RoleService.UpdateRole(ctx, &updateRole)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		switch {
+		case errors.Is(err, constants.ErrRecordNotFound):
 			helper.RespondWithError(c, helper.NotFound("role"))
-		} else if errors.Is(err, gorm.ErrDuplicatedKey) {
+		case errors.Is(err, constants.ErrRecordAlreadyExists):
 			helper.RespondWithError(c, helper.Conflict("role", "A role with these details already exists"))
-		} else {
+		default:
 			helper.RespondWithError(c, helper.InternalError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, updateRole, "Role updated successfully")
+	updatedRole, err := h.RoleService.GetActiveRoleByName(ctx, updateRole.Name)
+	if err != nil {
+		helper.RespondWithError(c, helper.InternalError(err))
+		return
+	}
+
+	response := mapper.ToRoleResponse(updatedRole)
+	helper.HandleSuccess(c, http.StatusOK, response, "Role updated successfully")
 }
 
 // DeleteRole godoc
@@ -153,46 +164,60 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 // @Param        id   path      int  true  "Role ID"
 // @Success      204  {object}  nil  "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Role not found"
 // @Router       /roles/{id} [delete]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 8)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid role ID"))
+		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
 		return
 	}
 
 	ctx := c.Request.Context()
-	err = h.RoleService.DeleteRole(ctx, uint8(id))
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("role"))
-		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
-		}
-		return
-	}
+	_ = h.RoleService.DeleteRole(ctx, uint8(id))
 
 	c.Status(http.StatusNoContent)
 }
 
-// GetAllRoles godoc
-// @Summary      List roles
-// @Description  Retrieves a list of all roles
+// GetPaginatedRoles godoc
+// @Summary      List paginated roles
+// @Description  Retrieves a paginated list of roles with optional sorting
 // @Tags         roles
-// @ID           listRoles
-// @Success      200  {array}   model.Role  "Success"
+// @ID           listPaginatedRoles
+// @Produce      json
+// @Param        sort      query     string  false  "Field to sort by (e.g. name, created_at)"
+// @Param        order     query     string  false  "Sort direction: asc or desc"  Enums(asc, desc)
+// @Param        page      query     int     false  "Page number (starts at 0)"
+// @Param        pageSize  query     int     false  "Number of items per page"
+// @Success      200       {object}  helper.PaginatedResponse{items=[]dto.RoleResponse, totalCount=int}
+// @Failure      400       {object}  helper.AppError "Invalid input"
+// @Failure      500       {object}  helper.AppError
 // @Router       /roles [get]
 // @Security     ApiKeyAuth
-func (h *RoleHandler) GetAllRoles(c *gin.Context) {
+func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
+	sort := c.DefaultQuery("sort", "created_at")
+	order := c.DefaultQuery("order", "desc")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	// Validate sort field
+	if err := helper.ValidateSort(model.Role{}, sort); err != nil {
+		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		return
+	}
+
 	ctx := c.Request.Context()
-	roles, err := h.RoleService.GetAllRoles(ctx)
+	roles, total, err := h.RoleService.GetPaginatedRoles(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, roles, "Role retrieved successfully")
+	response := helper.PaginatedResponse{
+		Items:      mapper.ToRoleResponseList(roles),
+		TotalCount: total,
+	}
+
+	helper.HandleSuccess(c, http.StatusOK, response, "Roles retrieved successfully")
 }

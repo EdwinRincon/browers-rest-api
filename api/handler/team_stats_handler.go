@@ -37,7 +37,7 @@ func NewTeamStatsHandler(teamStatsService service.TeamStatsService) *TeamStatsHa
 func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 	var teamStats model.TeamStat
 	if err := c.ShouldBindJSON(&teamStats); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team stats data"))
 		return
 	}
 
@@ -138,7 +138,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 
 	var teamStats model.TeamStat
 	if err := c.ShouldBindJSON(&teamStats); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team stats data"))
 		return
 	}
 

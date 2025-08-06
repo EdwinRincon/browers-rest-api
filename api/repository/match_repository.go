@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
 
-	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
@@ -33,9 +31,6 @@ func (mr *MatchRepositoryImpl) GetMatchByID(ctx context.Context, id uint64) (*mo
 	var match model.Match
 	err := mr.db.WithContext(ctx).Preload("Season").Preload("MVPPlayer").First(&match, id).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, constants.ErrMatchNotFound
-		}
 		return nil, err
 	}
 	return &match, nil
@@ -68,9 +63,6 @@ func (mr *MatchRepositoryImpl) GetNextScheduledMatch(ctx context.Context) (*mode
 		Where("home_team_id = ?", 1).Or("away_team_id =?", 1).First(&match).Error
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, constants.ErrMatchNotFound
-		}
 		return nil, err
 	}
 	return &match, nil
@@ -78,22 +70,10 @@ func (mr *MatchRepositoryImpl) GetNextScheduledMatch(ctx context.Context) (*mode
 
 func (mr *MatchRepositoryImpl) UpdateMatch(ctx context.Context, match *model.Match) error {
 	result := mr.db.WithContext(ctx).Save(match)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrMatchNotFound
-	}
-	return nil
+	return result.Error
 }
 
 func (mr *MatchRepositoryImpl) DeleteMatch(ctx context.Context, id uint64) error {
 	result := mr.db.WithContext(ctx).Delete(&model.Match{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrMatchNotFound
-	}
-	return nil
+	return result.Error
 }

@@ -21,7 +21,7 @@ func InitializeRoleRoutes(r *gin.Engine, roleHandler *handler.RoleHandler) {
 				roles.PUT("/:id", roleHandler.UpdateRole)
 				roles.DELETE("/:id", roleHandler.DeleteRole)
 				roles.GET("/:id", roleHandler.GetRoleByID)
-				roles.GET("", roleHandler.GetAllRoles)
+				roles.GET("", roleHandler.GetPaginatedRoles)
 			}
 		}
 	}

@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
 
-	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
@@ -33,9 +31,6 @@ func (sr *SeasonRepositoryImpl) GetSeasonByID(ctx context.Context, id uint) (*mo
 	var season model.Season
 	err := sr.db.WithContext(ctx).Preload("Match").Preload("Article").Preload("TeamStat").First(&season, id).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, constants.ErrSeasonNotFound
-		}
 		return nil, err
 	}
 	return &season, nil
@@ -53,22 +48,10 @@ func (sr *SeasonRepositoryImpl) GetAllSeasons(ctx context.Context, page uint64) 
 
 func (sr *SeasonRepositoryImpl) UpdateSeason(ctx context.Context, season *model.Season) error {
 	result := sr.db.WithContext(ctx).Save(season)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrSeasonNotFound
-	}
-	return nil
+	return result.Error
 }
 
 func (sr *SeasonRepositoryImpl) DeleteSeason(ctx context.Context, id uint) error {
 	result := sr.db.WithContext(ctx).Delete(&model.Season{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrSeasonNotFound
-	}
-	return nil
+	return result.Error
 }

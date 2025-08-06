@@ -2,54 +2,111 @@ package service
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"gorm.io/gorm"
 )
 
-// RoleService es la interfaz que define los métodos relacionados con roles
 type RoleService interface {
 	GetRoleByID(ctx context.Context, id uint8) (*model.Role, error)
-	GetRoleByName(ctx context.Context, name string) (*model.Role, error)
-	CreateRole(ctx context.Context, role *model.Role) error
-	UpdateRole(ctx context.Context, role *model.Role) error
+	GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error)
+	CreateRole(ctx context.Context, role *model.Role) (*model.Role, error)
+	UpdateRole(ctx context.Context, id uint8, updated *model.Role) error
 	DeleteRole(ctx context.Context, id uint8) error
-	GetAllRoles(ctx context.Context) ([]model.Role, error)
+	GetPaginatedRoles(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Role, int64, error)
 }
 
-// roleService es la implementación concreta de la interfaz RoleService
 type roleService struct {
 	RoleRepository repository.RoleRepository
 }
 
-// NewRoleService crea una nueva instancia de RoleService
 func NewRoleService(roleRepo repository.RoleRepository) RoleService {
 	return &roleService{
 		RoleRepository: roleRepo,
 	}
 }
 
-// GetRoleByID obtiene un rol por su ID
 func (s *roleService) GetRoleByID(ctx context.Context, id uint8) (*model.Role, error) {
-	return s.RoleRepository.GetRoleByID(ctx, id)
+	role, err := s.RoleRepository.GetRoleByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, constants.ErrRecordNotFound
+	}
+	return role, nil
 }
 
-func (s *roleService) GetRoleByName(ctx context.Context, name string) (*model.Role, error) {
-	return s.RoleRepository.GetRoleByName(ctx, name)
+func (s *roleService) GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error) {
+	role, err := s.RoleRepository.GetActiveRoleByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, constants.ErrRecordNotFound
+	}
+	return role, nil
 }
 
-func (s *roleService) CreateRole(ctx context.Context, role *model.Role) error {
-	return s.RoleRepository.CreateRole(ctx, role)
+func (s *roleService) CreateRole(ctx context.Context, role *model.Role) (*model.Role, error) {
+	existing, err := s.RoleRepository.GetUnscopedRoleByName(ctx, role.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing role: %w", err)
+	}
+
+	if existing != nil {
+		if existing.DeletedAt.Valid {
+			// Restore the soft-deleted role
+			existing.DeletedAt = gorm.DeletedAt{} // zero value = not deleted
+			existing.Description = role.Description
+			err := s.RoleRepository.UpdateRole(ctx, existing)
+			if err != nil {
+				return nil, fmt.Errorf("failed to restore role: %w", err)
+			}
+			return existing, nil
+		}
+		return nil, constants.ErrRecordAlreadyExists
+	}
+
+	err = s.RoleRepository.CreateRole(ctx, role)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create role: %w", err)
+	}
+	return role, nil
 }
 
-func (s *roleService) UpdateRole(ctx context.Context, role *model.Role) error {
-	return s.RoleRepository.UpdateRole(ctx, role)
+func (s *roleService) UpdateRole(ctx context.Context, id uint8, updated *model.Role) error {
+	existing, err := s.RoleRepository.GetRoleByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return constants.ErrRecordNotFound
+	}
+
+	if existing.Name != updated.Name {
+		duplicate, err := s.RoleRepository.GetActiveRoleByName(ctx, updated.Name)
+		if err != nil {
+			return fmt.Errorf("failed to check duplicate role: %w", err)
+		}
+		if duplicate != nil && duplicate.ID != existing.ID {
+			return constants.ErrRecordAlreadyExists
+		}
+	}
+
+	existing.Name = updated.Name
+	existing.Description = updated.Description
+
+	return s.RoleRepository.UpdateRole(ctx, existing)
 }
 
 func (s *roleService) DeleteRole(ctx context.Context, id uint8) error {
 	return s.RoleRepository.DeleteRole(ctx, id)
 }
 
-func (s *roleService) GetAllRoles(ctx context.Context) ([]model.Role, error) {
-	return s.RoleRepository.GetAllRoles(ctx)
+func (s *roleService) GetPaginatedRoles(ctx context.Context, sort, order string, page, pageSize int) ([]model.Role, int64, error) {
+	return s.RoleRepository.GetPaginatedRoles(ctx, sort, order, page, pageSize)
 }

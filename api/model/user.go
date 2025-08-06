@@ -71,7 +71,6 @@ type User struct {
 	Name       string         `gorm:"type:varchar(35);not null" json:"name" binding:"required,min=2,max=35"`
 	LastName   string         `gorm:"type:varchar(35);not null" json:"last_name" binding:"required,min=2,max=35"`
 	Username   string         `gorm:"type:varchar(50);not null;uniqueIndex" json:"username" binding:"required,safe_email,allowed_domain"`
-	IsActive   bool           `gorm:"default:true" json:"is_active"`
 	Birthdate  Date           `json:"birthdate" example:"1990-01-01"`
 	ImgProfile string         `gorm:"type:varchar(255)" json:"img_profile,omitempty" binding:"omitempty,url"`
 	ImgBanner  string         `gorm:"type:varchar(255)" json:"img_banner,omitempty" binding:"omitempty,url"`
@@ -89,48 +88,4 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 		u.ID = uuid.New().String()
 	}
 	return nil
-}
-
-// CreateUserRequest represents the allowed fields for creating a new user
-type CreateUserRequest struct {
-	Name     string `json:"name" binding:"required,min=2,max=35"`
-	LastName string `json:"last_name" binding:"required,min=2,max=35"`
-	Username string `json:"username" binding:"required,min=3,max=50,alphanum"`
-	RoleID   uint8  `json:"role_id,omitempty" binding:"omitempty,gte=0,lte=255"`
-}
-
-type UserMin struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-}
-
-type AuthUserResponse struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	LastName   string `json:"last_name"`
-	Username   string `json:"username"`
-	ImgProfile string `json:"img_profile,omitempty"`
-	RoleName   string `json:"role_name"`
-}
-
-type UserResponse struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	LastName   string `json:"last_name"`
-	Username   string `json:"username"`
-	IsActive   bool   `json:"is_active"`
-	Birthdate  Date   `json:"birthdate"`
-	ImgProfile string `json:"img_profile,omitempty"`
-	ImgBanner  string `json:"img_banner,omitempty"`
-	RoleName   string `json:"role_name"`
-}
-
-type UserUpdate struct {
-	Name       *string `json:"name,omitempty"`
-	LastName   *string `json:"last_name,omitempty"`
-	Username   *string `json:"username,omitempty"`
-	Birthdate  *Date   `json:"birthdate,omitempty"`
-	IsActive   *bool   `json:"is_active,omitempty"`
-	ImgProfile *string `json:"img_profile,omitempty"`
-	ImgBanner  *string `json:"img_banner,omitempty"`
 }

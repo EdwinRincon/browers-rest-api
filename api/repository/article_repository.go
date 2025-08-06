@@ -2,11 +2,9 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 
-	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
@@ -39,10 +37,7 @@ func (ar *ArticleRepositoryImpl) GetArticleByID(ctx context.Context, id uint64) 
 		Error
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, constants.ErrArticleNotFound
-		}
-		return nil, fmt.Errorf("failed to get article: %w", err)
+		return nil, err
 	}
 	return &article, nil
 }
@@ -78,22 +73,10 @@ func (ar *ArticleRepositoryImpl) GetAllArticles(ctx context.Context, page, pageS
 
 func (ar *ArticleRepositoryImpl) UpdateArticle(ctx context.Context, article *model.Article) error {
 	result := ar.db.WithContext(ctx).Save(article)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrArticleNotFound
-	}
-	return nil
+	return result.Error
 }
 
 func (ar *ArticleRepositoryImpl) DeleteArticle(ctx context.Context, id uint64) error {
 	result := ar.db.WithContext(ctx).Delete(&model.Article{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrArticleNotFound
-	}
-	return nil
+	return result.Error
 }

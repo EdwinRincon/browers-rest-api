@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/auth"
+	"github.com/EdwinRincon/browersfc-api/api/dto"
+	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"gorm.io/gorm"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
@@ -72,7 +74,7 @@ func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *model.User
 		return
 	}
 
-	authUserResponse := model.AuthUserResponse{
+	authUserResponse := dto.AuthUserResponse{
 		ID:         user.ID,
 		Name:       user.Name,
 		LastName:   user.LastName,
@@ -185,7 +187,7 @@ func (h *UserHandler) performGoogleOAuth(c *gin.Context) (*GoogleUserInfo, error
 // @Tags         users
 // @ID           googleCallback
 // @Produce      json
-// @Success      200  {object}  model.UserResponse "Successful authentication and user data"
+// @Success      200  {object}  dto.UserResponse "Successful authentication and user data"
 // @Failure      401  {object}  helper.AppError "Authentication failed or invalid state"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /users/auth/google/callback [get]
@@ -199,7 +201,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	user, err := h.UserService.GetUserByUsername(ctx, googleUser.Email)
-	if err != nil && !errors.Is(err, constants.ErrUserNotFound) {
+	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
@@ -214,7 +216,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 		// Note: Rate limiting for new accounts is now handled by middleware.RateLimitNewAccounts
 
 		// Get the default role for new Google users
-		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
+		defaultRole, err := h.RoleService.GetActiveRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
 			helper.RespondWithError(c, helper.InternalError(err))
 			return
@@ -225,7 +227,6 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 			Name:       googleUser.Name,
 			ImgProfile: googleUser.Picture,
 			LastName:   googleUser.FamilyName,
-			IsActive:   true,
 			RoleID:     defaultRole.ID,
 		}
 
@@ -289,17 +290,18 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 // @ID           createUser
 // @Accept       json
 // @Produce      json
-// @Param        user  body      model.CreateUserRequest  true  "User data"
-// @Success      201   {object}  model.UserMin  "User created successfully"
+// @Param        user  body      dto.CreateUserRequest  true  "User data"
+// @Success      201   {object}  dto.UserShort  "User created successfully"
 // @Failure      400   {object}  helper.AppError "Invalid input"
 // @Failure      409   {object}  helper.AppError "Conflict (e.g., username exists)"
 // @Failure      500   {object}  helper.AppError "Internal server error"
 // @Router       /users [post]
 // @Security     ApiKeyAuth
 func (h *UserHandler) CreateUser(c *gin.Context) {
-	var createRequest model.CreateUserRequest
+	var createRequest dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.HandleValidationError(c, err)
+		slog.Error("invalid user data", "error", err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid user data"))
 		return
 	}
 
@@ -316,7 +318,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		roleID = role.ID
 	} else {
 		// Get the default role if no role_id provided
-		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
+		defaultRole, err := h.RoleService.GetActiveRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
 			helper.RespondWithError(c, helper.InternalError(err))
 			return
@@ -324,14 +326,8 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		roleID = defaultRole.ID
 	}
 
-	// Map the request to User model with default values
-	user := &model.User{
-		Name:     createRequest.Name,
-		LastName: createRequest.LastName,
-		Username: createRequest.Username,
-		IsActive: true, // Set default active status
-		RoleID:   roleID,
-	}
+	// Map the request to a User model
+	user := mapper.ToUser(&createRequest, roleID)
 
 	createdUser, err := h.UserService.CreateUser(ctx, user)
 	if err != nil {
@@ -353,7 +349,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // @Tags         users
 // @ID           getUserByUsername
 // @Param        username  path      string  true  "Username"
-// @Success      200      {object}  model.UserResponse "User retrieved successfully"
+// @Success      200      {object}  dto.UserResponse "User retrieved successfully"
 // @Failure      400      {object}  helper.AppError "Invalid input"
 // @Failure      404      {object}  helper.AppError "User not found"
 // @Failure      500      {object}  helper.AppError "Internal server error"
@@ -377,57 +373,63 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 		return
 	}
 
-	userResponse := model.UserResponse{
+	userResponse := dto.UserResponse{
 		ID:         user.ID,
 		Name:       user.Name,
 		LastName:   user.LastName,
 		Username:   user.Username,
-		IsActive:   user.IsActive,
 		Birthdate:  user.Birthdate,
 		ImgProfile: user.ImgProfile,
 		ImgBanner:  user.ImgBanner,
-		RoleName:   user.Role.Name,
+		Role: dto.RoleShort{
+			Name: user.Role.Name,
+		},
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
 	}
 
 	helper.HandleSuccess(c, http.StatusOK, userResponse, "User retrieved successfully")
 }
 
-// ListUsers godoc
-// @Summary      List users
-// @Description  Retrieves a paginated list of users
+// GetPaginatedUsers godoc
+// @Summary      Get paginated users
+// @Description  Retrieves a paginated list of users with sorting and ordering
 // @Tags         users
-// @ID           listUsers
-// @Param        page  query     int  false  "Page number"
-// @Success      200   {array}   model.UserResponse "Users listed successfully"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      500   {object}  helper.AppError "Internal server error"
+// @ID           getPaginatedUsers
+// @Param        page      query     int     false  "Page number (0-based)"
+// @Param        pageSize  query     int     false  "Number of items per page (default 10)"
+// @Param        sort      query     string  false  "Sort field (e.g., username, name)"
+// @Param        order     query     string  false  "Sort order (asc/desc)"
+// @Success      200       {object}  map[string]interface{} "Users retrieved successfully"
+// @Failure      400       {object}  helper.AppError "Invalid input"
+// @Failure      500       {object}  helper.AppError "Internal server error"
 // @Router       /users [get]
 // @Security     ApiKeyAuth
-func (h *UserHandler) ListUsers(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
+func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
+	sort := c.DefaultQuery("sort", "created_at")
+	order := c.DefaultQuery("order", "desc")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	page, err := strconv.ParseUint(pageStr, 10, 64)
-	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("page", "Invalid page number"))
+	// Validate sort field
+	if err := helper.ValidateSort(model.User{}, sort); err != nil {
+		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
 		return
 	}
 
-	if page < 1 {
-		page = 1
-	}
-
 	ctx := c.Request.Context()
-	users, err := h.UserService.ListUsers(ctx, page)
+	users, total, err := h.UserService.GetPaginatedUsers(ctx, sort, order, page, pageSize)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("users"))
-			return
-		}
 		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, users, "Users listed successfully")
+	response := helper.PaginatedResponse{
+		Items:      mapper.ToUserResponseList(users),
+		TotalCount: total,
+	}
+
+	helper.HandleSuccess(c, http.StatusOK, response, "Users retrieved successfully")
 }
 
 // UpdateUser godoc
@@ -438,39 +440,45 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id    path      string           true  "User ID (UUID)"
-// @Param        user  body      model.UserUpdate true  "Updated user data"
-// @Success      200   {object}  model.User  "User updated successfully"
+// @Param        user  body      dto.UpdateUserRequest true  "Updated user data"
+// @Success      200   {object}  dto.UserShort  "User updated successfully"
 // @Failure      400   {object}  helper.AppError "Invalid input or UUID format"
 // @Failure      404   {object}  helper.AppError "User not found"
 // @Failure      500   {object}  helper.AppError "Internal server error"
 // @Router       /users/{id} [put]
 // @Security     ApiKeyAuth
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	var userUpdate model.UserUpdate
-	if err := c.ShouldBindJSON(&userUpdate); err != nil {
-		helper.HandleValidationError(c, err)
-		return
-	}
-
 	userIDStr := c.Param("id")
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
+	if _, err := uuid.Parse(userIDStr); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("id", "Invalid user ID format"))
 		return
 	}
 
+	var userUpdateDTO dto.UpdateUserRequest
+	if err := c.ShouldBindJSON(&userUpdateDTO); err != nil {
+		slog.Error("failed to bind user update request", "error", err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid user data"))
+		return
+	}
+
 	ctx := c.Request.Context()
-	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdate, userID.String())
+
+	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdateDTO, userIDStr)
 	if err != nil {
-		if errors.Is(err, constants.ErrUserNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("user"))
+			return
+		}
+		if errors.Is(err, constants.ErrRecordAlreadyExists) {
+			helper.RespondWithError(c, helper.Conflict("username", "Username already exists"))
 			return
 		}
 		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, updatedUser, "User updated successfully")
+	response := mapper.ToUserShort(updatedUser)
+	helper.HandleSuccess(c, http.StatusOK, response, "User updated successfully")
 }
 
 // DeleteUser godoc
@@ -479,10 +487,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // @Tags         users
 // @ID           deleteUser
 // @Param        id   path      string  true  "User ID (UUID)"
-// @Success      204  {object}  nil  "User deleted successfully"
+// @Success      204  {object}  nil  "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid UUID format"
-// @Failure      404  {object}  helper.AppError "User not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /users/{id} [delete]
 // @Security     ApiKeyAuth
 func (h *UserHandler) DeleteUser(c *gin.Context) {
@@ -494,17 +500,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	if err := h.UserService.DeleteUser(ctx, id.String()); err != nil {
-		switch {
-		case errors.Is(err, constants.ErrUserNotFound):
-			helper.RespondWithError(c, helper.NotFound("user"))
-		case errors.Is(err, constants.ErrInvalidUUID):
-			helper.RespondWithError(c, helper.BadRequest("id", "Invalid UUID format"))
-		default:
-			helper.RespondWithError(c, helper.InternalError(err))
-		}
-		return
-	}
+	_ = h.UserService.DeleteUser(ctx, id.String())
 
 	c.Status(http.StatusNoContent)
 }

@@ -39,7 +39,7 @@ func NewTeamHandler(teamService service.TeamService) *TeamHandler {
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var team model.Team
 	if err := c.ShouldBindJSON(&team); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 
 	var team model.Team
 	if err := c.ShouldBindJSON(&team); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
 		return
 	}
 

@@ -39,7 +39,7 @@ func NewSeasonHandler(seasonService service.SeasonService) *SeasonHandler {
 func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 	var season model.Season
 	if err := c.ShouldBindJSON(&season); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid season data"))
 		return
 	}
 
@@ -146,7 +146,7 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 
 	var season model.Season
 	if err := c.ShouldBindJSON(&season); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid season data"))
 		return
 	}
 

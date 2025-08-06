@@ -37,7 +37,7 @@ func NewLineupHandler(lineupService service.LineupService) *LineupHandler {
 func (h *LineupHandler) CreateLineup(c *gin.Context) {
 	var lineup model.Lineup
 	if err := c.ShouldBindJSON(&lineup); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid lineup data"))
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 
 	var lineup model.Lineup
 	if err := c.ShouldBindJSON(&lineup); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid lineup data"))
 		return
 	}
 

@@ -29,7 +29,7 @@ func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 			users.Use(middleware.JwtAuthMiddleware())
 			{
 				// User read operations
-				users.GET("", userHandler.ListUsers)                   // List all users
+				users.GET("", userHandler.GetPaginatedUsers)           // List all users
 				users.GET("/:username", userHandler.GetUserByUsername) // Get specific user
 			}
 

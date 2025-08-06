@@ -39,7 +39,7 @@ func NewMatchHandler(matchService service.MatchService) *MatchHandler {
 func (h *MatchHandler) CreateMatch(c *gin.Context) {
 	var match model.Match
 	if err := c.ShouldBindJSON(&match); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid match data"))
 		return
 	}
 
@@ -152,7 +152,7 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 
 	var match model.Match
 	if err := c.ShouldBindJSON(&match); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid match data"))
 		return
 	}
 

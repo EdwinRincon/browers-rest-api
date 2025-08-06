@@ -38,7 +38,7 @@ func NewPlayerHandler(playerService service.PlayerService) *PlayerHandler {
 func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 	var player model.Player
 	if err := c.ShouldBindJSON(&player); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid player data"))
 		return
 	}
 
@@ -115,7 +115,7 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 
 	var player model.Player
 	if err := c.ShouldBindJSON(&player); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid player data"))
 		return
 	}
 

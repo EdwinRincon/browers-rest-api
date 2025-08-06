@@ -43,7 +43,7 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	article, err := h.ArticleService.GetArticleByID(ctx, id)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 	var article model.Article
 	if err := c.ShouldBindJSON(&article); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid article data"))
 		return
 	}
 	article.ID = 0
@@ -75,7 +75,7 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 	ctx := c.Request.Context()
 	err := h.ArticleService.CreateArticle(ctx, &article)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
@@ -107,7 +107,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 
 	var article model.Article
 	if err := c.ShouldBindJSON(&article); err != nil {
-		helper.HandleValidationError(c, err)
+		helper.RespondWithError(c, helper.BadRequest("body", "Invalid article data"))
 		return
 	}
 
@@ -121,7 +121,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = h.ArticleService.UpdateArticle(ctx, &article)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = h.ArticleService.DeleteArticle(ctx, id)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
@@ -188,7 +188,7 @@ func (h *ArticleHandler) GetAllArticles(c *gin.Context) {
 	ctx := c.Request.Context()
 	articles, err := h.ArticleService.GetAllArticles(ctx, page, pageSize)
 	if err != nil {
-		helper.HandleGormError(c, err)
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 

@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
 
-	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
@@ -33,9 +31,6 @@ func (pr *PlayerRepositoryImpl) GetPlayerByID(ctx context.Context, id uint64) (*
 	var player model.Player
 	err := pr.db.WithContext(ctx).First(&player, id).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, constants.ErrPlayerNotFound
-		}
 		return nil, err
 	}
 	return &player, nil
@@ -53,22 +48,10 @@ func (pr *PlayerRepositoryImpl) GetAllPlayers(ctx context.Context, page uint64) 
 
 func (pr *PlayerRepositoryImpl) UpdatePlayer(ctx context.Context, player *model.Player) error {
 	result := pr.db.WithContext(ctx).Save(player)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrPlayerNotFound
-	}
-	return nil
+	return result.Error
 }
 
 func (pr *PlayerRepositoryImpl) DeletePlayer(ctx context.Context, id uint64) error {
 	result := pr.db.WithContext(ctx).Delete(&model.Player{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return constants.ErrPlayerNotFound
-	}
-	return nil
+	return result.Error
 }

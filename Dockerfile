@@ -15,7 +15,7 @@ RUN apk add --no-cache git && go mod download && apk del git
 
 # Copy explicitly the source files
 # to ensure that the build context is clean and only contains necessary files
-COPY main.go ./
+COPY cmd/      ./cmd/
 COPY api/      ./api/
 COPY config/   ./config/
 COPY docs/     ./docs/
@@ -26,7 +26,7 @@ COPY server/   ./server/
 
 ENV CGO_ENABLED=0
 ARG TARGETARCH
-RUN GOOS=linux GOARCH="$TARGETARCH" go build -ldflags="-s -w" -o /app/app . && \
+RUN GOOS=linux GOARCH="$TARGETARCH" go build -ldflags="-s -w" -o /app/app ./cmd/browersfc && \
     test -f /app/app || exit 1
 
 # =========================
