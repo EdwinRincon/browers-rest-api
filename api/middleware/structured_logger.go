@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"crypto/rand"
 	"log/slog"
-	"math/rand"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,12 +13,17 @@ func generateRequestID() string {
 	return time.Now().Format("20060102150405") + "-" + randomString(6)
 }
 
-// randomString generates a random string of specified length
+// randomString generates a cryptographically secure random string of specified length
 func randomString(n int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+	randBytes := make([]byte, n)
+	if _, err := rand.Read(randBytes); err != nil {
+		// Fallback to timestamp-based generation if crypto/rand fails
+		return time.Now().Format("150405")
+	}
+	for i, rb := range randBytes {
+		b[i] = letters[int(rb)%len(letters)]
 	}
 	return string(b)
 }

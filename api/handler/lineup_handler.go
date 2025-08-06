@@ -170,7 +170,7 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 // @Tags         lineups
 // @ID           deleteLineup
 // @Param        id   path      int  true  "Lineup ID"
-// @Success      204  {object}  nil "No Content"
+// @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Lineup not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"

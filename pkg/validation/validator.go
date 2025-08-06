@@ -5,25 +5,34 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/go-playground/validator/v10"
 )
 
 var (
-	validate   *validator.Validate
-	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	urlRegex   = regexp.MustCompile(`^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)$`)
+	validate     *validator.Validate
+	validateOnce sync.Once
+	validateErr  error
+	emailRegex   = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	urlRegex     = regexp.MustCompile(`^https?://(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:/[a-zA-Z0-9\-._~!$&'()*+,;=:@%/?]*)?$`)
 )
 
 // InitValidator initializes the validator with custom validations
-func InitValidator() {
+func InitValidator() error {
 	validate = validator.New()
 
 	// Register custom validations
-	_ = validate.RegisterValidation("safe_email", validateSafeEmail)
-	_ = validate.RegisterValidation("allowed_domain", validateAllowedDomain)
-	_ = validate.RegisterValidation("safe_url", validateSafeURL)
+	if err := validate.RegisterValidation("safe_email", validateSafeEmail); err != nil {
+		return err
+	}
+	if err := validate.RegisterValidation("allowed_domain", validateAllowedDomain); err != nil {
+		return err
+	}
+	if err := validate.RegisterValidation("safe_url", validateSafeURL); err != nil {
+		return err
+	}
 
 	// Register custom tag name functions
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -33,12 +42,18 @@ func InitValidator() {
 		}
 		return name
 	})
+
+	return nil
 }
 
 // ValidateStruct validates a struct using validator tags
 func ValidateStruct(s interface{}) error {
-	if validate == nil {
-		InitValidator()
+	validateOnce.Do(func() {
+		validateErr = InitValidator()
+	})
+
+	if validateErr != nil {
+		return validateErr
 	}
 	return validate.Struct(s)
 }
@@ -85,6 +100,9 @@ func validateAllowedDomain(fl validator.FieldLevel) bool {
 	}
 
 	domain := strings.ToLower(parts[1])
+	if domain == "" {
+		return false
+	}
 	for _, allowed := range constants.AllowedEmailDomains {
 		if domain == allowed {
 			return true

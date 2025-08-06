@@ -162,7 +162,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 // @Tags         roles
 // @ID           deleteRole
 // @Param        id   path      int  true  "Role ID"
-// @Success      204  {object}  nil  "No Content"
+// @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Router       /roles/{id} [delete]
 // @Security     ApiKeyAuth

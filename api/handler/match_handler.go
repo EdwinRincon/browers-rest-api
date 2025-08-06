@@ -177,7 +177,7 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 // @Tags         matches
 // @ID           deleteMatch
 // @Param        id   path      int  true  "Match ID"
-// @Success      204  {object}  nil "No Content"
+// @Success      204 nil "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Match not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"

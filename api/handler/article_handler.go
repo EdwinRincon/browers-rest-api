@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 
@@ -35,8 +36,8 @@ func NewArticleHandler(articleService service.ArticleService) *ArticleHandler {
 func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 	articleID := c.Param("id")
 	id, err := strconv.ParseUint(articleID, 10, 64)
-	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid article ID"))
+	if err != nil || id > uint64(math.MaxUint32) {
+		helper.RespondWithError(c, helper.BadRequest("id", "Invalid or too large article ID"))
 		return
 	}
 
@@ -100,8 +101,8 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	articleID := c.Param("id")
 	id, err := strconv.ParseUint(articleID, 10, 64)
-	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid article ID"))
+	if err != nil || id > uint64(math.MaxUint32) {
+		helper.RespondWithError(c, helper.BadRequest("id", "Invalid or too large article ID"))
 		return
 	}
 
@@ -111,11 +112,11 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 		return
 	}
 
-	// Reject mismatching IDs
 	if article.ID != 0 && article.ID != uint(id) {
 		helper.RespondWithError(c, helper.BadRequest("id", "Mismatched article ID in body and URL"))
 		return
 	}
+
 	article.ID = uint(id)
 
 	ctx := c.Request.Context()
@@ -134,7 +135,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 // @Tags         articles
 // @ID           deleteArticle
 // @Param        id   path      int  true  "Article ID"
-// @Success      204  {object}  nil "No Content"
+// @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Article not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"

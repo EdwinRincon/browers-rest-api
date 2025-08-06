@@ -497,7 +497,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // @Tags         users
 // @ID           deleteUser
 // @Param        id   path      string  true  "User ID (UUID)"
-// @Success      204  {object}  nil  "No Content"
+// @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid UUID format"
 // @Router       /users/{id} [delete]
 // @Security     ApiKeyAuth

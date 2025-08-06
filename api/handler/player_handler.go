@@ -143,7 +143,7 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 // @Tags         players
 // @ID           deletePlayer
 // @Param        id   path      int  true  "Player ID"
-// @Success      204  {object}  nil  "No Content"
+// @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Player not found"
 // @Router       /players/{id} [delete]
@@ -167,7 +167,7 @@ func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, nil, "Player deleted successfully")
+	c.Status(http.StatusNoContent)
 }
 
 // GetAllPlayers godoc

@@ -2,7 +2,7 @@ package constants
 
 // OAuth2 Security Constants
 const (
-	// Email domain restrictions for account creation
+	// Security limits and durations
 	MaxLoginAttemptsPerIP  = 5  // Maximum login attempts per IP address
 	LoginLockoutDuration   = 15 // Lockout duration in minutes
 	MinPasswordLength      = 8  // Minimum password length

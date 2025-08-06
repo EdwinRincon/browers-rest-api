@@ -163,7 +163,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 // @Tags         team-stats
 // @ID           deleteTeamStats
 // @Param        id   path      int  true  "Team Stats ID"
-// @Success      204  {object}  nil "No Content"
+// @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Team stats not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
