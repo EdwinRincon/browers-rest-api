@@ -102,7 +102,7 @@ func (ur *UserRepositoryImpl) GetPaginatedUsers(ctx context.Context, sort string
 }
 
 func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.User) error {
-	return ur.db.Create(user).Error
+	return ur.db.WithContext(ctx).Create(user).Error
 }
 
 func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, id string, user *model.User) error {
@@ -114,5 +114,5 @@ func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, id string, user *m
 }
 
 func (ur *UserRepositoryImpl) DeleteUser(ctx context.Context, id string) error {
-	return ur.db.Delete(&model.User{}, "id = ?", id).Error
+	return ur.db.WithContext(ctx).Delete(&model.User{}, "id = ?", id).Error
 }

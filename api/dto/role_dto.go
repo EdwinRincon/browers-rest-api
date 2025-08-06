@@ -8,7 +8,7 @@ type CreateRoleRequest struct {
 }
 
 type UpdateRoleRequest struct {
-	Name        *string `json:"name,omitempty" binding:"omitempty,max=20"`
+	Name        *string `json:"name,omitempty" binding:"omitempty,min=1,max=20"`
 	Description *string `json:"description,omitempty"`
 }
 

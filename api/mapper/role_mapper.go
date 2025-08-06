@@ -7,6 +7,9 @@ import (
 
 // ToRole converts a CreateRoleRequest DTO to a Role model
 func ToRole(roleDTO *dto.CreateRoleRequest) *model.Role {
+	if roleDTO == nil {
+		return nil
+	}
 	description := ""
 	if roleDTO.Description != nil {
 		description = *roleDTO.Description
@@ -20,6 +23,9 @@ func ToRole(roleDTO *dto.CreateRoleRequest) *model.Role {
 
 // ToRoleResponse converts a Role model to a RoleResponse DTO
 func ToRoleResponse(role *model.Role) *dto.RoleResponse {
+	if role == nil {
+		return nil
+	}
 	return &dto.RoleResponse{
 		ID:          role.ID,
 		Name:        role.Name,
@@ -33,7 +39,9 @@ func ToRoleResponse(role *model.Role) *dto.RoleResponse {
 func ToRoleResponseList(roles []model.Role) []dto.RoleResponse {
 	roleResponses := make([]dto.RoleResponse, len(roles))
 	for i, role := range roles {
-		roleResponses[i] = *ToRoleResponse(&role)
+		if response := ToRoleResponse(&role); response != nil {
+			roleResponses[i] = *response
+		}
 	}
 	return roleResponses
 }

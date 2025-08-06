@@ -411,6 +411,16 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+	if order != "asc" && order != "desc" {
+		order = "asc"
+	}
+
 	// Validate sort field
 	if err := helper.ValidateSort(model.User{}, sort); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
@@ -500,7 +510,11 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	_ = h.UserService.DeleteUser(ctx, id.String())
+	err = h.UserService.DeleteUser(ctx, id.String())
+	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
+		helper.RespondWithError(c, helper.InternalError(err))
+		return
+	}
 
 	c.Status(http.StatusNoContent)
 }

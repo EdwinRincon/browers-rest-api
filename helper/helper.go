@@ -103,14 +103,47 @@ func parseFields(t reflect.Type, fields map[string]bool) {
 	}
 }
 
+// shouldAddUnderscore determines if an underscore should be added before the current character
+func shouldAddUnderscore(runes []rune, i int) bool {
+	if i == 0 {
+		return false
+	}
+
+	curr := runes[i]
+	prev := runes[i-1]
+
+	// Number after letter or letter after number
+	if (unicode.IsNumber(curr) && unicode.IsLetter(prev)) ||
+		(unicode.IsLetter(curr) && unicode.IsNumber(prev)) {
+		return true
+	}
+
+	// Uppercase rules
+	if unicode.IsUpper(curr) {
+		// Previous is lowercase
+		if unicode.IsLower(prev) {
+			return true
+		}
+		// Previous is uppercase and next is lowercase
+		if i+1 < len(runes) && unicode.IsUpper(prev) && unicode.IsLower(runes[i+1]) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // toSnakeCase converts a camelCase or PascalCase string to snake_case
 func toSnakeCase(str string) string {
 	var result []rune
-	for i, r := range str {
+	runes := []rune(str)
+
+	for i, r := range runes {
+		if shouldAddUnderscore(runes, i) {
+			result = append(result, '_')
+		}
+
 		if unicode.IsUpper(r) {
-			if i > 0 {
-				result = append(result, '_')
-			}
 			result = append(result, unicode.ToLower(r))
 		} else {
 			result = append(result, r)
