@@ -17,9 +17,7 @@ func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 		users := api.Group("/users")
 		{
 			// Public routes - OAuth2 Authentication
-			// Rate limited to prevent auth abuse
 			authGroup := users.Group("/auth")
-			authGroup.Use(middleware.RateLimitAuth())
 			{
 				authGroup.GET("/google", userHandler.LoginWithGoogle)
 				authGroup.GET("/google/callback", userHandler.GoogleCallback)
@@ -29,24 +27,22 @@ func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
 			users.Use(middleware.JwtAuthMiddleware())
 			{
 				// User read operations
-				users.GET("", userHandler.GetPaginatedUsers)           // List all users
-				users.GET("/:username", userHandler.GetUserByUsername) // Get specific user
+				users.GET("", userHandler.GetPaginatedUsers)
+				users.GET("/:username", userHandler.GetUserByUsername)
 			}
 
 			// Admin routes - Require RBAC admin role
 			adminGroup := users.Group("")
 			adminGroup.Use(middleware.RBACMiddleware(constants.RoleAdmin))
 			{
-				// User creation - Special rate limiting
 				createGroup := adminGroup.Group("")
-				createGroup.Use(middleware.RateLimitNewAccounts())
 				{
-					createGroup.POST("", userHandler.CreateUser) // Create new user
+					createGroup.POST("", userHandler.CreateUser)
 				}
 
 				// User modifications - Admin only
-				adminGroup.PUT("/:id", userHandler.UpdateUser)    // Update user
-				adminGroup.DELETE("/:id", userHandler.DeleteUser) // Delete user
+				adminGroup.PUT("/:id", userHandler.UpdateUser)
+				adminGroup.DELETE("/:id", userHandler.DeleteUser)
 			}
 		}
 	}

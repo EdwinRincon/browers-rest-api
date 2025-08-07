@@ -331,10 +331,12 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	createdUser, err := h.UserService.CreateUser(ctx, user)
 	if err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		switch {
+		case errors.Is(err, constants.ErrRecordAlreadyExists):
 			helper.RespondWithError(c, helper.Conflict("username", "Username already exists"))
 			return
-		} else {
+		default:
+			slog.Error("failed to create user", "error", err)
 			helper.RespondWithError(c, helper.InternalError(err))
 			return
 		}
@@ -411,10 +413,10 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	if page <= 0 {
+	if page < 0 {
 		page = 1
 	}
-	if pageSize <= 0 || pageSize > 100 {
+	if pageSize < 0 || pageSize > 200 {
 		pageSize = 10
 	}
 	if order != "asc" && order != "desc" {

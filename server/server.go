@@ -80,9 +80,6 @@ func NewServer() *Server {
 	// Add our structured logger middleware
 	r.Use(middleware.StructuredLogger())
 
-	// Apply generic rate limiting for all routes
-	r.Use(middleware.RateLimit())
-
 	// Configurar Swagger
 	setupSwagger()
 

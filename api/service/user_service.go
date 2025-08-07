@@ -9,7 +9,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
-	"gorm.io/gorm"
 )
 
 type UserService interface {
@@ -31,31 +30,38 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 }
 
 func (s *userService) CreateUser(ctx context.Context, user *model.User) (*dto.UserShort, error) {
-	// Check for existing user (including soft-deleted)
+	// First check if there's an active user with this username
+	activeUser, err := s.UserRepository.GetActiveUserByUsername(ctx, user.Username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing active user: %w", err)
+	}
+	if activeUser != nil {
+		return nil, constants.ErrRecordAlreadyExists
+	}
+
+	// If no active user exists, check for soft-deleted user
 	existing, err := s.UserRepository.GetUnscopedUserByUsername(ctx, user.Username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing user: %w", err)
 	}
 
-	if existing != nil {
-		if existing.DeletedAt.Valid {
-			// Restore the soft-deleted user with new information
-			existing.DeletedAt = gorm.DeletedAt{} // Reset soft delete
-			existing.Name = user.Name
-			existing.LastName = user.LastName
-			existing.Username = user.Username
-			existing.RoleID = user.RoleID
-			existing.ImgProfile = user.ImgProfile
-			existing.ImgBanner = user.ImgBanner
-			existing.Birthdate = user.Birthdate
+	if existing != nil && existing.DeletedAt.Valid {
+		// Update all relevant fields from the new user
+		existing.Name = user.Name
+		existing.LastName = user.LastName
+		existing.Username = user.Username
+		existing.RoleID = user.RoleID
+		existing.ImgProfile = user.ImgProfile
+		existing.ImgBanner = user.ImgBanner
+		existing.Birthdate = user.Birthdate
 
-			if err := s.UserRepository.UpdateUser(ctx, existing.ID, existing); err != nil {
-				return nil, fmt.Errorf("failed to restore user: %w", err)
-			}
-
-			return mapper.ToUserShort(existing), nil
+		// Restore and update the user in a transaction
+		err := s.UserRepository.RestoreAndUpdateUser(ctx, existing)
+		if err != nil {
+			return nil, fmt.Errorf("failed to restore and update user: %w", err)
 		}
-		return nil, constants.ErrRecordAlreadyExists
+
+		return mapper.ToUserShort(existing), nil
 	}
 
 	if err := s.UserRepository.CreateUser(ctx, user); err != nil {
@@ -81,7 +87,7 @@ func (s *userService) GetPaginatedUsers(ctx context.Context, sort string, order 
 }
 
 func (s *userService) UpdateUser(ctx context.Context, userUpdate *dto.UpdateUserRequest, userID string) (*model.User, error) {
-	user, err := s.UserRepository.GetUserByID(ctx, userID)
+	user, err := s.UserRepository.GetActiveUserByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by ID: %w", err)
 	}

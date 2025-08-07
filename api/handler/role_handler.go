@@ -201,10 +201,10 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	if page <= 0 {
+	if page < 0 {
 		page = 1
 	}
-	if pageSize <= 0 || pageSize > 100 {
+	if pageSize < 0 || pageSize > 100 {
 		pageSize = 10
 	}
 	if order != "asc" && order != "desc" {
