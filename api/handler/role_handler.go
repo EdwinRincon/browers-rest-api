@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
@@ -81,7 +83,9 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	role := mapper.ToRole(&roleDTO)
 
 	createdRole, err := h.RoleService.CreateRole(ctx, role)
@@ -123,13 +127,15 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	}
 
 	var updateRoleDTO dto.UpdateRoleRequest
-	if err := c.ShouldBindJSON(&updateRoleDTO); err != nil {
+	if err = c.ShouldBindJSON(&updateRoleDTO); err != nil {
 		slog.Error("failed to bind role update request", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid role data"))
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 
 	// Convert DTO to domain model
 	updateRole := mapper.ToRoleFromUpdate(&updateRoleDTO)
@@ -174,7 +180,9 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	_ = h.RoleService.DeleteRole(ctx, uint8(id))
 
 	c.Status(http.StatusNoContent)
@@ -202,7 +210,7 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
 	if page < 0 {
-		page = 1
+		page = 0
 	}
 	if pageSize < 0 || pageSize > 100 {
 		pageSize = 10
@@ -217,7 +225,9 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	roles, total, err := h.RoleService.GetPaginatedRoles(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))

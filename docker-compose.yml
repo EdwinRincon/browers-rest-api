@@ -1,0 +1,54 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: browers-api:1.0
+    container_name: browers-api
+    expose:
+      - "5050"
+    environment:
+      - PORT=${PORT:-5050}
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
+      - OAUTH_REDIRECT_URL=${OAUTH_REDIRECT_URL}
+      - DB_URL_FILE=/run/secrets/db_url
+      - JWT_SECRET_FILE=/run/secrets/jwt_secret
+      - OAUTH_CLIENT_SECRET_FILE=/run/secrets/oauth_client_secret
+    secrets:
+      - db_url
+      - jwt_secret
+      - oauth_client_secret
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx:
+    image: nginx:1.24-alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  nginx_logs:
+
+secrets:
+  db_url:
+    file: ./secrets/db_url.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  oauth_client_secret:
+    file: ./secrets/oauth_client_secret.txt

@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -41,7 +43,9 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err := h.TeamStatsService.CreateTeamStats(ctx, &teamStats)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -75,7 +79,9 @@ func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	teamStats, err := h.TeamStatsService.GetTeamStatsByID(ctx, id)
 	if err != nil {
 		helper.RespondWithError(c, helper.NotFound("team stats"))
@@ -104,7 +110,9 @@ func (h *TeamStatsHandler) ListTeamStats(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	teamStats, err := h.TeamStatsService.ListTeamStats(ctx, page)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -137,12 +145,14 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	}
 
 	var teamStats model.TeamStat
-	if err := c.ShouldBindJSON(&teamStats); err != nil {
+	if err = c.ShouldBindJSON(&teamStats); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team stats data"))
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	teamStats.ID = id
 	err = h.TeamStatsService.UpdateTeamStats(ctx, &teamStats)
 	if err != nil {
@@ -176,7 +186,9 @@ func (h *TeamStatsHandler) DeleteTeamStats(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.TeamStatsService.DeleteTeamStats(ctx, id)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))

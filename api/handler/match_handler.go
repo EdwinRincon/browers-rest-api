@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -44,7 +46,9 @@ func (h *MatchHandler) CreateMatch(c *gin.Context) {
 	}
 
 	match.ID = 0
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 
 	if err := h.MatchService.CreateMatch(ctx, &match); err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -78,7 +82,9 @@ func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	match, err := h.MatchService.GetMatchByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -117,7 +123,9 @@ func (h *MatchHandler) ListMatches(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	matches, err := h.MatchService.ListMatches(ctx, page, pageSize)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -151,12 +159,14 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 	}
 
 	var match model.Match
-	if err := c.ShouldBindJSON(&match); err != nil {
+	if err = c.ShouldBindJSON(&match); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid match data"))
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	match.ID = id
 	err = h.MatchService.UpdateMatch(ctx, &match)
 	if err != nil {
@@ -191,7 +201,9 @@ func (h *MatchHandler) DeleteMatch(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.MatchService.DeleteMatch(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

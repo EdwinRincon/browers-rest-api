@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -44,7 +46,9 @@ func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 
 	player.ID = 0
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err := h.PlayerService.CreatePlayer(ctx, &player)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -77,7 +81,9 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	player, err := h.PlayerService.GetPlayerByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -114,14 +120,16 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 	}
 
 	var player model.Player
-	if err := c.ShouldBindJSON(&player); err != nil {
+	if err = c.ShouldBindJSON(&player); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid player data"))
 		return
 	}
 
 	player.ID = id
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.PlayerService.UpdatePlayer(ctx, &player)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -156,7 +164,9 @@ func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.PlayerService.DeletePlayer(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -188,7 +198,9 @@ func (h *PlayerHandler) GetAllPlayers(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	players, err := h.PlayerService.GetAllPlayers(ctx, page)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))

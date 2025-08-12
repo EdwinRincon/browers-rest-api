@@ -199,7 +199,9 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	user, err := h.UserService.GetUserByUsername(ctx, googleUser.Email)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -305,7 +307,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 
 	var roleID uint8
 	if createRequest.RoleID > 0 {
@@ -360,7 +364,10 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 	username := c.Param("username")
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
 	user, err := h.UserService.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -414,7 +421,7 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
 	if page < 0 {
-		page = 1
+		page = 0
 	}
 	if pageSize < 0 || pageSize > 200 {
 		pageSize = 10
@@ -429,7 +436,10 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
 	users, total, err := h.UserService.GetPaginatedUsers(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -473,7 +483,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 
 	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdateDTO, userIDStr)
 	if err != nil {
@@ -511,7 +523,9 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.UserService.DeleteUser(ctx, id.String())
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.RespondWithError(c, helper.InternalError(err))

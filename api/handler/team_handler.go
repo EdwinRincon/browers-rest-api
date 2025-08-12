@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -46,7 +48,9 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	// Reset ID to ensure we're creating a new record
 	team.ID = 0
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err := h.TeamService.CreateTeam(ctx, &team)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -80,7 +84,9 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	team, err := h.TeamService.GetTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -113,7 +119,9 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	teams, err := h.TeamService.ListTeams(ctx, page)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -147,12 +155,14 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	}
 
 	var team model.Team
-	if err := c.ShouldBindJSON(&team); err != nil {
+	if err = c.ShouldBindJSON(&team); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	team.ID = id
 	err = h.TeamService.UpdateTeam(ctx, &team)
 	if err != nil {
@@ -189,7 +199,9 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.TeamService.DeleteTeam(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

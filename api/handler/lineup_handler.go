@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -41,7 +43,9 @@ func (h *LineupHandler) CreateLineup(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err := h.LineupService.CreateLineup(ctx, &lineup)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -75,7 +79,9 @@ func (h *LineupHandler) GetLineupByID(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	lineup, err := h.LineupService.GetLineupByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -108,7 +114,9 @@ func (h *LineupHandler) ListLineups(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	lineups, err := h.LineupService.ListLineups(ctx, page)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -142,12 +150,14 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 	}
 
 	var lineup model.Lineup
-	if err := c.ShouldBindJSON(&lineup); err != nil {
+	if err = c.ShouldBindJSON(&lineup); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid lineup data"))
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	lineup.ID = uint64(id)
 	err = h.LineupService.UpdateLineup(ctx, &lineup)
 	if err != nil {
@@ -184,7 +194,9 @@ func (h *LineupHandler) DeleteLineup(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.LineupService.DeleteLineup(ctx, uint64(id))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -216,7 +228,9 @@ func (h *LineupHandler) GetLineupsByMatch(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	lineups, err := h.LineupService.GetLineupsByMatch(ctx, matchID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

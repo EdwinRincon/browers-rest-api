@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -43,7 +45,9 @@ func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err := h.SeasonService.CreateSeason(ctx, &season)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -77,7 +81,9 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	season, err := h.SeasonService.GetSeasonByID(ctx, uint(id))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -111,7 +117,9 @@ func (h *SeasonHandler) GetAllSeasons(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	seasons, err := h.SeasonService.GetAllSeasons(ctx, page)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -145,12 +153,14 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 	}
 
 	var season model.Season
-	if err := c.ShouldBindJSON(&season); err != nil {
+	if err = c.ShouldBindJSON(&season); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid season data"))
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	season.ID = uint(id)
 	err = h.SeasonService.UpdateSeason(ctx, &season)
 	if err != nil {
@@ -185,7 +195,9 @@ func (h *SeasonHandler) DeleteSeason(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.SeasonService.DeleteSeason(ctx, uint(id))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

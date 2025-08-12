@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
@@ -41,7 +43,9 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	article, err := h.ArticleService.GetArticleByID(ctx, id)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -73,7 +77,9 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 	}
 	article.ID = 0
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err := h.ArticleService.CreateArticle(ctx, &article)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -107,7 +113,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	}
 
 	var article model.Article
-	if err := c.ShouldBindJSON(&article); err != nil {
+	if err = c.ShouldBindJSON(&article); err != nil {
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid article data"))
 		return
 	}
@@ -119,7 +125,9 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 
 	article.ID = uint(id)
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.ArticleService.UpdateArticle(ctx, &article)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -149,7 +157,9 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	err = h.ArticleService.DeleteArticle(ctx, id)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
@@ -186,7 +196,9 @@ func (h *ArticleHandler) GetAllArticles(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 	articles, err := h.ArticleService.GetAllArticles(ctx, page, pageSize)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
