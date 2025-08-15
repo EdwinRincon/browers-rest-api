@@ -16,7 +16,7 @@ func UpdateUserFromDTO(user *model.User, dto *dto.UpdateUserRequest) {
 		user.Username = *dto.Username
 	}
 	if dto.Birthdate != nil {
-		user.Birthdate = *dto.Birthdate
+		*user.Birthdate = *dto.Birthdate
 	}
 	if dto.ImgProfile != nil {
 		user.ImgProfile = *dto.ImgProfile
@@ -43,7 +43,7 @@ func ToUserResponse(user *model.User) *dto.UserResponse {
 		Name:       user.Name,
 		LastName:   user.LastName,
 		Username:   user.Username,
-		Birthdate:  user.Birthdate,
+		Birthdate:  *user.Birthdate,
 		ImgProfile: user.ImgProfile,
 		ImgBanner:  user.ImgBanner,
 		Role:       role,

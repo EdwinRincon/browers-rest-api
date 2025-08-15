@@ -382,20 +382,7 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 		return
 	}
 
-	userResponse := dto.UserResponse{
-		ID:         user.ID,
-		Name:       user.Name,
-		LastName:   user.LastName,
-		Username:   user.Username,
-		Birthdate:  user.Birthdate,
-		ImgProfile: user.ImgProfile,
-		ImgBanner:  user.ImgBanner,
-		Role: dto.RoleShort{
-			Name: user.Role.Name,
-		},
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-	}
+	userResponse := mapper.ToUserResponse(user)
 
 	helper.HandleSuccess(c, http.StatusOK, userResponse, "User retrieved successfully")
 }
@@ -423,7 +410,7 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	if page < 0 {
 		page = 0
 	}
-	if pageSize < 0 || pageSize > 200 {
+	if pageSize < 1 || pageSize > 200 {
 		pageSize = 10
 	}
 	if order != "asc" && order != "desc" {

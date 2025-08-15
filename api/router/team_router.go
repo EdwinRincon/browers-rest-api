@@ -16,7 +16,7 @@ func InitializeTeamRoutes(r *gin.Engine, teamHandler *handler.TeamHandler) {
 		{
 			teams.Use(middleware.JwtAuthMiddleware())
 
-			teams.GET("", teamHandler.ListTeams)
+			teams.GET("", teamHandler.GetPaginatedTeams)
 			teams.GET("/:id", teamHandler.GetTeamByID)
 
 			teams.Use(middleware.RBACMiddleware(constants.RoleAdmin))

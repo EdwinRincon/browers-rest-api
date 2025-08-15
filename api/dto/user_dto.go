@@ -2,8 +2,6 @@ package dto
 
 import (
 	"time"
-
-	"github.com/EdwinRincon/browersfc-api/api/model"
 )
 
 type CreateUserRequest struct {
@@ -14,26 +12,26 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
-	Name       *string     `json:"name,omitempty"`
-	LastName   *string     `json:"last_name,omitempty"`
-	Username   *string     `json:"username,omitempty"`
-	Birthdate  *model.Date `json:"birthdate,omitempty"`
-	ImgProfile *string     `json:"img_profile,omitempty"`
-	ImgBanner  *string     `json:"img_banner,omitempty"`
-	RoleID     *uint8      `json:"role_id,omitempty" binding:"omitempty,gte=0,lte=255"`
+	Name       *string    `json:"name,omitempty"`
+	LastName   *string    `json:"last_name,omitempty"`
+	Username   *string    `json:"username,omitempty"`
+	Birthdate  *time.Time `json:"birthdate,omitempty"`
+	ImgProfile *string    `json:"img_profile,omitempty"`
+	ImgBanner  *string    `json:"img_banner,omitempty"`
+	RoleID     *uint8     `json:"role_id,omitempty" binding:"omitempty,gte=0,lte=255"`
 }
 
 type UserResponse struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	LastName   string     `json:"last_name"`
-	Username   string     `json:"username"`
-	Birthdate  model.Date `json:"birthdate,omitempty"`
-	ImgProfile string     `json:"img_profile,omitempty"`
-	ImgBanner  string     `json:"img_banner,omitempty"`
-	Role       RoleShort  `json:"role,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	LastName   string    `json:"last_name"`
+	Username   string    `json:"username"`
+	Birthdate  time.Time `json:"birthdate,omitempty"`
+	ImgProfile string    `json:"img_profile,omitempty"`
+	ImgBanner  string    `json:"img_banner,omitempty"`
+	Role       RoleShort `json:"role,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type UserShort struct {

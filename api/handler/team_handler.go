@@ -3,10 +3,14 @@ package handler
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
+	"github.com/EdwinRincon/browersfc-api/api/dto"
+	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
@@ -31,37 +35,43 @@ func NewTeamHandler(teamService service.TeamService) *TeamHandler {
 // @ID           createTeam
 // @Accept       json
 // @Produce      json
-// @Param        team  body      model.Team  true  "Team data"
-// @Success      201   {object}  model.Team "Created"
+// @Param        team  body      dto.CreateTeamRequest  true  "Team data"
+// @Success      201   {object}  dto.TeamShort "Created"
 // @Failure      400   {object}  helper.AppError "Invalid input"
 // @Failure      409   {object}  helper.AppError "Conflict (e.g., team name exists)"
 // @Failure      500   {object}  helper.AppError "Internal server error"
 // @Router       /teams [post]
 // @Security     ApiKeyAuth
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
-	var team model.Team
-	if err := c.ShouldBindJSON(&team); err != nil {
+	var createRequest dto.CreateTeamRequest
+	if err := c.ShouldBindJSON(&createRequest); err != nil {
+		slog.Error("invalid team data", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
 		return
 	}
 
-	// Reset ID to ensure we're creating a new record
-	team.ID = 0
-
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err := h.TeamService.CreateTeam(ctx, &team)
+
+	// Map DTO to model
+	team := mapper.ToTeam(&createRequest)
+
+	createdTeam, err := h.TeamService.CreateTeam(ctx, team)
 	if err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		switch {
+		case errors.Is(err, constants.ErrRecordAlreadyExists):
 			helper.RespondWithError(c, helper.Conflict("team", "A team with this name already exists"))
-		} else {
+			return
+		default:
+			slog.Error("failed to create team", "error", err)
+
 			helper.RespondWithError(c, helper.InternalError(err))
+			return
 		}
-		return
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, team, "Team created successfully")
+	helper.HandleSuccess(c, http.StatusCreated, createdTeam, "Team created successfully")
 }
 
 // GetTeamByID godoc
@@ -100,49 +110,70 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 	helper.HandleSuccess(c, http.StatusOK, team, "Team found successfully")
 }
 
-// ListTeams godoc
+// GetPaginatedTeams godoc
 // @Summary      List teams
-// @Description  Retrieves a paginated list of teams
+// @Description  Returns a paginated list of teams
 // @Tags         teams
-// @ID           listTeams
-// @Param        page  query     int  false  "Page number"
-// @Success      200   {array}   model.Team "Teams listed successfully"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      500   {object}  helper.AppError "Internal server error"
+// @ID           GetPaginatedTeams
+// @Param        page      query     int     false  "Page number (default: 0)"
+// @Param        pageSize  query     int     false  "Page size (default: 10)"
+// @Param        sort      query     string  false  "Sort field (default: id)"
+// @Param        order     query     string  false  "Sort order (asc or desc, default: asc)"
+// @Success      200       {object}  helper.PaginatedResponse{data=[]dto.TeamResponse} "Success"
+// @Failure      400       {object}  helper.AppError "Invalid input"
+// @Failure      500       {object}  helper.AppError "Internal server error"
 // @Router       /teams [get]
 // @Security     ApiKeyAuth
-func (h *TeamHandler) ListTeams(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	page, err := strconv.ParseUint(pageStr, 10, 64)
-	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("page", "Invalid page number"))
+func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
+	sort := c.DefaultQuery("sort", "id")
+	order := c.DefaultQuery("order", "asc")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	if page < 0 {
+		page = 0
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	// Validate sort field
+	if err := helper.ValidateSort(model.Team{}, sort); err != nil {
+		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
 		return
 	}
 
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	teams, err := h.TeamService.ListTeams(ctx, page)
+
+	teams, total, err := h.TeamService.GetPaginatedTeams(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, teams, "Teams listed successfully")
+	response := helper.PaginatedResponse{
+		Items:      mapper.ToTeamResponseList(teams),
+		TotalCount: total,
+	}
+
+	helper.HandleSuccess(c, http.StatusOK, response, "Teams retrieved successfully")
 }
 
 // UpdateTeam godoc
-// @Summary      Update an existing team
-// @Description  Updates the details of an existing team by ID
+// @Summary      Update a team
+// @Description  Updates a team with the provided data
 // @Tags         teams
 // @ID           updateTeam
 // @Accept       json
 // @Produce      json
-// @Param        id    path      int        true  "Team ID"
-// @Param        team  body      model.Team true  "Updated team data"
-// @Success      200   {object}  model.Team "Updated"
+// @Param        id    path      int                  true  "Team ID"
+// @Param        team  body      dto.UpdateTeamRequest  true  "Updated team data"
+// @Success      200   {object}  dto.TeamResponse "Success"
 // @Failure      400   {object}  helper.AppError "Invalid input"
 // @Failure      404   {object}  helper.AppError "Team not found"
+// @Failure      409   {object}  helper.AppError "Conflict (e.g., team name exists)"
 // @Failure      500   {object}  helper.AppError "Internal server error"
 // @Router       /teams/{id} [put]
 // @Security     ApiKeyAuth
@@ -154,8 +185,9 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 		return
 	}
 
-	var team model.Team
-	if err = c.ShouldBindJSON(&team); err != nil {
+	var updateTeamRequest dto.UpdateTeamRequest
+	if err = c.ShouldBindJSON(&updateTeamRequest); err != nil {
+		slog.Error("failed to bind update team request", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
 		return
 	}
@@ -163,12 +195,12 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	team.ID = id
-	err = h.TeamService.UpdateTeam(ctx, &team)
+
+	updatedTeam, err := h.TeamService.UpdateTeam(ctx, &updateTeamRequest, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("team"))
-		} else if errors.Is(err, gorm.ErrDuplicatedKey) {
+		} else if errors.Is(err, constants.ErrRecordAlreadyExists) {
 			helper.RespondWithError(c, helper.Conflict("team", "A team with this name already exists"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))
@@ -176,7 +208,8 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, team, "Team updated successfully")
+	teamResponse := mapper.ToTeamResponse(updatedTeam)
+	helper.HandleSuccess(c, http.StatusOK, teamResponse, "Team updated successfully")
 }
 
 // DeleteTeam godoc
@@ -185,7 +218,7 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 // @Tags         teams
 // @ID           deleteTeam
 // @Param        id   path      int  true  "Team ID"
-// @Success      204  {object}  nil "No Content"
+// @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Team not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
@@ -204,7 +237,7 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	defer cancel()
 	err = h.TeamService.DeleteTeam(ctx, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("team"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))
