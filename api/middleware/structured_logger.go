@@ -2,11 +2,15 @@ package middleware
 
 import (
 	"crypto/rand"
-	"log/slog"
+	"strings"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
+
+// RequestIDKey is the context key for the request ID
+const RequestIDKey = "request_id"
 
 // generateRequestID creates a simple request ID for tracing
 func generateRequestID() string {
@@ -28,9 +32,28 @@ func randomString(n int) string {
 	return string(b)
 }
 
+// shouldSkipPath determines if a path should have minimal logging
+func shouldSkipPath(path string) bool {
+	skipPaths := []string{
+		"/healthz",
+		"/metrics",
+		"/favicon.ico",
+		"/css/",
+		"/js/",
+		"/static/",
+	}
+
+	for _, prefix := range skipPaths {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // StructuredLogger returns a Gin middleware that logs requests using structured logging.
 // It includes:
-// - Request ID for tracing
+// - Request ID for tracing (respects incoming X-Request-ID header)
 // - HTTP method and path
 // - Status code
 // - Response time in milliseconds
@@ -38,9 +61,15 @@ func randomString(n int) string {
 // - Any errors that occurred during handling
 func StructuredLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Generate request ID and add to context
-		requestID := generateRequestID()
-		c.Set("request_id", requestID)
+		// Check for existing request ID from upstream services (e.g., Nginx)
+		// or generate a new one if not present
+		requestID := c.GetHeader("X-Request-ID")
+		if requestID == "" {
+			requestID = generateRequestID()
+		}
+
+		// Store in context and header for downstream services
+		c.Set(RequestIDKey, requestID)
 		c.Header("X-Request-ID", requestID)
 
 		// Start timer
@@ -52,35 +81,7 @@ func StructuredLogger() gin.HandlerFunc {
 		// Calculate duration in milliseconds
 		durationMs := float64(time.Since(start).Nanoseconds()) / 1e6
 
-		// Get status code and determine log level
-		status := c.Writer.Status()
-		var logFn func(msg string, args ...any)
-
-		switch {
-		case status >= 500:
-			logFn = slog.Error
-		case status >= 400:
-			logFn = slog.Warn
-		default:
-			logFn = slog.Info
-		}
-
-		// Build path with query parameters if present
-		path := c.Request.URL.Path
-		if raw := c.Request.URL.RawQuery; raw != "" {
-			path = path + "?" + raw
-		}
-
-		// Log request details
-		logFn("http request",
-			"request_id", requestID,
-			"method", c.Request.Method,
-			"path", path,
-			"status", status,
-			"duration_ms", durationMs,
-			"client_ip", c.ClientIP(),
-			"user_agent", c.Request.UserAgent(),
-			"errors", c.Errors.String(),
-		)
+		// Use the centralized logger to log this HTTP request
+		logger.LogHTTPRequest(c, durationMs, shouldSkipPath(c.Request.URL.Path))
 	}
 }

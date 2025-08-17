@@ -8,7 +8,6 @@ import (
 )
 
 func InitializeMatchRoutes(r *gin.Engine, matchHandler *handler.MatchHandler) {
-	r.Use(middleware.SecurityHeadersMiddleware())
 
 	api := r.Group(constants.APIBasePath)
 	{

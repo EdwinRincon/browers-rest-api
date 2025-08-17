@@ -8,7 +8,6 @@ import (
 )
 
 func InitializePlayerRoutes(r *gin.Engine, playerHandler *handler.PlayerHandler) {
-	r.Use(middleware.SecurityHeadersMiddleware())
 
 	api := r.Group(constants.APIBasePath)
 	{

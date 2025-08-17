@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -78,7 +77,6 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var roleDTO dto.CreateRoleRequest
 	if err := c.ShouldBindJSON(&roleDTO); err != nil {
-		slog.Error("failed to bind role create request", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid role data"))
 		return
 	}
@@ -128,7 +126,6 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 
 	var updateRoleDTO dto.UpdateRoleRequest
 	if err = c.ShouldBindJSON(&updateRoleDTO); err != nil {
-		slog.Error("failed to bind role update request", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid role data"))
 		return
 	}

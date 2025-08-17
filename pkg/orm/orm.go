@@ -33,9 +33,15 @@ func GetDBInstance() (*gorm.DB, error) {
 				initErr = fmt.Errorf("error initializing database connection: %w", openErr)
 				return
 			}
+
+			// Initialize GORM with custom logger
+			gormConfig := &gorm.Config{
+				Logger: NewContextAwareGormLogger(),
+			}
+
 			instance, initErr = gorm.Open(mysql.New(mysql.Config{
 				Conn: sqlDB,
-			}), &gorm.Config{})
+			}), gormConfig)
 			if initErr != nil {
 				initErr = fmt.Errorf("error initializing database connection gorm: %w", initErr)
 				return

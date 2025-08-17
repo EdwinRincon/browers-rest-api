@@ -8,7 +8,6 @@ import (
 )
 
 func InitializeSeasonRoutes(r *gin.Engine, seasonHandler *handler.SeasonHandler) {
-	r.Use(middleware.SecurityHeadersMiddleware())
 
 	api := r.Group(constants.APIBasePath)
 	{

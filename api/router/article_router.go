@@ -8,8 +8,7 @@ import (
 )
 
 func InitializeArticleRoutes(r *gin.Engine, articleHandler *handler.ArticleHandler) {
-	r.Use(middleware.CORSMiddleware())
-	r.Use(middleware.SecurityHeadersMiddleware())
+
 	api := r.Group(constants.APIBasePath)
 	{
 		articles := api.Group("/articles")

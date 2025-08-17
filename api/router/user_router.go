@@ -8,8 +8,6 @@ import (
 )
 
 func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
-	// Global middleware for all routes
-	r.Use(middleware.SecurityHeadersMiddleware())
 
 	// API routes group
 	api := r.Group(constants.APIBasePath)

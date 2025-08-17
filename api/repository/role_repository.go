@@ -66,15 +66,15 @@ func (rr *RoleRepositoryImpl) GetRoleByID(ctx context.Context, id uint8) (*model
 }
 
 func (rr *RoleRepositoryImpl) CreateRole(ctx context.Context, role *model.Role) error {
-	return rr.db.Create(role).Error
+	return rr.db.WithContext(ctx).Create(role).Error
 }
 
 func (rr *RoleRepositoryImpl) UpdateRole(ctx context.Context, role *model.Role) error {
-	return rr.db.Save(role).Error
+	return rr.db.WithContext(ctx).Save(role).Error
 }
 
 func (rr *RoleRepositoryImpl) DeleteRole(ctx context.Context, id uint8) error {
-	return rr.db.Delete(&model.Role{}, id).Error
+	return rr.db.WithContext(ctx).Delete(&model.Role{}, id).Error
 }
 
 func (rr *RoleRepositoryImpl) GetPaginatedRoles(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Role, int64, error) {

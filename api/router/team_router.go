@@ -8,7 +8,6 @@ import (
 )
 
 func InitializeTeamRoutes(r *gin.Engine, teamHandler *handler.TeamHandler) {
-	r.Use(middleware.SecurityHeadersMiddleware())
 
 	api := r.Group(constants.APIBasePath)
 	{

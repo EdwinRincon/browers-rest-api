@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -45,7 +44,6 @@ func NewTeamHandler(teamService service.TeamService) *TeamHandler {
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var createRequest dto.CreateTeamRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		slog.Error("invalid team data", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
 		return
 	}
@@ -64,8 +62,6 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 			helper.RespondWithError(c, helper.Conflict("team", "A team with this name already exists"))
 			return
 		default:
-			slog.Error("failed to create team", "error", err)
-
 			helper.RespondWithError(c, helper.InternalError(err))
 			return
 		}
@@ -187,7 +183,6 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 
 	var updateTeamRequest dto.UpdateTeamRequest
 	if err = c.ShouldBindJSON(&updateTeamRequest); err != nil {
-		slog.Error("failed to bind update team request", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
 		return
 	}

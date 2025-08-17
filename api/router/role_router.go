@@ -8,7 +8,6 @@ import (
 )
 
 func InitializeRoleRoutes(r *gin.Engine, roleHandler *handler.RoleHandler) {
-	r.Use(middleware.SecurityHeadersMiddleware())
 
 	api := r.Group(constants.APIBasePath)
 	{

@@ -8,7 +8,6 @@ import (
 )
 
 func InitializeLineupRoutes(r *gin.Engine, lineupHandler *handler.LineupHandler) {
-	r.Use(middleware.SecurityHeadersMiddleware())
 
 	api := r.Group(constants.APIBasePath)
 	{

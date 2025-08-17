@@ -41,7 +41,7 @@ COPY --from=builder /app/app /usr/local/bin/app
 
 WORKDIR /home/appuser
 
-ENV GIN_MODE=release TZ=Europe/Madrid
+ENV GIN_MODE=release TZ=UTC
 
 EXPOSE 5050
 

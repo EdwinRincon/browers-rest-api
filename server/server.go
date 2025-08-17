@@ -80,6 +80,10 @@ func NewServer() *Server {
 	// Add our structured logger middleware
 	r.Use(middleware.StructuredLogger())
 
+	// Add CORS and security headers middleware
+	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.SecurityHeadersMiddleware())
+
 	// Configurar Swagger
 	setupSwagger()
 
@@ -187,9 +191,9 @@ func createHTTPServer(port string, handler http.Handler) *http.Server {
 }
 
 func startServer(server *http.Server) {
-	slog.Info("Server starting", "address", server.Addr)
+	slog.Info("server_startup", "address", server.Addr, "event", "server_start")
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("Could not start server", "error", err)
+		slog.Error("server_error", "error", err, "event", "server_failure")
 		os.Exit(1)
 	}
 }

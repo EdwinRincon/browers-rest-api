@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/auth"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
+	"github.com/EdwinRincon/browersfc-api/pkg/logger"
 	"gorm.io/gorm"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
@@ -129,7 +129,7 @@ func (h *UserHandler) exchangeCodeForToken(c *gin.Context) (*oauth2.Token, error
 	token, err := config.OAuthConfig.Exchange(ctx, code,
 		oauth2.SetAuthURLParam("code_verifier", pkceParams.Verifier))
 	if err != nil {
-		slog.Error("code exchange failed", "error", err)
+		logger.Error(c, "code exchange failed", "error", err)
 		return nil, err
 	}
 
@@ -145,17 +145,15 @@ func (h *UserHandler) validateOAuthState(c *gin.Context) bool {
 	state := c.Query("state")
 	storedState, _ := c.Cookie("oauth_state")
 
-	slog.Info("oauth state validation", "query", state, "cookie", storedState)
+	logger.Info(c, "OAuth state validation", "query_state", state, "cookie_state", storedState)
 
 	if state == "" || state != storedState {
-		slog.Error("invalid oauth state")
 		helper.RespondWithError(c, helper.Unauthorized("Invalid OAuth state"))
 		return false
 	}
 
 	pkceParams, ok := config.GetAndDeletePKCE(state)
 	if !ok {
-		slog.Error("pkce parameters not found")
 		helper.RespondWithError(c, helper.Unauthorized("Invalid request"))
 		return false
 	}
@@ -194,7 +192,6 @@ func (h *UserHandler) performGoogleOAuth(c *gin.Context) (*GoogleUserInfo, error
 func (h *UserHandler) GoogleCallback(c *gin.Context) {
 	googleUser, err := h.performGoogleOAuth(c)
 	if err != nil {
-		slog.Error("google oauth failed", "error", err)
 		helper.RespondWithError(c, helper.Unauthorized("Authentication failed"))
 		return
 	}
@@ -238,7 +235,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 			return
 		}
 
-		slog.Info("new user created via OAuth", "username", newUser.Username)
+		logger.Info(c, "new user created via OAuth", "username", newUser.Username)
 
 		user, err = h.UserService.GetUserByUsername(ctx, newUser.Username)
 		if err != nil {
@@ -268,7 +265,6 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 
 	pkceParams, err := config.GeneratePKCE()
 	if err != nil {
-		slog.Error("failed to generate pkce parameters", "error", err)
 		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
@@ -302,7 +298,6 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var createRequest dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		slog.Error("invalid user data", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid user data"))
 		return
 	}
@@ -340,7 +335,6 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 			helper.RespondWithError(c, helper.Conflict("username", "Username already exists"))
 			return
 		default:
-			slog.Error("failed to create user", "error", err)
 			helper.RespondWithError(c, helper.InternalError(err))
 			return
 		}
@@ -465,7 +459,6 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	var userUpdateDTO dto.UpdateUserRequest
 	if err := c.ShouldBindJSON(&userUpdateDTO); err != nil {
-		slog.Error("failed to bind user update request", "error", err)
 		helper.RespondWithError(c, helper.BadRequest("body", "Invalid user data"))
 		return
 	}
