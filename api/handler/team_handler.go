@@ -44,7 +44,7 @@ func NewTeamHandler(teamService service.TeamService) *TeamHandler {
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var createRequest dto.CreateTeamRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidTeamData))
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team ID"))
+		helper.RespondWithError(c, helper.BadRequest("id", constants.MsgInvalidTeamID))
 		return
 	}
 
@@ -177,13 +177,13 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team ID"))
+		helper.RespondWithError(c, helper.BadRequest("id", constants.MsgInvalidTeamID))
 		return
 	}
 
 	var updateTeamRequest dto.UpdateTeamRequest
 	if err = c.ShouldBindJSON(&updateTeamRequest); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team data"))
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidTeamData))
 		return
 	}
 
@@ -223,7 +223,7 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team ID"))
+		helper.RespondWithError(c, helper.BadRequest("id", constants.MsgInvalidTeamID))
 		return
 	}
 

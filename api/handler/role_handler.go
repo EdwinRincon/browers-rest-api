@@ -77,7 +77,7 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var roleDTO dto.CreateRoleRequest
 	if err := c.ShouldBindJSON(&roleDTO); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid role data"))
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidRoleData))
 		return
 	}
 
@@ -126,7 +126,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 
 	var updateRoleDTO dto.UpdateRoleRequest
 	if err = c.ShouldBindJSON(&updateRoleDTO); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid role data"))
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidRoleData))
 		return
 	}
 

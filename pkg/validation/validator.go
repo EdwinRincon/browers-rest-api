@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"fmt"
 	"net/mail"
 	"reflect"
 	"regexp"
@@ -120,4 +121,116 @@ func validateSafeURL(fl validator.FieldLevel) bool {
 	}
 
 	return urlRegex.MatchString(url)
+}
+
+// ExtractValidationErrors converts go-playground/validator errors into a user-friendly map
+func ExtractValidationErrors(err error) map[string]string {
+	if err == nil {
+		return nil
+	}
+
+	validationErrors, ok := err.(validator.ValidationErrors)
+	if !ok {
+		return nil
+	}
+
+	errorMap := make(map[string]string)
+	for _, fieldErr := range validationErrors {
+		fieldName := getFieldName(fieldErr)
+		message := getErrorMessage(fieldErr)
+		errorMap[fieldName] = message
+	}
+
+	return errorMap
+}
+
+// getFieldName extracts the field name from a validation error
+func getFieldName(fieldErr validator.FieldError) string {
+	fieldName := fieldErr.Field()
+
+	structType, ok := underlyingStruct(fieldErr.Value())
+	if !ok {
+		return fieldName
+	}
+
+	if field, found := structType.FieldByName(fieldErr.StructField()); found {
+		if jsonTag := jsonTagName(field.Tag.Get("json")); jsonTag != "" {
+			fieldName = jsonTag
+		}
+	}
+
+	return fieldName
+}
+
+// underlyingStruct returns the underlying struct type and a boolean indicating success
+func underlyingStruct(value interface{}) (reflect.Type, bool) {
+	structType := reflect.TypeOf(value)
+	if structType == nil {
+		return nil, false
+	}
+	if structType.Kind() == reflect.Ptr {
+		structType = structType.Elem()
+	}
+	return structType, structType.Kind() == reflect.Struct
+}
+
+func jsonTagName(tag string) string {
+	if tag == "" || tag == "-" {
+		return ""
+	}
+	return strings.Split(tag, ",")[0]
+}
+
+// messageFunc defines a function type for generating error messages
+type messageFunc func(fieldErr validator.FieldError) string
+
+// registry of validation tag -> message generator
+var messageRegistry = map[string]messageFunc{
+	"required": func(_ validator.FieldError) string {
+		return "This field is required"
+	},
+	"min": func(fe validator.FieldError) string {
+		return fmt.Sprintf("Should be at least %s characters long", fe.Param())
+	},
+	"max": func(fe validator.FieldError) string {
+		return fmt.Sprintf("Should not exceed %s characters", fe.Param())
+	},
+	"email": func(_ validator.FieldError) string {
+		return "Invalid email format"
+	},
+	"url": func(_ validator.FieldError) string {
+		return "Invalid URL format"
+	},
+	"safe_url": func(_ validator.FieldError) string {
+		return "Invalid or unsafe URL"
+	},
+	"allowed_domain": func(_ validator.FieldError) string {
+		return "Email domain is not allowed"
+	},
+	"safe_email": func(_ validator.FieldError) string {
+		return "Invalid or unsafe email format"
+	},
+	"gte": func(fe validator.FieldError) string {
+		return fmt.Sprintf("Should be greater than or equal to %s", fe.Param())
+	},
+	"lte": func(fe validator.FieldError) string {
+		return fmt.Sprintf("Should be less than or equal to %s", fe.Param())
+	},
+	"alphanum": func(_ validator.FieldError) string {
+		return "Should contain only alphanumeric characters"
+	},
+	"len": func(fe validator.FieldError) string {
+		return fmt.Sprintf("Should be exactly %s characters long", fe.Param())
+	},
+	"oneof": func(fe validator.FieldError) string {
+		return fmt.Sprintf("Should be one of: %s", fe.Param())
+	},
+}
+
+func getErrorMessage(fieldErr validator.FieldError) string {
+	if msgFunc, exists := messageRegistry[fieldErr.Tag()]; exists {
+		return msgFunc(fieldErr)
+	}
+	// fallback if tag is not in registry
+	return fmt.Sprintf("Failed validation on '%s'", fieldErr.Tag())
 }

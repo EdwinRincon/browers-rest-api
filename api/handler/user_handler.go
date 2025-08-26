@@ -298,7 +298,7 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var createRequest dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid user data"))
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidUserData))
 		return
 	}
 
@@ -459,7 +459,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	var userUpdateDTO dto.UpdateUserRequest
 	if err := c.ShouldBindJSON(&userUpdateDTO); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid user data"))
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidUserData))
 		return
 	}
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
+	"github.com/EdwinRincon/browersfc-api/pkg/validation"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,6 +17,7 @@ type AppError struct {
 	Validation  map[string]string `json:"validation,omitempty"`
 	Field       string            `json:"field,omitempty"`
 	SafeForUser bool              `json:"-"`
+	cause       error             `json:"-"` // Internal error for logging, never exposed to client
 }
 
 type AppSuccess struct {
@@ -95,6 +97,35 @@ func InternalError(err error) *AppError {
 		http.StatusInternalServerError,
 		"Internal server error",
 		withDetail("An unexpected error occurred"),
+		withCause(err),
+	)
+}
+
+// ValidationError creates a user-safe validation error with structured field errors
+func ValidationError(validation map[string]string) *AppError {
+	return newAppError(
+		http.StatusBadRequest,
+		"Validation failed",
+		withDetail("One or more fields are invalid"),
+		withValidation(validation),
+		safe(),
+	)
+}
+
+// ProcessValidationError is a convenience function to handle validator errors
+// It extracts validation errors if present, or returns a generic bad request error otherwise
+func ProcessValidationError(err error, field, defaultMessage string) *AppError {
+	validationErrs := validation.ExtractValidationErrors(err)
+	if len(validationErrs) > 0 {
+		return ValidationError(validationErrs)
+	}
+	return newAppError(
+		http.StatusBadRequest,
+		defaultMessage,
+		withField(field),
+		withDetail(fmt.Sprintf("The %s field has an invalid value", field)),
+		withCause(err), // <--- attach the raw Go error
+		safe(),
 	)
 }
 
@@ -119,8 +150,31 @@ func withField(field string) func(*AppError) {
 	}
 }
 
+// withCause adds the original error as the cause (for internal use only)
+func withCause(err error) func(*AppError) {
+	return func(e *AppError) {
+		e.cause = err
+	}
+}
+
+// withValidation adds validation errors to the error
+func withValidation(validation map[string]string) func(*AppError) {
+	return func(e *AppError) {
+		e.Validation = validation
+	}
+}
+
 func (e *AppError) Error() string {
+	if e.cause != nil {
+		return e.cause.Error()
+	}
 	return e.Message
+}
+
+// Unwrap implements the errors.Unwrap interface
+// It allows errors.Is and errors.As to work with wrapped errors
+func (e *AppError) Unwrap() error {
+	return e.cause
 }
 
 // AddToLog implements the logger.LoggableError interface
@@ -148,8 +202,44 @@ func (e *AppError) AddToLog(l *slog.Logger) *slog.Logger {
 		}
 	}
 
+	if e.cause != nil {
+		attrs = append(attrs, "error_cause", e.cause.Error())
+	}
+
 	// Add error attributes to logger
 	return l.With(attrs...)
+}
+
+// ToResponse returns a map that can be safely serialized to JSON for client responses
+// It ensures consistent response shape and prevents leaking sensitive details
+func (e *AppError) ToResponse() map[string]interface{} {
+	response := map[string]interface{}{
+		"code": e.Code,
+	}
+
+	// If the error is not safe for users, use generic messages
+	if !e.SafeForUser {
+		response["message"] = "An error occurred"
+		response["detail"] = "Please try again or contact support if the problem persists"
+		return response
+	}
+
+	// Otherwise include all safe fields
+	response["message"] = e.Message
+
+	if e.Detail != "" {
+		response["detail"] = e.Detail
+	}
+
+	if e.Field != "" {
+		response["field"] = e.Field
+	}
+
+	if len(e.Validation) > 0 {
+		response["validation"] = e.Validation
+	}
+
+	return response
 }
 
 // RespondWithError sends an error response to the client
@@ -157,17 +247,9 @@ func RespondWithError(c *gin.Context, err *AppError) {
 	// Store the error in the context for later logging by the middleware
 	logger.StoreErrorForLogging(c, err)
 
-	if err.SafeForUser {
-		// safe errors can be shown to users directly
-		c.JSON(err.Code, err)
-	} else {
-		// For unsafe errors, only expose the status code and a generic message
-		c.JSON(err.Code, gin.H{
-			"code":    err.Code,
-			"message": "An error occurred",
-			"detail":  "Please try again or contact support if the problem persists",
-		})
-	}
+	// Use the ToResponse method to ensure a consistent response shape
+	// This will automatically handle SafeForUser flag
+	c.JSON(err.Code, err.ToResponse())
 
 	// Add error to Gin's error collection for consistency with built-in error handling
 	_ = c.Error(err)
