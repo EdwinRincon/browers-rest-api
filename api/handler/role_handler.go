@@ -37,17 +37,17 @@ func NewRoleHandler(roleService service.RoleService) *RoleHandler {
 // @Success      200  {object}  dto.RoleResponse
 // @Failure      400  {object}  helper.AppError
 // @Failure      404  {object}  helper.AppError
-// @Router       /roles/{id} [get]
+// @Router       /admin/roles/{id} [get]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 	roleID := c.Param("id")
-	id, err := strconv.ParseUint(roleID, 10, 8)
+	id, err := strconv.ParseUint(roleID, 10, 64)
 	if err != nil {
 		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
 		return
 	}
 
-	role, err := h.RoleService.GetRoleByID(c.Request.Context(), uint8(id))
+	role, err := h.RoleService.GetRoleByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("role"))
@@ -72,7 +72,7 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 // @Success      201   {object}  dto.RoleResponse
 // @Failure      400   {object}  helper.AppError
 // @Failure      409   {object}  helper.AppError
-// @Router       /roles [post]
+// @Router       /admin/roles [post]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var roleDTO dto.CreateRoleRequest
@@ -114,11 +114,11 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 // @Failure      400   {object}  helper.AppError
 // @Failure      404   {object}  helper.AppError
 // @Failure      409   {object}  helper.AppError
-// @Router       /roles/{id} [put]
+// @Router       /admin/roles/{id} [put]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	roleID := c.Param("id")
-	id, err := strconv.ParseUint(roleID, 10, 8)
+	id, err := strconv.ParseUint(roleID, 10, 64)
 	if err != nil {
 		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
 		return
@@ -136,7 +136,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 
 	// Convert DTO to domain model
 	updateRole := mapper.ToRoleFromUpdate(&updateRoleDTO)
-	err = h.RoleService.UpdateRole(ctx, uint8(id), updateRole)
+	err = h.RoleService.UpdateRole(ctx, id, updateRole)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
@@ -167,11 +167,11 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 // @Param        id   path      int  true  "Role ID"
 // @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
-// @Router       /roles/{id} [delete]
+// @Router       /admin/roles/{id} [delete]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	roleID := c.Param("id")
-	id, err := strconv.ParseUint(roleID, 10, 8)
+	id, err := strconv.ParseUint(roleID, 10, 64)
 	if err != nil {
 		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
 		return
@@ -180,7 +180,7 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	_ = h.RoleService.DeleteRole(ctx, uint8(id))
+	_ = h.RoleService.DeleteRole(ctx, id)
 
 	c.Status(http.StatusNoContent)
 }
@@ -198,7 +198,7 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 // @Success      200       {object}  helper.PaginatedResponse{items=[]dto.RoleResponse, totalCount=int}
 // @Failure      400       {object}  helper.AppError "Invalid input"
 // @Failure      500       {object}  helper.AppError
-// @Router       /roles [get]
+// @Router       /admin/roles [get]
 // @Security     ApiKeyAuth
 func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "created_at")

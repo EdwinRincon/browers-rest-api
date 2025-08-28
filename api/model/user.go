@@ -15,7 +15,7 @@ type User struct {
 	Birthdate  *time.Time     `gorm:"type:date" json:"birthdate" example:"1990-01-01"`
 	ImgProfile string         `gorm:"type:varchar(255)" json:"img_profile,omitempty" binding:"omitempty,url"`
 	ImgBanner  string         `gorm:"type:varchar(255)" json:"img_banner,omitempty" binding:"omitempty,url"`
-	RoleID     uint8          `json:"role_id" binding:"required,min=1"`
+	RoleID     uint64         `json:"role_id" binding:"required,min=1"`
 	Role       *Role          `gorm:"foreignKey:RoleID" json:"role,omitempty" binding:"-"`
 	CreatedAt  time.Time      `json:"created_at,omitempty"`
 	UpdatedAt  time.Time      `json:"updated_at,omitempty"`

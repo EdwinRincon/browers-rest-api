@@ -7,11 +7,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
+	"github.com/EdwinRincon/browersfc-api/api/dto"
+	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type PlayerHandler struct {
@@ -31,35 +33,37 @@ func NewPlayerHandler(playerService service.PlayerService) *PlayerHandler {
 // @ID           createPlayer
 // @Accept       json
 // @Produce      json
-// @Param        player  body      model.Player  true  "Player data"
-// @Success      201     {object}  model.Player  "Created"
+// @Param        player  body      dto.CreatePlayerRequest  true  "Player data"
+// @Success      201     {object}  dto.PlayerShort  "Player created successfully"
 // @Failure      400     {object}  helper.AppError "Invalid input"
-// @Failure      409     {object}  helper.AppError "Player already exists"
-// @Router       /players [post]
+// @Failure      409     {object}  helper.AppError "Conflict (e.g., nickname exists)"
+// @Failure      500     {object}  helper.AppError "Internal server error"
+// @Router       /admin/players [post]
 // @Security     ApiKeyAuth
 func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
-	var player model.Player
-	if err := c.ShouldBindJSON(&player); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid player data"))
+	var createRequest dto.CreatePlayerRequest
+	if err := c.ShouldBindJSON(&createRequest); err != nil {
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid player data"))
 		return
 	}
-
-	player.ID = 0
 
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err := h.PlayerService.CreatePlayer(ctx, &player)
+
+	createdPlayer, err := h.PlayerService.CreatePlayer(ctx, &createRequest)
 	if err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			helper.RespondWithError(c, helper.Conflict("player", "A player with these details already exists"))
-		} else {
+		switch {
+		case errors.Is(err, constants.ErrRecordAlreadyExists):
+			helper.RespondWithError(c, helper.Conflict("nick_name", "Nickname already exists"))
+			return
+		default:
 			helper.RespondWithError(c, helper.InternalError(err))
+			return
 		}
-		return
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, player, "Player created successfully")
+	helper.HandleSuccess(c, http.StatusCreated, createdPlayer, "Player created successfully")
 }
 
 // GetPlayerByID godoc
@@ -68,9 +72,10 @@ func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 // @Tags         players
 // @ID           getPlayerByID
 // @Param        id   path      int  true  "Player ID"
-// @Success      200  {object}  model.Player  "Success"
+// @Success      200  {object}  dto.PlayerResponse  "Player retrieved successfully"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Player not found"
+// @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /players/{id} [get]
 // @Security     ApiKeyAuth
 func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
@@ -86,7 +91,7 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 	defer cancel()
 	player, err := h.PlayerService.GetPlayerByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("player"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))
@@ -94,22 +99,114 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, player, "Player found successfully")
+	playerResponse := mapper.ToPlayerResponse(player)
+
+	helper.HandleSuccess(c, http.StatusOK, playerResponse, "Player retrieved successfully")
+}
+
+// GetPlayerByNickName godoc
+// @Summary      Get a player by nickname
+// @Description  Retrieves a player by their nickname
+// @Tags         players
+// @ID           getPlayerByNickName
+// @Param        nickname  path      string  true  "Nickname"
+// @Success      200       {object}  dto.PlayerResponse "Player retrieved successfully"
+// @Failure      400       {object}  helper.AppError "Invalid input"
+// @Failure      404       {object}  helper.AppError "Player not found"
+// @Failure      500       {object}  helper.AppError "Internal server error"
+// @Router       /players/nickname/{nickname} [get]
+// @Security     ApiKeyAuth
+func (h *PlayerHandler) GetPlayerByNickName(c *gin.Context) {
+	nickname := c.Param("nickname")
+
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	player, err := h.PlayerService.GetPlayerByNickName(ctx, nickname)
+	if err != nil {
+		if errors.Is(err, constants.ErrRecordNotFound) {
+			helper.RespondWithError(c, helper.NotFound("player"))
+		} else {
+			helper.RespondWithError(c, helper.InternalError(err))
+		}
+		return
+	}
+
+	playerResponse := mapper.ToPlayerResponse(player)
+
+	helper.HandleSuccess(c, http.StatusOK, playerResponse, "Player retrieved successfully")
+}
+
+// GetPaginatedPlayers godoc
+// @Summary      Get paginated players
+// @Description  Retrieves a paginated list of players with sorting and ordering
+// @Tags         players
+// @ID           getPaginatedPlayers
+// @Param        page      query     int     false  "Page number (0-based)"
+// @Param        pageSize  query     int     false  "Number of items per page (default 10)"
+// @Param        sort      query     string  false  "Sort field (e.g., nickname, rating)"
+// @Param        order     query     string  false  "Sort order (asc/desc)"
+// @Success      200       {object}  map[string]interface{} "Players retrieved successfully"
+// @Failure      400       {object}  helper.AppError "Invalid input"
+// @Failure      500       {object}  helper.AppError "Internal server error"
+// @Router       /players [get]
+// @Security     ApiKeyAuth
+func (h *PlayerHandler) GetPaginatedPlayers(c *gin.Context) {
+	sort := c.DefaultQuery("sort", "created_at")
+	order := c.DefaultQuery("order", "desc")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	if page < 0 {
+		page = 0
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 10
+	}
+	if order != "asc" && order != "desc" {
+		order = "asc"
+	}
+
+	// Validate sort field
+	if err := helper.ValidateSort(model.Player{}, sort); err != nil {
+		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		return
+	}
+
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	players, total, err := h.PlayerService.GetPaginatedPlayers(ctx, sort, order, page, pageSize)
+	if err != nil {
+		helper.RespondWithError(c, helper.InternalError(err))
+		return
+	}
+
+	response := helper.PaginatedResponse{
+		Items:      mapper.ToPlayerResponseList(players),
+		TotalCount: total,
+	}
+
+	helper.HandleSuccess(c, http.StatusOK, response, "Players retrieved successfully")
 }
 
 // UpdatePlayer godoc
 // @Summary      Update an existing player
-// @Description  Updates the details of an existing player by ID
+// @Description  Updates an existing player's information by ID
 // @Tags         players
 // @ID           updatePlayer
 // @Accept       json
 // @Produce      json
-// @Param        id      path      int         true  "Player ID"
-// @Param        player  body      model.Player true  "Updated player data"
-// @Success      200     {object}  model.Player  "Updated"
+// @Param        id      path      int           true  "Player ID"
+// @Param        player  body      dto.UpdatePlayerRequest true  "Updated player data"
+// @Success      200     {object}  dto.PlayerShort  "Player updated successfully"
 // @Failure      400     {object}  helper.AppError "Invalid input"
 // @Failure      404     {object}  helper.AppError "Player not found"
-// @Router       /players/{id} [put]
+// @Failure      409     {object}  helper.AppError "Conflict (e.g., nickname exists)"
+// @Failure      500     {object}  helper.AppError "Internal server error"
+// @Router       /admin/players/{id} [put]
 // @Security     ApiKeyAuth
 func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 	idStr := c.Param("id")
@@ -119,30 +216,30 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 		return
 	}
 
-	var player model.Player
-	if err = c.ShouldBindJSON(&player); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid player data"))
+	var playerUpdateDTO dto.UpdatePlayerRequest
+	if err = c.ShouldBindJSON(&playerUpdateDTO); err != nil {
+		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid player data"))
 		return
 	}
-
-	player.ID = id
 
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err = h.PlayerService.UpdatePlayer(ctx, &player)
+
+	updatedPlayer, err := h.PlayerService.UpdatePlayer(ctx, &playerUpdateDTO, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("player"))
-		} else if errors.Is(err, gorm.ErrDuplicatedKey) {
-			helper.RespondWithError(c, helper.Conflict("player", "A player with these details already exists"))
+		} else if errors.Is(err, constants.ErrRecordAlreadyExists) {
+			helper.RespondWithError(c, helper.Conflict("nick_name", "Nickname already exists"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, player, "Player updated successfully")
+	response := mapper.ToPlayerShort(updatedPlayer)
+	helper.HandleSuccess(c, http.StatusOK, response, "Player updated successfully")
 }
 
 // DeletePlayer godoc
@@ -154,7 +251,8 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 // @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Player not found"
-// @Router       /players/{id} [delete]
+// @Failure      500  {object}  helper.AppError "Internal server error"
+// @Router       /admin/players/{id} [delete]
 // @Security     ApiKeyAuth
 func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 	idStr := c.Param("id")
@@ -168,43 +266,10 @@ func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 	err = h.PlayerService.DeletePlayer(ctx, id)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("player"))
-		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
-		}
+	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
+		helper.RespondWithError(c, helper.InternalError(err))
 		return
 	}
 
 	c.Status(http.StatusNoContent)
-}
-
-// GetAllPlayers godoc
-// @Summary      List players
-// @Description  Retrieves a paginated list of players
-// @Tags         players
-// @ID           listPlayers
-// @Param        page  query     int  false  "Page number"
-// @Success      200   {array}   model.Player  "Success"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Router       /players [get]
-// @Security     ApiKeyAuth
-func (h *PlayerHandler) GetAllPlayers(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	page, err := strconv.ParseUint(pageStr, 10, 64)
-	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("page", "Invalid page number"))
-		return
-	}
-
-	// Wrap context with timeout for DB/service calls
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
-	defer cancel()
-	players, err := h.PlayerService.GetAllPlayers(ctx, page)
-	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
-		return
-	}
-	helper.HandleSuccess(c, http.StatusOK, players, "Players retrieved successfully")
 }

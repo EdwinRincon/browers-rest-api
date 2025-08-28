@@ -39,7 +39,7 @@ func NewTeamHandler(teamService service.TeamService) *TeamHandler {
 // @Failure      400   {object}  helper.AppError "Invalid input"
 // @Failure      409   {object}  helper.AppError "Conflict (e.g., team name exists)"
 // @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /teams [post]
+// @Router       /admin/teams [post]
 // @Security     ApiKeyAuth
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var createRequest dto.CreateTeamRequest
@@ -171,7 +171,7 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 // @Failure      404   {object}  helper.AppError "Team not found"
 // @Failure      409   {object}  helper.AppError "Conflict (e.g., team name exists)"
 // @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /teams/{id} [put]
+// @Router       /admin/teams/{id} [put]
 // @Security     ApiKeyAuth
 func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	teamID := c.Param("id")
@@ -217,7 +217,7 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      404  {object}  helper.AppError "Team not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /teams/{id} [delete]
+// @Router       /admin/teams/{id} [delete]
 // @Security     ApiKeyAuth
 func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	teamID := c.Param("id")

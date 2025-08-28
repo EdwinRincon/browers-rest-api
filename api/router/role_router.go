@@ -8,20 +8,16 @@ import (
 )
 
 func InitializeRoleRoutes(r *gin.Engine, roleHandler *handler.RoleHandler) {
-
 	api := r.Group(constants.APIBasePath)
-	{
-		roles := api.Group("/roles")
-		{
-			roles.Use(middleware.JwtAuthMiddleware())
-			roles.Use(middleware.RBACMiddleware(constants.RoleAdmin))
-			{
-				roles.POST("", roleHandler.CreateRole)
-				roles.PUT("/:id", roleHandler.UpdateRole)
-				roles.DELETE("/:id", roleHandler.DeleteRole)
-				roles.GET("/:id", roleHandler.GetRoleByID)
-				roles.GET("", roleHandler.GetPaginatedRoles)
-			}
-		}
-	}
+
+	// Admin-only role management
+	adminRoles := api.Group("/admin/roles")
+	adminRoles.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+	// Read
+	adminRoles.GET("", roleHandler.GetPaginatedRoles)
+	adminRoles.GET("/:id", roleHandler.GetRoleByID)
+	// Write
+	adminRoles.POST("", roleHandler.CreateRole)
+	adminRoles.PUT("/:id", roleHandler.UpdateRole)
+	adminRoles.DELETE("/:id", roleHandler.DeleteRole)
 }

@@ -16,8 +16,8 @@ type PlayerTeam struct {
 	Team   *Team   `gorm:"foreignKey:TeamID" json:"team,omitempty"`
 	Season *Season `gorm:"foreignKey:SeasonID" json:"season,omitempty"`
 
-	StartDate time.Time `gorm:"not null" json:"start_date"`
-	EndDate   time.Time `json:"end_date,omitempty"`
+	StartDate time.Time  `gorm:"not null" json:"start_date"`
+	EndDate   *time.Time `json:"end_date,omitempty"`
 
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`

@@ -63,6 +63,8 @@ func GetDBInstance() (*gorm.DB, error) {
 				&model.TeamStat{},
 				&model.Team{},
 				&model.User{},
+				&model.PlayerTeam{},
+				&model.PlayerStat{},
 			)
 			if migrateErr != nil {
 				initErr = fmt.Errorf("error running migrations: %w", migrateErr)

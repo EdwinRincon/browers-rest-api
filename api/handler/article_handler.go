@@ -118,12 +118,12 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 		return
 	}
 
-	if article.ID != 0 && article.ID != uint(id) {
+	if article.ID != 0 && article.ID != id {
 		helper.RespondWithError(c, helper.BadRequest("id", "Mismatched article ID in body and URL"))
 		return
 	}
 
-	article.ID = uint(id)
+	article.ID = id
 
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)

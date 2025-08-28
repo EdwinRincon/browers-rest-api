@@ -8,22 +8,24 @@ import (
 )
 
 func InitializePlayerRoutes(r *gin.Engine, playerHandler *handler.PlayerHandler) {
-
 	api := r.Group(constants.APIBasePath)
 	{
+		// Public/Authenticated player routes
 		players := api.Group("/players")
+		players.Use(middleware.JwtAuthMiddleware())
 		{
-			players.Use(middleware.JwtAuthMiddleware())
-
-			players.GET("", playerHandler.GetAllPlayers)
+			players.GET("", playerHandler.GetPaginatedPlayers)
+			players.GET("/nickname/:nickname", playerHandler.GetPlayerByNickName) // placed before :id
 			players.GET("/:id", playerHandler.GetPlayerByID)
+		}
 
-			players.Use(middleware.RBACMiddleware(constants.RoleAdmin))
-			{
-				players.POST("", playerHandler.CreatePlayer)
-				players.PUT("/:id", playerHandler.UpdatePlayer)
-				players.DELETE("/:id", playerHandler.DeletePlayer)
-			}
+		// Admin routes
+		adminPlayers := api.Group("/admin/players")
+		adminPlayers.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+		{
+			adminPlayers.POST("", playerHandler.CreatePlayer)
+			adminPlayers.PUT("/:id", playerHandler.UpdatePlayer)
+			adminPlayers.DELETE("/:id", playerHandler.DeletePlayer)
 		}
 	}
 }

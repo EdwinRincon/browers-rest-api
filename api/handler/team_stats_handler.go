@@ -29,7 +29,7 @@ func NewTeamStatsHandler(teamStatsService service.TeamStatsService) *TeamStatsHa
 // @ID           createTeamStats
 // @Accept       json
 // @Produce      json
-// @Param        teamStats  body      model.TeamStat  true  "Team stats data"
+// @Param        teamStat  body      model.TeamStat  true  "Team stat data"
 // @Success      201        {object}  model.TeamStat "Created"
 // @Failure      400        {object}  helper.AppError "Invalid input"
 // @Failure      409        {object}  helper.AppError "Conflict (e.g., stats for this team/season already exist)"
@@ -46,7 +46,7 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err := h.TeamStatsService.CreateTeamStats(ctx, &teamStats)
+	err := h.TeamStatsService.CreateTeamStat(ctx, &teamStats)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			helper.RespondWithError(c, helper.Conflict("team-stats", "Stats for this team/season already exist"))
@@ -82,7 +82,7 @@ func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	teamStats, err := h.TeamStatsService.GetTeamStatsByID(ctx, id)
+	teamStats, err := h.TeamStatsService.GetTeamStatByID(ctx, id)
 	if err != nil {
 		helper.RespondWithError(c, helper.NotFound("team stats"))
 		return
@@ -154,7 +154,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 	teamStats.ID = id
-	err = h.TeamStatsService.UpdateTeamStats(ctx, &teamStats)
+	err = h.TeamStatsService.UpdateTeamStat(ctx, &teamStats)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("team stats"))
@@ -189,7 +189,7 @@ func (h *TeamStatsHandler) DeleteTeamStats(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err = h.TeamStatsService.DeleteTeamStats(ctx, id)
+	err = h.TeamStatsService.DeleteTeamStat(ctx, id)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
 		return

@@ -8,22 +8,23 @@ import (
 )
 
 func InitializeSeasonRoutes(r *gin.Engine, seasonHandler *handler.SeasonHandler) {
-
 	api := r.Group(constants.APIBasePath)
+
+	// Seasons endpoints (read-only, no authentication required)
+	seasons := api.Group("/seasons")
 	{
-		seasons := api.Group("/seasons")
-		{
-			seasons.Use(middleware.JwtAuthMiddleware())
+		seasons.GET("", seasonHandler.GetPaginatedSeasons)
+		seasons.GET("/current", seasonHandler.GetCurrentSeason)
+		seasons.GET("/:id", seasonHandler.GetSeasonByID)
+	}
 
-			seasons.GET("", seasonHandler.GetAllSeasons)
-			seasons.GET("/:id", seasonHandler.GetSeasonByID)
-
-			seasons.Use(middleware.RBACMiddleware(constants.RoleAdmin))
-			{
-				seasons.POST("", seasonHandler.CreateSeason)
-				seasons.PUT("/:id", seasonHandler.UpdateSeason)
-				seasons.DELETE("/:id", seasonHandler.DeleteSeason)
-			}
-		}
+	// Admin routes (authenticated + role check)
+	adminSeasons := api.Group("/admin/seasons")
+	adminSeasons.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+	{
+		adminSeasons.POST("", seasonHandler.CreateSeason)
+		adminSeasons.PUT("/:id", seasonHandler.UpdateSeason)
+		adminSeasons.PUT("/:id/set-current", seasonHandler.SetCurrentSeason)
+		adminSeasons.DELETE("/:id", seasonHandler.DeleteSeason)
 	}
 }

@@ -11,11 +11,11 @@ import (
 )
 
 type RoleService interface {
-	GetRoleByID(ctx context.Context, id uint8) (*model.Role, error)
+	GetRoleByID(ctx context.Context, id uint64) (*model.Role, error)
 	GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error)
 	CreateRole(ctx context.Context, role *model.Role) (*model.Role, error)
-	UpdateRole(ctx context.Context, id uint8, updated *model.Role) error
-	DeleteRole(ctx context.Context, id uint8) error
+	UpdateRole(ctx context.Context, id uint64, updated *model.Role) error
+	DeleteRole(ctx context.Context, id uint64) error
 	GetPaginatedRoles(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Role, int64, error)
 }
 
@@ -29,7 +29,7 @@ func NewRoleService(roleRepo repository.RoleRepository) RoleService {
 	}
 }
 
-func (s *roleService) GetRoleByID(ctx context.Context, id uint8) (*model.Role, error) {
+func (s *roleService) GetRoleByID(ctx context.Context, id uint64) (*model.Role, error) {
 	role, err := s.RoleRepository.GetRoleByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *roleService) CreateRole(ctx context.Context, role *model.Role) (*model.
 	return role, nil
 }
 
-func (s *roleService) UpdateRole(ctx context.Context, id uint8, updated *model.Role) error {
+func (s *roleService) UpdateRole(ctx context.Context, id uint64, updated *model.Role) error {
 	existing, err := s.RoleRepository.GetRoleByID(ctx, id)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (s *roleService) UpdateRole(ctx context.Context, id uint8, updated *model.R
 	return s.RoleRepository.UpdateRole(ctx, existing)
 }
 
-func (s *roleService) DeleteRole(ctx context.Context, id uint8) error {
+func (s *roleService) DeleteRole(ctx context.Context, id uint64) error {
 	return s.RoleRepository.DeleteRole(ctx, id)
 }
 

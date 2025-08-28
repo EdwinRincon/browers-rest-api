@@ -8,11 +8,11 @@ import (
 )
 
 type TeamStatsService interface {
-	CreateTeamStats(ctx context.Context, teamStats *model.TeamStat) error
-	GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamStat, error)
+	CreateTeamStat(ctx context.Context, teamStat *model.TeamStat) error
+	GetTeamStatByID(ctx context.Context, id uint64) (*model.TeamStat, error)
 	ListTeamStats(ctx context.Context, page uint64) ([]*model.TeamStat, error)
-	UpdateTeamStats(ctx context.Context, teamStats *model.TeamStat) error
-	DeleteTeamStats(ctx context.Context, id uint64) error
+	UpdateTeamStat(ctx context.Context, teamStat *model.TeamStat) error
+	DeleteTeamStat(ctx context.Context, id uint64) error
 }
 
 type teamStatsService struct {
@@ -25,22 +25,22 @@ func NewTeamStatsService(teamStatsRepo repository.TeamStatsRepository) TeamStats
 	}
 }
 
-func (s *teamStatsService) CreateTeamStats(ctx context.Context, teamStats *model.TeamStat) error {
-	return s.TeamStatsRepository.CreateTeamStats(ctx, teamStats)
+func (s *teamStatsService) CreateTeamStat(ctx context.Context, teamStat *model.TeamStat) error {
+	return s.TeamStatsRepository.CreateTeamStat(ctx, teamStat)
 }
 
-func (s *teamStatsService) GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamStat, error) {
-	return s.TeamStatsRepository.GetTeamStatsByID(ctx, id)
+func (s *teamStatsService) GetTeamStatByID(ctx context.Context, id uint64) (*model.TeamStat, error) {
+	return s.TeamStatsRepository.GetTeamStatByID(ctx, id)
 }
 
 func (s *teamStatsService) ListTeamStats(ctx context.Context, page uint64) ([]*model.TeamStat, error) {
 	return s.TeamStatsRepository.ListTeamStats(ctx, page)
 }
 
-func (s *teamStatsService) UpdateTeamStats(ctx context.Context, teamStats *model.TeamStat) error {
-	return s.TeamStatsRepository.UpdateTeamStats(ctx, teamStats)
+func (s *teamStatsService) UpdateTeamStat(ctx context.Context, teamStat *model.TeamStat) error {
+	return s.TeamStatsRepository.UpdateTeamStat(ctx, teamStat)
 }
 
-func (s *teamStatsService) DeleteTeamStats(ctx context.Context, id uint64) error {
-	return s.TeamStatsRepository.DeleteTeamStats(ctx, id)
+func (s *teamStatsService) DeleteTeamStat(ctx context.Context, id uint64) error {
+	return s.TeamStatsRepository.DeleteTeamStat(ctx, id)
 }

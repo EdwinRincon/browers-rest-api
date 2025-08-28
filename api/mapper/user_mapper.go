@@ -67,7 +67,7 @@ func ToUserShort(user *model.User) *dto.UserShort {
 	}
 }
 
-func ToUser(dto *dto.CreateUserRequest, roleID uint8) *model.User {
+func ToUser(dto *dto.CreateUserRequest, roleID uint64) *model.User {
 	return &model.User{
 		Name:     dto.Name,
 		LastName: dto.LastName,

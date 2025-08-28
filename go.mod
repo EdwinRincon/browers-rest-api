@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.23.1
 
 require (
+	github.com/brianvoe/gofakeit/v7 v7.4.0
 	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/validator/v10 v10.26.0

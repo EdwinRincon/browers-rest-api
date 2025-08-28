@@ -11,12 +11,12 @@ import (
 )
 
 type RoleRepository interface {
-	GetRoleByID(ctx context.Context, id uint8) (*model.Role, error)
+	GetRoleByID(ctx context.Context, id uint64) (*model.Role, error)
 	GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error)
 	GetUnscopedRoleByName(ctx context.Context, name string) (*model.Role, error)
 	CreateRole(ctx context.Context, role *model.Role) error
 	UpdateRole(ctx context.Context, role *model.Role) error
-	DeleteRole(ctx context.Context, id uint8) error
+	DeleteRole(ctx context.Context, id uint64) error
 	GetPaginatedRoles(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Role, int64, error)
 }
 
@@ -53,7 +53,7 @@ func (rr *RoleRepositoryImpl) GetUnscopedRoleByName(ctx context.Context, name st
 	return &role, err
 }
 
-func (rr *RoleRepositoryImpl) GetRoleByID(ctx context.Context, id uint8) (*model.Role, error) {
+func (rr *RoleRepositoryImpl) GetRoleByID(ctx context.Context, id uint64) (*model.Role, error) {
 	var role model.Role
 	result := rr.db.WithContext(ctx).Where("id = ?", id).First(&role)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -73,7 +73,7 @@ func (rr *RoleRepositoryImpl) UpdateRole(ctx context.Context, role *model.Role) 
 	return rr.db.WithContext(ctx).Save(role).Error
 }
 
-func (rr *RoleRepositoryImpl) DeleteRole(ctx context.Context, id uint8) error {
+func (rr *RoleRepositoryImpl) DeleteRole(ctx context.Context, id uint64) error {
 	return rr.db.WithContext(ctx).Delete(&model.Role{}, id).Error
 }
 

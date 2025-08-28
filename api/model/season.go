@@ -7,7 +7,7 @@ import (
 )
 
 type Season struct {
-	ID          uint           `gorm:"primaryKey" json:"id"`
+	ID          uint64         `gorm:"primaryKey" json:"id"`
 	Year        uint16         `gorm:"not null;uniqueIndex;check:year >= 1999 AND year <= 2100" json:"year"`
 	StartDate   time.Time      `gorm:"not null" json:"start_date"`
 	EndDate     time.Time      `gorm:"not null" json:"end_date"`
@@ -16,6 +16,7 @@ type Season struct {
 	Articles    []Article      `gorm:"foreignKey:SeasonID" json:"articles" swaggerignore:"true"`
 	TeamStats   []TeamStat     `gorm:"foreignKey:SeasonID" json:"team_stats" swaggerignore:"true"`
 	PlayerTeams []PlayerTeam   `gorm:"foreignKey:SeasonID" json:"player_teams" swaggerignore:"true"`
+	PlayerStats []PlayerStat   `gorm:"foreignKey:SeasonID" json:"player_stats" swaggerignore:"true"`
 	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`

@@ -15,10 +15,10 @@ type Team struct {
 	Shield    string    `gorm:"type:varchar(200);not null" json:"shield" form:"shield" binding:"required,url"`
 	NextMatch time.Time `gorm:"type:date" json:"next_match,omitempty" form:"next_match"`
 
-	Players     []Player   `gorm:"many2many:player_teams;" json:"players,omitempty" swaggerignore:"true"`
-	HomeMatches []Match    `gorm:"foreignKey:HomeTeamID" json:"home_matches,omitempty" swaggerignore:"true"`
-	AwayMatches []Match    `gorm:"foreignKey:AwayTeamID" json:"away_matches,omitempty" swaggerignore:"true"`
-	TeamStats   []TeamStat `gorm:"foreignKey:TeamID" json:"team_stats,omitempty" swaggerignore:"true"`
+	PlayerTeams []PlayerTeam `json:"player_teams,omitempty"`
+	HomeMatches []Match      `gorm:"foreignKey:HomeTeamID" json:"home_matches,omitempty" swaggerignore:"true"`
+	AwayMatches []Match      `gorm:"foreignKey:AwayTeamID" json:"away_matches,omitempty" swaggerignore:"true"`
+	TeamStats   []TeamStat   `gorm:"foreignKey:TeamID" json:"team_stats,omitempty" swaggerignore:"true"`
 
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`

@@ -293,7 +293,7 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 // @Failure      400   {object}  helper.AppError "Invalid input"
 // @Failure      409   {object}  helper.AppError "Conflict (e.g., username exists)"
 // @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /users [post]
+// @Router       /admin/users [post]
 // @Security     ApiKeyAuth
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var createRequest dto.CreateUserRequest
@@ -306,7 +306,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var roleID uint8
+	var roleID uint64
 	if createRequest.RoleID > 0 {
 		// If role_id is provided, verify it exists
 		role, err := h.RoleService.GetRoleByID(ctx, createRequest.RoleID)
@@ -448,7 +448,7 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 // @Failure      400   {object}  helper.AppError "Invalid input or UUID format"
 // @Failure      404   {object}  helper.AppError "User not found"
 // @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /users/{id} [put]
+// @Router       /admin/users/{id} [put]
 // @Security     ApiKeyAuth
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userIDStr := c.Param("id")
@@ -493,7 +493,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // @Param        id   path      string  true  "User ID (UUID)"
 // @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid UUID format"
-// @Router       /users/{id} [delete]
+// @Router       /admin/users/{id} [delete]
 // @Security     ApiKeyAuth
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")

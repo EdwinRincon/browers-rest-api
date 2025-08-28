@@ -17,7 +17,7 @@ type TeamStat struct {
 	Rank         uint8          `gorm:"not null;default:0" json:"rank" form:"rank" binding:"gte=0"`
 	TeamID       uint64         `gorm:"index;not null" json:"team_id" form:"team_id" binding:"required"`
 	Team         *Team          `gorm:"foreignKey:TeamID" json:"team,omitempty"`
-	SeasonID     uint           `gorm:"index;not null" json:"season_id" form:"season_id" binding:"required"`
+	SeasonID     uint64         `gorm:"index;not null" json:"season_id" form:"season_id" binding:"required"`
 	Season       *Season        `gorm:"foreignKey:SeasonID" json:"season,omitempty"`
 	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`

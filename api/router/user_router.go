@@ -8,40 +8,30 @@ import (
 )
 
 func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler) {
-
-	// API routes group
 	api := r.Group(constants.APIBasePath)
 	{
-		users := api.Group("/users")
+		// Public routes - OAuth2 Authentication
+		authGroup := api.Group("/users/auth")
 		{
-			// Public routes - OAuth2 Authentication
-			authGroup := users.Group("/auth")
-			{
-				authGroup.GET("/google", userHandler.LoginWithGoogle)
-				authGroup.GET("/google/callback", userHandler.GoogleCallback)
-			}
+			authGroup.GET("/google", userHandler.LoginWithGoogle)
+			authGroup.GET("/google/callback", userHandler.GoogleCallback)
+		}
 
-			// Protected routes - Require JWT authentication
-			users.Use(middleware.JwtAuthMiddleware())
-			{
-				// User read operations
-				users.GET("", userHandler.GetPaginatedUsers)
-				users.GET("/:username", userHandler.GetUserByUsername)
-			}
+		// Protected user routes
+		users := api.Group("/users")
+		users.Use(middleware.JwtAuthMiddleware())
+		{
+			users.GET("", userHandler.GetPaginatedUsers)
+			users.GET("/:username", userHandler.GetUserByUsername)
+		}
 
-			// Admin routes - Require RBAC admin role
-			adminGroup := users.Group("")
-			adminGroup.Use(middleware.RBACMiddleware(constants.RoleAdmin))
-			{
-				createGroup := adminGroup.Group("")
-				{
-					createGroup.POST("", userHandler.CreateUser)
-				}
-
-				// User modifications - Admin only
-				adminGroup.PUT("/:id", userHandler.UpdateUser)
-				adminGroup.DELETE("/:id", userHandler.DeleteUser)
-			}
+		// Admin routes
+		adminUsers := api.Group("/admin/users")
+		adminUsers.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+		{
+			adminUsers.POST("", userHandler.CreateUser)
+			adminUsers.PUT("/:id", userHandler.UpdateUser)
+			adminUsers.DELETE("/:id", userHandler.DeleteUser)
 		}
 	}
 }
