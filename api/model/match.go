@@ -9,8 +9,7 @@ import (
 type Match struct {
 	ID          uint64       `gorm:"primaryKey" json:"id" form:"id"`
 	Status      string       `gorm:"type:varchar(11);not null;check:status IN ('scheduled','in_progress','completed','postponed','cancelled')" json:"status" form:"status" binding:"required,oneof=scheduled in_progress completed postponed cancelled"`
-	Date        time.Time    `gorm:"type:date;not null;index" json:"date" form:"date" binding:"required"`
-	Time        string       `gorm:"type:varchar(5);not null" json:"time" form:"time" binding:"required,len=5"`
+	Kickoff     time.Time    `gorm:"type:timestamp;not null" json:"kickoff" form:"kickoff" binding:"required"`
 	Location    string       `gorm:"type:varchar(35);not null" json:"location" form:"location" binding:"required,max=35"`
 	HomeGoals   uint8        `gorm:"not null;default:0" json:"home_goals" form:"home_goals"`
 	AwayGoals   uint8        `gorm:"not null;default:0" json:"away_goals" form:"away_goals"`
@@ -25,7 +24,7 @@ type Match struct {
 	MVPPlayerID *uint64      `gorm:"index" json:"mvp_player_id" form:"mvp_player_id"`
 	MVPPlayer   *Player      `gorm:"foreignKey:MVPPlayerID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"mvp_player,omitempty" form:"mvp_player"`
 
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" form:"-" swaggerignore:"true"`
+	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at" form:"created_at"`
+	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at" form:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;index" json:"deleted_at,omitempty" form:"-" swaggerignore:"true"`
 }

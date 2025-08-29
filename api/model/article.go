@@ -15,7 +15,7 @@ type Article struct {
 	SeasonID  uint64    `gorm:"not null;index" json:"season_id" form:"season_id" binding:"required"`
 	Season    *Season   `gorm:"foreignKey:SeasonID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"season,omitempty"`
 
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`
+	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
+	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
 }

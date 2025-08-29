@@ -34,6 +34,12 @@ func GetDBInstance() (*gorm.DB, error) {
 				return
 			}
 
+			// ensure MySQL session timezone is UTC:
+			if _, err := sqlDB.Exec("SET time_zone = '+00:00'"); err != nil {
+				initErr = fmt.Errorf("error setting MySQL timezone: %w", err)
+				return
+			}
+
 			// Initialize GORM with custom logger
 			gormConfig := &gorm.Config{
 				Logger: NewContextAwareGormLogger(),
@@ -52,22 +58,34 @@ func GetDBInstance() (*gorm.DB, error) {
 			sqlDB.SetMaxIdleConns(5)                // Maximum number of idle connections
 			sqlDB.SetConnMaxLifetime(1 * time.Hour) // Maximum connection lifetime
 
-			// Schema migration (table creation)
+			// Phase 1: Disable foreign key checks temporarily
+			if err := instance.Exec("SET FOREIGN_KEY_CHECKS = 0").Error; err != nil {
+				initErr = fmt.Errorf("error disabling foreign key checks: %w", err)
+				return
+			}
+
+			// First, create all tables without foreign key constraints
 			migrateErr := instance.AutoMigrate(
 				&model.Article{},
-				&model.Lineup{},
-				&model.Match{},
-				&model.Player{},
 				&model.Role{},
 				&model.Season{},
-				&model.TeamStat{},
-				&model.Team{},
 				&model.User{},
+				&model.Player{},
+				&model.Team{},
+				&model.Match{},
+				&model.Lineup{},
+				&model.TeamStat{},
 				&model.PlayerTeam{},
 				&model.PlayerStat{},
 			)
 			if migrateErr != nil {
 				initErr = fmt.Errorf("error running migrations: %w", migrateErr)
+				return
+			}
+
+			// Phase 2: Re-enable foreign key checks
+			if err := instance.Exec("SET FOREIGN_KEY_CHECKS = 1").Error; err != nil {
+				initErr = fmt.Errorf("error re-enabling foreign key checks: %w", err)
 				return
 			}
 		})

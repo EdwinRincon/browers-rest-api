@@ -17,9 +17,9 @@ type User struct {
 	ImgBanner  string         `gorm:"type:varchar(255)" json:"img_banner,omitempty" binding:"omitempty,url"`
 	RoleID     uint64         `json:"role_id" binding:"required,min=1"`
 	Role       *Role          `gorm:"foreignKey:RoleID" json:"role,omitempty" binding:"-"`
-	CreatedAt  time.Time      `json:"created_at,omitempty"`
-	UpdatedAt  time.Time      `json:"updated_at,omitempty"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`
+	CreatedAt  time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt  time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
+	DeletedAt  gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
 }
 
 // BeforeCreate will set a UUID rather than numeric ID.

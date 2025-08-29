@@ -31,7 +31,7 @@ type Player struct {
 	MVPCount      uint8          `gorm:"type:tinyint;not null;default:0;" json:"mvp_count" form:"mvp_count"`
 	UserID        *string        `gorm:"index;" json:"user_id,omitempty" form:"user_id"`
 	User          *User          `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"user,omitempty" form:"user"`
-	CreatedAt     time.Time      `gorm:"autoCreateTime;" json:"created_at,omitempty"`
-	UpdatedAt     time.Time      `gorm:"autoUpdateTime;" json:"updated_at,omitempty"`
-	DeletedAt     gorm.DeletedAt `gorm:"index;" json:",omitempty" swaggerignore:"true"`
+	CreatedAt     time.Time      `gorm:"type:timestamp;autoCreateTime;" json:"created_at,omitempty"`
+	UpdatedAt     time.Time      `gorm:"type:timestamp;autoUpdateTime;" json:"updated_at,omitempty"`
+	DeletedAt     gorm.DeletedAt `gorm:"type:timestamp;index;" json:",omitempty" swaggerignore:"true"`
 }

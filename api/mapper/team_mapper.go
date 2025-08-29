@@ -21,22 +21,35 @@ func UpdateTeamFromDTO(team *model.Team, dto *dto.UpdateTeamRequest) {
 	if dto.Shield != nil {
 		team.Shield = *dto.Shield
 	}
-	if dto.NextMatch != nil {
-		team.NextMatch = *dto.NextMatch
+	if dto.NextMatchID != nil {
+		team.NextMatchID = dto.NextMatchID
 	}
 }
 
 func ToTeamResponse(team *model.Team) *dto.TeamResponse {
+	var nextMatch *dto.MatchShort
+	if team.NextMatch != nil {
+		nextMatch = &dto.MatchShort{
+			ID:        team.NextMatch.ID,
+			Status:    team.NextMatch.Status,
+			Kickoff:   team.NextMatch.Kickoff,
+			Location:  team.NextMatch.Location,
+			HomeGoals: team.NextMatch.HomeGoals,
+			AwayGoals: team.NextMatch.AwayGoals,
+		}
+	}
+
 	return &dto.TeamResponse{
-		ID:        team.ID,
-		FullName:  team.FullName,
-		ShortName: team.ShortName,
-		Color:     team.Color,
-		Color2:    team.Color2,
-		Shield:    team.Shield,
-		NextMatch: team.NextMatch,
-		CreatedAt: team.CreatedAt,
-		UpdatedAt: team.UpdatedAt,
+		ID:          team.ID,
+		FullName:    team.FullName,
+		ShortName:   team.ShortName,
+		Color:       team.Color,
+		Color2:      team.Color2,
+		Shield:      team.Shield,
+		NextMatchID: team.NextMatchID,
+		NextMatch:   nextMatch,
+		CreatedAt:   team.CreatedAt,
+		UpdatedAt:   team.UpdatedAt,
 	}
 }
 
@@ -58,11 +71,11 @@ func ToTeamShort(team *model.Team) *dto.TeamShort {
 
 func ToTeam(dto *dto.CreateTeamRequest) *model.Team {
 	return &model.Team{
-		FullName:  dto.FullName,
-		ShortName: dto.ShortName,
-		Color:     dto.Color,
-		Color2:    dto.Color2,
-		Shield:    dto.Shield,
-		NextMatch: dto.NextMatch,
+		FullName:    dto.FullName,
+		ShortName:   dto.ShortName,
+		Color:       dto.Color,
+		Color2:      dto.Color2,
+		Shield:      dto.Shield,
+		NextMatchID: dto.NextMatchID,
 	}
 }

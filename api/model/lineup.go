@@ -14,7 +14,7 @@ type Lineup struct {
 	MatchID   uint64         `gorm:"index;not null;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"match_id" form:"match_id" binding:"required"`
 	Match     *Match         `gorm:"foreignKey:MatchID" json:"match,omitempty" form:"match"`
 	Starting  bool           `gorm:"default:false" json:"starting" form:"starting"`
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" form:"created_at"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" form:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" form:"-" swaggerignore:"true"`
+	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at" form:"created_at"`
+	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at" form:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;index" json:"deleted_at,omitempty" form:"-" swaggerignore:"true"`
 }

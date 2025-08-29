@@ -78,6 +78,11 @@ func SeedDatabase() error {
 		return fmt.Errorf("failed to seed player stats: %w", err)
 	}
 
+	err = updateTeamsNextMatch(db, teams, matches)
+	if err != nil {
+		return fmt.Errorf("failed to update teams with next match: %w", err)
+	}
+
 	return nil
 }
 
@@ -138,7 +143,7 @@ func seedTeams(db *gorm.DB) ([]model.Team, error) {
 			Color:     teamColors[i],
 			Color2:    teamSecondColors[i],
 			Shield:    gofakeit.URL(),
-			NextMatch: gofakeit.DateRange(time.Now(), time.Now().AddDate(0, 1, 0)),
+			// NextMatchID will be set after matches are created
 		}
 	}
 
@@ -293,13 +298,23 @@ func seedMatches(db *gorm.DB, teams []model.Team, seasons []model.Season, player
 		homeTeamIndex := i % len(teams)
 		awayTeamIndex := (i + 1) % len(teams)
 
-		// Random time in HH:MM format
-		hour := rand.Intn(12) + 10  // Between 10:00 and 21:00
-		minute := rand.Intn(4) * 15 // 00, 15, 30, or 45
-		timeStr := fmt.Sprintf("%02d:%02d", hour, minute)
-
 		// Random date within the current season
 		matchDate := gofakeit.DateRange(currentSeason.StartDate, currentSeason.EndDate)
+
+		// Random kickoff time (HH:MM)
+		hour := rand.Intn(12) + 10  // Between 10:00 and 21:00
+		minute := rand.Intn(4) * 15 // 00, 15, 30, or 45
+
+		// Combine into full kickoff datetime
+		kickoff := time.Date(
+			matchDate.Year(),
+			matchDate.Month(),
+			matchDate.Day(),
+			hour,
+			minute,
+			0, 0,
+			time.UTC,
+		)
 
 		// For completed matches, set goals
 		var homeGoals, awayGoals uint8
@@ -317,8 +332,7 @@ func seedMatches(db *gorm.DB, teams []model.Team, seasons []model.Season, player
 
 		matches[i] = model.Match{
 			Status:      statuses[i%len(statuses)],
-			Date:        matchDate,
-			Time:        timeStr,
+			Kickoff:     kickoff,
 			Location:    locations[i%len(locations)],
 			HomeGoals:   homeGoals,
 			AwayGoals:   awayGoals,
@@ -472,10 +486,22 @@ func generatePlayerStat(player model.Player, match model.Match, seasonID uint64,
 		minutesPlayed = uint8(1 + rand.Intn(30))
 	}
 
+	// Randomly decide if we want to set a TeamID (for demonstration of the feature)
+	var teamID *uint64
+	if rand.Float32() > 0.5 { // 50% chance of setting team ID
+		// Randomly assign either home or away team
+		if rand.Float32() > 0.5 {
+			teamID = &match.HomeTeamID
+		} else {
+			teamID = &match.AwayTeamID
+		}
+	}
+
 	return model.PlayerStat{
 		PlayerID:      player.ID,
 		MatchID:       match.ID,
 		SeasonID:      seasonID,
+		TeamID:        teamID, // Added TeamID field
 		Goals:         goals,
 		Assists:       assists,
 		Saves:         saves,
@@ -487,6 +513,39 @@ func generatePlayerStat(player model.Player, match model.Match, seasonID uint64,
 		IsMVP:         isMVP,
 		Position:      positions[rand.Intn(len(positions))], // Random position
 	}
+}
+
+// updateTeamsNextMatch updates each team with a reference to an upcoming match
+func updateTeamsNextMatch(db *gorm.DB, teams []model.Team, matches []model.Match) error {
+	// Find matches that are scheduled
+	scheduledMatches := make([]model.Match, 0)
+	for _, match := range matches {
+		if match.Status == "scheduled" {
+			scheduledMatches = append(scheduledMatches, match)
+		}
+	}
+
+	// If no scheduled matches, use any match
+	if len(scheduledMatches) == 0 {
+		scheduledMatches = matches
+	}
+
+	// For each team, assign a NextMatchID
+	for i, team := range teams {
+		// Pick a match for this team (could be home or away)
+		matchIndex := i % len(scheduledMatches)
+		match := scheduledMatches[matchIndex]
+
+		// Set NextMatchID
+		matchID := match.ID
+
+		// Update the team in the database
+		if err := db.Model(&model.Team{}).Where("id = ?", team.ID).Update("next_match_id", matchID).Error; err != nil {
+			return fmt.Errorf("failed to update NextMatchID for team %d: %w", team.ID, err)
+		}
+	}
+
+	return nil
 }
 
 // seedPlayerStats creates player statistics for matches

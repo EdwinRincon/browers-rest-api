@@ -53,7 +53,7 @@ func (s *teamService) CreateTeam(ctx context.Context, team *model.Team) (*dto.Te
 		existing.Color = team.Color
 		existing.Color2 = team.Color2
 		existing.Shield = team.Shield
-		existing.NextMatch = team.NextMatch
+		existing.NextMatchID = team.NextMatchID
 
 		// Restore and update the team in a transaction
 		err := s.TeamRepository.RestoreAndUpdateTeam(ctx, existing)

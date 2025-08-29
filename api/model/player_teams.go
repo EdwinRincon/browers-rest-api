@@ -19,7 +19,7 @@ type PlayerTeam struct {
 	StartDate time.Time  `gorm:"not null" json:"start_date"`
 	EndDate   *time.Time `json:"end_date,omitempty"`
 
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`
+	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
+	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
 }

@@ -17,7 +17,7 @@ type Season struct {
 	TeamStats   []TeamStat     `gorm:"foreignKey:SeasonID" json:"team_stats" swaggerignore:"true"`
 	PlayerTeams []PlayerTeam   `gorm:"foreignKey:SeasonID" json:"player_teams" swaggerignore:"true"`
 	PlayerStats []PlayerStat   `gorm:"foreignKey:SeasonID" json:"player_stats" swaggerignore:"true"`
-	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-" swaggerignore:"true"`
+	CreatedAt   time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
 }
