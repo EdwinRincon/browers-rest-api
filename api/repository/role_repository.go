@@ -5,15 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"gorm.io/gorm"
 )
 
 type RoleRepository interface {
 	GetRoleByID(ctx context.Context, id uint64) (*model.Role, error)
-	GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error)
-	GetUnscopedRoleByName(ctx context.Context, name string) (*model.Role, error)
+	GetRoleByName(ctx context.Context, name string) (*model.Role, error)
 	CreateRole(ctx context.Context, role *model.Role) error
 	UpdateRole(ctx context.Context, role *model.Role) error
 	DeleteRole(ctx context.Context, id uint64) error
@@ -28,22 +26,9 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 	return &RoleRepositoryImpl{db: db}
 }
 
-func (rr *RoleRepositoryImpl) GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error) {
+func (rr *RoleRepositoryImpl) GetRoleByName(ctx context.Context, name string) (*model.Role, error) {
 	var role model.Role
 	err := rr.db.WithContext(ctx).
-		Where("name = ?", name).
-		First(&role).Error
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	return &role, err
-}
-
-func (rr *RoleRepositoryImpl) GetUnscopedRoleByName(ctx context.Context, name string) (*model.Role, error) {
-	var role model.Role
-	err := rr.db.WithContext(ctx).
-		Unscoped(). // include soft-deleted records
 		Where("name = ?", name).
 		First(&role).Error
 
@@ -57,7 +42,7 @@ func (rr *RoleRepositoryImpl) GetRoleByID(ctx context.Context, id uint64) (*mode
 	var role model.Role
 	result := rr.db.WithContext(ctx).Where("id = ?", id).First(&role)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, constants.ErrRecordNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error

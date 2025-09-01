@@ -2,12 +2,9 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // PlayerTeam represents the many-to-many relationship between players, teams, and seasons
-// Note: The unique index includes DeletedAt to allow reusing player-team-season-startDate combinations after soft deletion
 type PlayerTeam struct {
 	ID       uint64 `gorm:"primaryKey;autoIncrement" json:"id"`
 	PlayerID uint64 `gorm:"uniqueIndex:idx_player_team_unique;not null;index:fk_players_player_teams" json:"player_id"`
@@ -21,7 +18,6 @@ type PlayerTeam struct {
 	StartDate time.Time  `gorm:"type:timestamp;uniqueIndex:idx_player_team_unique;not null" json:"start_date"`
 	EndDate   *time.Time `gorm:"type:timestamp" json:"end_date,omitempty"`
 
-	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;uniqueIndex:idx_player_team_unique;index" json:"-" swaggerignore:"true"`
+	CreatedAt time.Time `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt time.Time `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
 }

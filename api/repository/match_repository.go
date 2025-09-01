@@ -11,7 +11,7 @@ import (
 
 type MatchRepository interface {
 	CreateMatch(ctx context.Context, match *model.Match) error
-	GetActiveMatchByID(ctx context.Context, id uint64) (*model.Match, error)
+	GetMatchByID(ctx context.Context, id uint64) (*model.Match, error)
 	GetPaginatedMatches(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Match, int64, error)
 	GetMatchesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]model.Match, int64, error)
 	GetMatchesByTeamID(ctx context.Context, teamID uint64, sort string, order string, page int, pageSize int) ([]model.Match, int64, error)
@@ -33,8 +33,8 @@ func (mr *MatchRepositoryImpl) CreateMatch(ctx context.Context, match *model.Mat
 	return mr.db.WithContext(ctx).Create(match).Error
 }
 
-// GetActiveMatchByID retrieves an active match by its ID with basic preloads
-func (mr *MatchRepositoryImpl) GetActiveMatchByID(ctx context.Context, id uint64) (*model.Match, error) {
+// GetMatchByID retrieves a match by its ID with basic preloads
+func (mr *MatchRepositoryImpl) GetMatchByID(ctx context.Context, id uint64) (*model.Match, error) {
 	var match model.Match
 	result := mr.db.WithContext(ctx).
 		Preload("Season").

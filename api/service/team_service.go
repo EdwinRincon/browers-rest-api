@@ -31,37 +31,13 @@ func NewTeamService(teamRepo repository.TeamRepository) TeamService {
 }
 
 func (s *teamService) CreateTeam(ctx context.Context, team *model.Team) (*dto.TeamShort, error) {
-	// First check if there's an active team with this name
-	activeTeam, err := s.TeamRepository.GetActiveTeamByName(ctx, team.FullName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check existing active team: %w", err)
-	}
-	if activeTeam != nil {
-		return nil, constants.ErrRecordAlreadyExists
-	}
-
-	// If no active team exists, check for soft-deleted team
-	existing, err := s.TeamRepository.GetUnscopedTeamByName(ctx, team.FullName)
+	// Check if a team with this name already exists
+	existing, err := s.TeamRepository.GetTeamByName(ctx, team.FullName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing team: %w", err)
 	}
-
-	if existing != nil && existing.DeletedAt.Valid {
-		// Update all relevant fields from the new team
-		existing.FullName = team.FullName
-		existing.ShortName = team.ShortName
-		existing.Color = team.Color
-		existing.Color2 = team.Color2
-		existing.Shield = team.Shield
-		existing.NextMatchID = team.NextMatchID
-
-		// Restore and update the team in a transaction
-		err := s.TeamRepository.RestoreAndUpdateTeam(ctx, existing)
-		if err != nil {
-			return nil, fmt.Errorf("failed to restore and update team: %w", err)
-		}
-
-		return mapper.ToTeamShort(existing), nil
+	if existing != nil {
+		return nil, constants.ErrRecordAlreadyExists
 	}
 
 	if err := s.TeamRepository.CreateTeam(ctx, team); err != nil {
@@ -76,11 +52,14 @@ func (s *teamService) GetTeamByID(ctx context.Context, id uint64) (*model.Team, 
 	if err != nil {
 		return nil, err
 	}
+	if team == nil {
+		return nil, constants.ErrRecordNotFound
+	}
 	return team, nil
 }
 
 func (s *teamService) GetTeamByName(ctx context.Context, fullName string) (*model.Team, error) {
-	team, err := s.TeamRepository.GetActiveTeamByName(ctx, fullName)
+	team, err := s.TeamRepository.GetTeamByName(ctx, fullName)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +83,7 @@ func (s *teamService) UpdateTeam(ctx context.Context, teamUpdate *dto.UpdateTeam
 	}
 
 	if teamUpdate.FullName != nil && *teamUpdate.FullName != team.FullName {
-		dup, err := s.TeamRepository.GetActiveTeamByName(ctx, *teamUpdate.FullName)
+		dup, err := s.TeamRepository.GetTeamByName(ctx, *teamUpdate.FullName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check duplicate team name: %w", err)
 		}

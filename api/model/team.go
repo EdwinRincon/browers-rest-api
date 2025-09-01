@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Team struct {
@@ -17,12 +15,11 @@ type Team struct {
 	NextMatch   *Match    `gorm:"foreignKey:NextMatchID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"next_match,omitempty" swaggerignore:"true"`
 
 	PlayerTeams []PlayerTeam `json:"player_teams,omitempty" swaggerignore:"true"`
-	HomeMatches []Match      `gorm:"foreignKey:HomeTeamID" json:"home_matches,omitempty" swaggerignore:"true"`
-	AwayMatches []Match      `gorm:"foreignKey:AwayTeamID" json:"away_matches,omitempty" swaggerignore:"true"`
-	TeamStats   []TeamStat   `gorm:"foreignKey:TeamID" json:"team_stats,omitempty" swaggerignore:"true"`
-	PlayerStats []PlayerStat `gorm:"foreignKey:TeamID" json:"player_stats,omitempty" swaggerignore:"true"`
+	HomeMatches []Match      `gorm:"foreignKey:HomeTeamID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"home_matches,omitempty" swaggerignore:"true"`
+	AwayMatches []Match      `gorm:"foreignKey:AwayTeamID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"away_matches,omitempty" swaggerignore:"true"`
+	TeamStats   []TeamStat   `gorm:"foreignKey:TeamID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"team_stats,omitempty" swaggerignore:"true"`
+	PlayerStats []PlayerStat `gorm:"foreignKey:TeamID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"player_stats,omitempty" swaggerignore:"true"`
 
-	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
+	CreatedAt time.Time `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt time.Time `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
 }

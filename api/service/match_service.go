@@ -46,7 +46,7 @@ func (s *matchService) CreateMatch(ctx context.Context, matchDTO *dto.CreateMatc
 
 // GetMatchByID retrieves a match by its ID
 func (s *matchService) GetMatchByID(ctx context.Context, id uint64) (*model.Match, error) {
-	match, err := s.MatchRepository.GetActiveMatchByID(ctx, id)
+	match, err := s.MatchRepository.GetMatchByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (s *matchService) GetNextMatchByTeamID(ctx context.Context, teamID uint64) 
 // UpdateMatch updates an existing match
 func (s *matchService) UpdateMatch(ctx context.Context, id uint64, matchDTO *dto.UpdateMatchRequest) (*model.Match, error) {
 	// First get the existing match
-	existingMatch, err := s.MatchRepository.GetActiveMatchByID(ctx, id)
+	existingMatch, err := s.MatchRepository.GetMatchByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get match by ID: %w", err)
 	}
@@ -108,7 +108,7 @@ func (s *matchService) UpdateMatch(ctx context.Context, id uint64, matchDTO *dto
 	}
 
 	// Reload the match to get the updated version with associations
-	updatedMatch, err := s.MatchRepository.GetActiveMatchByID(ctx, id)
+	updatedMatch, err := s.MatchRepository.GetMatchByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to reload match after update: %w", err)
 	}

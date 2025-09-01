@@ -149,7 +149,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 		return
 	}
 
-	updatedRole, err := h.RoleService.GetActiveRoleByName(ctx, updateRole.Name)
+	updatedRole, err := h.RoleService.GetRoleByName(ctx, updateRole.Name)
 	if err != nil {
 		helper.RespondWithError(c, helper.InternalError(err))
 		return
@@ -209,7 +209,7 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	if page < 0 {
 		page = 0
 	}
-	if pageSize < 0 || pageSize > 100 {
+	if pageSize < 1 || pageSize > 100 {
 		pageSize = 10
 	}
 	if order != "asc" && order != "desc" {

@@ -55,7 +55,7 @@ func (s *seasonService) CreateSeason(ctx context.Context, createRequest *dto.Cre
 }
 
 func (s *seasonService) GetSeasonByID(ctx context.Context, id uint64) (*model.Season, error) {
-	season, err := s.SeasonRepository.GetActiveSeasonByID(ctx, id)
+	season, err := s.SeasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get season by ID: %w", err)
 	}
@@ -93,7 +93,7 @@ func (s *seasonService) GetPaginatedSeasons(ctx context.Context, sort string, or
 
 func (s *seasonService) UpdateSeason(ctx context.Context, id uint64, updateRequest *dto.UpdateSeasonRequest) (*dto.SeasonResponse, error) {
 	// Fetch existing season
-	season, err := s.SeasonRepository.GetActiveSeasonByID(ctx, id)
+	season, err := s.SeasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf(errFailedToGetSeason, err)
 	}
@@ -124,7 +124,7 @@ func (s *seasonService) UpdateSeason(ctx context.Context, id uint64, updateReque
 
 func (s *seasonService) DeleteSeason(ctx context.Context, id uint64) error {
 	// Check if season exists
-	season, err := s.SeasonRepository.GetActiveSeasonByID(ctx, id)
+	season, err := s.SeasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf(errFailedToGetSeason, err)
 	}
@@ -142,7 +142,7 @@ func (s *seasonService) DeleteSeason(ctx context.Context, id uint64) error {
 
 func (s *seasonService) SetCurrentSeason(ctx context.Context, id uint64) error {
 	// Check if season exists
-	season, err := s.SeasonRepository.GetActiveSeasonByID(ctx, id)
+	season, err := s.SeasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf(errFailedToGetSeason, err)
 	}

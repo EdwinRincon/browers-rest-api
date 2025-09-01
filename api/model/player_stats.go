@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // PlayerStat represents the statistics of a player in a specific match and season.
@@ -30,7 +28,6 @@ type PlayerStat struct {
 	Season *Season `gorm:"foreignKey:SeasonID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"season,omitempty"`
 	Team   *Team   `gorm:"foreignKey:TeamID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"team,omitempty"`
 
-	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;index" json:",omitempty" swaggerignore:"true"`
+	CreatedAt time.Time `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt time.Time `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
 }

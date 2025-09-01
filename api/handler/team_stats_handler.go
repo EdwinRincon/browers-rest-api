@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
@@ -156,7 +157,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	teamStats.ID = id
 	err = h.TeamStatsService.UpdateTeamStat(ctx, &teamStats)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("team stats"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))

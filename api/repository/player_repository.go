@@ -20,10 +20,8 @@ const (
 
 type PlayerRepository interface {
 	CreatePlayer(ctx context.Context, player *model.Player) error
-	GetActivePlayerByID(ctx context.Context, id uint64) (*model.Player, error)
-	GetUnscopedPlayerByID(ctx context.Context, id uint64) (*model.Player, error)
-	GetActivePlayerByNickName(ctx context.Context, nickName string) (*model.Player, error)
-	GetUnscopedPlayerByNickName(ctx context.Context, nickName string) (*model.Player, error)
+	GetPlayerByID(ctx context.Context, id uint64) (*model.Player, error)
+	GetPlayerByNickName(ctx context.Context, nickName string) (*model.Player, error)
 	GetPaginatedPlayers(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Player, int64, error)
 	UpdatePlayer(ctx context.Context, id uint64, player *model.Player) error
 	DeletePlayer(ctx context.Context, id uint64) error
@@ -37,8 +35,7 @@ func NewPlayerRepository(db *gorm.DB) PlayerRepository {
 	return &PlayerRepositoryImpl{db: db}
 }
 
-// GetActivePlayerByNickName retrieves an active (not deleted) player by their nickname.
-func (pr *PlayerRepositoryImpl) GetActivePlayerByNickName(ctx context.Context, nickName string) (*model.Player, error) {
+func (pr *PlayerRepositoryImpl) GetPlayerByNickName(ctx context.Context, nickName string) (*model.Player, error) {
 	var player model.Player
 	result := pr.db.WithContext(ctx).
 		Preload(PreloadUser).
@@ -55,44 +52,12 @@ func (pr *PlayerRepositoryImpl) GetActivePlayerByNickName(ctx context.Context, n
 	return &player, nil
 }
 
-// GetUnscopedPlayerByNickName retrieves a player by their nickname, including soft-deleted records.
-func (pr *PlayerRepositoryImpl) GetUnscopedPlayerByNickName(ctx context.Context, nickName string) (*model.Player, error) {
+// GetPlayerByID retrieves a player by their ID with preloaded relations.
+func (pr *PlayerRepositoryImpl) GetPlayerByID(ctx context.Context, id uint64) (*model.Player, error) {
 	var player model.Player
 	result := pr.db.WithContext(ctx).
 		Preload(PreloadUser).
 		Preload(PreloadPlayerTeamsTeam).
-		Unscoped().
-		Where(WhereNickNameEquals, nickName).
-		First(&player)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	return &player, result.Error
-}
-
-// GetActivePlayerByID retrieves an active (not deleted) player by their ID, with preloaded relations.
-func (pr *PlayerRepositoryImpl) GetActivePlayerByID(ctx context.Context, id uint64) (*model.Player, error) {
-	var player model.Player
-	result := pr.db.WithContext(ctx).
-		Preload(PreloadUser).
-		Preload(PreloadPlayerTeamsTeam).
-		Where(WhereIDEquals, id).
-		First(&player)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	return &player, result.Error
-}
-
-// GetUnscopedPlayerByID retrieves a player by their ID including soft-deleted records, with preloaded relations.
-func (pr *PlayerRepositoryImpl) GetUnscopedPlayerByID(ctx context.Context, id uint64) (*model.Player, error) {
-	var player model.Player
-	result := pr.db.WithContext(ctx).
-		Preload(PreloadUser).
-		Preload(PreloadPlayerTeamsTeam).
-		Unscoped().
 		Where(WhereIDEquals, id).
 		First(&player)
 

@@ -17,8 +17,7 @@ const (
 
 type SeasonRepository interface {
 	CreateSeason(ctx context.Context, season *model.Season) error
-	GetActiveSeasonByID(ctx context.Context, id uint64) (*model.Season, error)
-	GetUnscopedSeasonByID(ctx context.Context, id uint64) (*model.Season, error)
+	GetSeasonByID(ctx context.Context, id uint64) (*model.Season, error)
 	GetSeasonByYear(ctx context.Context, year uint16) (*model.Season, error)
 	GetCurrentSeason(ctx context.Context) (*model.Season, error)
 	GetPaginatedSeasons(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Season, int64, error)
@@ -51,32 +50,9 @@ func (sr *SeasonRepositoryImpl) clearCurrentSeasons(ctx context.Context) error {
 	return sr.db.WithContext(ctx).Model(&model.Season{}).Where("is_current = ?", true).Update("is_current", false).Error
 }
 
-func (sr *SeasonRepositoryImpl) GetActiveSeasonByID(ctx context.Context, id uint64) (*model.Season, error) {
+func (sr *SeasonRepositoryImpl) GetSeasonByID(ctx context.Context, id uint64) (*model.Season, error) {
 	var season model.Season
 	result := sr.db.WithContext(ctx).
-		Preload("Matches").
-		Preload("Articles").
-		Preload("TeamStats").
-		Preload("PlayerTeams").
-		Preload("PlayerStats").
-		Where(whereID, id).
-		First(&season)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("error getting season by ID: %w", result.Error)
-	}
-
-	return &season, nil
-}
-
-func (sr *SeasonRepositoryImpl) GetUnscopedSeasonByID(ctx context.Context, id uint64) (*model.Season, error) {
-	var season model.Season
-	result := sr.db.WithContext(ctx).
-		Unscoped().
 		Preload("Matches").
 		Preload("Articles").
 		Preload("TeamStats").

@@ -14,7 +14,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type TeamHandler struct {
@@ -95,7 +94,7 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 	defer cancel()
 	team, err := h.TeamService.GetTeamByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("team"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))

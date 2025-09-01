@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type TeamStat struct {
@@ -15,11 +13,10 @@ type TeamStat struct {
 	GoalsAgainst uint16         `gorm:"not null;default:0" json:"goals_against" form:"goals_against" binding:"gte=0"`
 	Points       uint16         `gorm:"not null;default:0" json:"points" form:"points" binding:"gte=0"`
 	Rank         uint8          `gorm:"not null;default:0" json:"rank" form:"rank" binding:"gte=0"`
-	TeamID       uint64         `gorm:"index;not null" json:"team_id" form:"team_id" binding:"required"`
-	Team         *Team          `gorm:"foreignKey:TeamID" json:"team,omitempty"`
-	SeasonID     uint64         `gorm:"index;not null" json:"season_id" form:"season_id" binding:"required"`
-	Season       *Season        `gorm:"foreignKey:SeasonID" json:"season,omitempty"`
-	CreatedAt    time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
-	UpdatedAt    time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt    gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
+	TeamID       uint64         `gorm:"index;not null;index:idx_season_team" json:"team_id" form:"team_id" binding:"required"`
+	Team         *Team          `gorm:"foreignKey:TeamID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"team,omitempty"`
+	SeasonID     uint64         `gorm:"index;not null;index:idx_season_team" json:"season_id" form:"season_id" binding:"required"`
+	Season       *Season     `gorm:"foreignKey:SeasonID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"season,omitempty"`
+	CreatedAt    time.Time   `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
+	UpdatedAt    time.Time   `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
 }

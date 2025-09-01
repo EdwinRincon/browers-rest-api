@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Season struct {
@@ -16,8 +14,7 @@ type Season struct {
 	Articles    []Article      `gorm:"foreignKey:SeasonID" json:"articles" swaggerignore:"true"`
 	TeamStats   []TeamStat     `gorm:"foreignKey:SeasonID" json:"team_stats" swaggerignore:"true"`
 	PlayerTeams []PlayerTeam   `gorm:"foreignKey:SeasonID" json:"player_teams" swaggerignore:"true"`
-	PlayerStats []PlayerStat   `gorm:"foreignKey:SeasonID" json:"player_stats" swaggerignore:"true"`
-	CreatedAt   time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
+	PlayerStats []PlayerStat `gorm:"foreignKey:SeasonID" json:"player_stats" swaggerignore:"true"`
+	CreatedAt   time.Time    `gorm:"type:timestamp;autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time    `gorm:"type:timestamp;autoUpdateTime" json:"updated_at"`
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
-	"gorm.io/gorm"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
@@ -215,7 +214,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 		// Note: Rate limiting for new accounts is now handled by middleware.RateLimitNewAccounts
 
 		// Get the default role for new Google users
-		defaultRole, err := h.RoleService.GetActiveRoleByName(ctx, constants.RoleDefault)
+		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
 			helper.RespondWithError(c, helper.InternalError(err))
 			return
@@ -317,7 +316,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		roleID = role.ID
 	} else {
 		// Get the default role if no role_id provided
-		defaultRole, err := h.RoleService.GetActiveRoleByName(ctx, constants.RoleDefault)
+		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
 			helper.RespondWithError(c, helper.InternalError(err))
 			return
@@ -364,7 +363,7 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 
 	user, err := h.UserService.GetUserByUsername(ctx, username)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("user"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))

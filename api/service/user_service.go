@@ -30,38 +30,13 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 }
 
 func (s *userService) CreateUser(ctx context.Context, user *model.User) (*dto.UserShort, error) {
-	// First check if there's an active user with this username
-	activeUser, err := s.UserRepository.GetActiveUserByUsername(ctx, user.Username)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check existing active user: %w", err)
-	}
-	if activeUser != nil {
-		return nil, constants.ErrRecordAlreadyExists
-	}
-
-	// If no active user exists, check for soft-deleted user
-	existing, err := s.UserRepository.GetUnscopedUserByUsername(ctx, user.Username)
+	// Check if a user with this username already exists
+	existing, err := s.UserRepository.GetUserByUsername(ctx, user.Username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing user: %w", err)
 	}
-
-	if existing != nil && existing.DeletedAt.Valid {
-		// Update all relevant fields from the new user
-		existing.Name = user.Name
-		existing.LastName = user.LastName
-		existing.Username = user.Username
-		existing.RoleID = user.RoleID
-		existing.ImgProfile = user.ImgProfile
-		existing.ImgBanner = user.ImgBanner
-		existing.Birthdate = user.Birthdate
-
-		// Restore and update the user in a transaction
-		err := s.UserRepository.RestoreAndUpdateUser(ctx, existing)
-		if err != nil {
-			return nil, fmt.Errorf("failed to restore and update user: %w", err)
-		}
-
-		return mapper.ToUserShort(existing), nil
+	if existing != nil {
+		return nil, constants.ErrRecordAlreadyExists
 	}
 
 	if err := s.UserRepository.CreateUser(ctx, user); err != nil {
@@ -72,7 +47,7 @@ func (s *userService) CreateUser(ctx context.Context, user *model.User) (*dto.Us
 }
 
 func (s *userService) GetUserByUsername(ctx context.Context, username string) (*model.User, error) {
-	user, err := s.UserRepository.GetActiveUserByUsername(ctx, username)
+	user, err := s.UserRepository.GetUserByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +62,7 @@ func (s *userService) GetPaginatedUsers(ctx context.Context, sort string, order 
 }
 
 func (s *userService) UpdateUser(ctx context.Context, userUpdate *dto.UpdateUserRequest, userID string) (*model.User, error) {
-	user, err := s.UserRepository.GetActiveUserByID(ctx, userID)
+	user, err := s.UserRepository.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by ID: %w", err)
 	}
@@ -96,7 +71,7 @@ func (s *userService) UpdateUser(ctx context.Context, userUpdate *dto.UpdateUser
 	}
 
 	if userUpdate.Username != nil && *userUpdate.Username != user.Username {
-		dup, err := s.UserRepository.GetActiveUserByUsername(ctx, *userUpdate.Username)
+		dup, err := s.UserRepository.GetUserByUsername(ctx, *userUpdate.Username)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check duplicate username: %w", err)
 		}

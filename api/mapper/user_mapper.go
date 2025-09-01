@@ -38,18 +38,24 @@ func ToUserResponse(user *model.User) *dto.UserResponse {
 		}
 	}
 
-	return &dto.UserResponse{
+	response := &dto.UserResponse{
 		ID:         user.ID,
 		Name:       user.Name,
 		LastName:   user.LastName,
 		Username:   user.Username,
-		Birthdate:  *user.Birthdate,
 		ImgProfile: user.ImgProfile,
 		ImgBanner:  user.ImgBanner,
 		Role:       role,
 		CreatedAt:  user.CreatedAt,
 		UpdatedAt:  user.UpdatedAt,
 	}
+
+	// Only set the birthdate if it's not nil
+	if user.Birthdate != nil {
+		response.Birthdate = *user.Birthdate
+	}
+
+	return response
 }
 
 func ToUserResponseList(users []model.User) []dto.UserResponse {

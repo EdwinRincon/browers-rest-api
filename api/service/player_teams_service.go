@@ -45,7 +45,7 @@ func NewPlayerTeamService(
 // CreatePlayerTeam creates a new player-team relationship
 func (s *PlayerTeamServiceImpl) CreatePlayerTeam(ctx context.Context, createRequest *dto.CreatePlayerTeamRequest) (*dto.PlayerTeamResponse, error) {
 	// Validate that the player, team, and season exist
-	player, err := s.PlayerRepository.GetActivePlayerByID(ctx, createRequest.PlayerID)
+	player, err := s.PlayerRepository.GetPlayerByID(ctx, createRequest.PlayerID)
 	if err != nil || player == nil {
 		return nil, constants.ErrPlayerNotFound
 	}
@@ -55,7 +55,7 @@ func (s *PlayerTeamServiceImpl) CreatePlayerTeam(ctx context.Context, createRequ
 		return nil, constants.ErrTeamNotFound
 	}
 
-	season, err := s.SeasonRepository.GetActiveSeasonByID(ctx, createRequest.SeasonID)
+	season, err := s.SeasonRepository.GetSeasonByID(ctx, createRequest.SeasonID)
 	if err != nil || season == nil {
 		return nil, constants.ErrSeasonNotFound
 	}
@@ -113,7 +113,7 @@ func (s *PlayerTeamServiceImpl) GetPlayerTeamByID(ctx context.Context, id uint64
 // GetPlayerTeamsByPlayerID retrieves all team relationships for a player
 func (s *PlayerTeamServiceImpl) GetPlayerTeamsByPlayerID(ctx context.Context, playerID uint64) ([]dto.PlayerTeamResponse, error) {
 	// Validate player exists
-	player, err := s.PlayerRepository.GetActivePlayerByID(ctx, playerID)
+	player, err := s.PlayerRepository.GetPlayerByID(ctx, playerID)
 	if err != nil || player == nil {
 		return nil, constants.ErrPlayerNotFound
 	}
@@ -145,7 +145,7 @@ func (s *PlayerTeamServiceImpl) GetPlayerTeamsByTeamID(ctx context.Context, team
 // GetPlayerTeamsBySeasonID retrieves all player-team relationships for a season
 func (s *PlayerTeamServiceImpl) GetPlayerTeamsBySeasonID(ctx context.Context, seasonID uint64) ([]dto.PlayerTeamResponse, error) {
 	// Validate season exists
-	season, err := s.SeasonRepository.GetActiveSeasonByID(ctx, seasonID)
+	season, err := s.SeasonRepository.GetSeasonByID(ctx, seasonID)
 	if err != nil || season == nil {
 		return nil, constants.ErrSeasonNotFound
 	}

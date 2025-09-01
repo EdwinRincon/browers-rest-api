@@ -73,35 +73,13 @@ func (s *playerService) addTeamAssociations(ctx context.Context, playerID uint64
 	return nil
 }
 
-// restorePlayer updates a soft-deleted player and restores it
-func (s *playerService) restorePlayer(ctx context.Context, existing *model.Player, player *model.Player) error {
-	// Update all relevant fields from the new player
-	existing.NickName = player.NickName
-	existing.Height = player.Height
-	existing.Country = player.Country
-	existing.Country2 = player.Country2
-	existing.Foot = player.Foot
-	existing.Age = player.Age
-	existing.SquadNumber = player.SquadNumber
-	existing.Position = player.Position
-	existing.CareerSummary = player.CareerSummary
-	existing.UserID = player.UserID
-
-	// Reset DeletedAt to restore the player
-	existing.DeletedAt.Valid = false
-	existing.DeletedAt.Time = time.Time{}
-
-	// Update the player with all fields
-	return s.PlayerRepository.UpdatePlayer(ctx, existing.ID, existing)
-}
-
 // checkNicknameExists checks if a player with the given nickname already exists
 func (s *playerService) checkNicknameExists(ctx context.Context, nickname string) error {
-	activePlayer, err := s.PlayerRepository.GetActivePlayerByNickName(ctx, nickname)
+	player, err := s.PlayerRepository.GetPlayerByNickName(ctx, nickname)
 	if err != nil {
-		return fmt.Errorf("failed to check existing active player: %w", err)
+		return fmt.Errorf("failed to check existing player: %w", err)
 	}
-	if activePlayer != nil {
+	if player != nil {
 		return constants.ErrRecordAlreadyExists
 	}
 	return nil
@@ -132,33 +110,12 @@ func (s *playerService) CreatePlayer(ctx context.Context, createRequest *dto.Cre
 	// Convert DTO to model
 	player := mapper.ToPlayer(createRequest)
 
-	// Check for soft-deleted player with the same nickname
-	existing, err := s.PlayerRepository.GetUnscopedPlayerByNickName(ctx, createRequest.NickName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check existing player: %w", err)
-	}
-
-	// If soft-deleted player exists, restore it
-	if existing != nil && existing.DeletedAt.Valid {
-		if err := s.restorePlayer(ctx, existing, player); err != nil {
-			return nil, fmt.Errorf("failed to restore and update player: %w", err)
-		}
-
-		if len(createRequest.TeamIDs) > 0 {
-			if err := s.addTeamAssociations(ctx, existing.ID, createRequest.TeamIDs); err != nil {
-				return nil, err
-			}
-		}
-
-		return mapper.ToPlayerShort(existing), nil
-	}
-
-	// Create new player if no soft-deleted player exists
+	// Create new player
 	return s.createNewPlayer(ctx, player, createRequest.TeamIDs)
 }
 
 func (s *playerService) GetPlayerByNickName(ctx context.Context, nickName string) (*model.Player, error) {
-	player, err := s.PlayerRepository.GetActivePlayerByNickName(ctx, nickName)
+	player, err := s.PlayerRepository.GetPlayerByNickName(ctx, nickName)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +126,7 @@ func (s *playerService) GetPlayerByNickName(ctx context.Context, nickName string
 }
 
 func (s *playerService) GetPlayerByID(ctx context.Context, id uint64) (*model.Player, error) {
-	player, err := s.PlayerRepository.GetActivePlayerByID(ctx, id)
+	player, err := s.PlayerRepository.GetPlayerByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +152,7 @@ func (s *playerService) updatePlayerTeams(ctx context.Context, playerID uint64, 
 }
 
 func (s *playerService) UpdatePlayer(ctx context.Context, playerUpdate *dto.UpdatePlayerRequest, playerID uint64) (*model.Player, error) {
-	player, err := s.PlayerRepository.GetActivePlayerByID(ctx, playerID)
+	player, err := s.PlayerRepository.GetPlayerByID(ctx, playerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get player by ID: %w", err)
 	}
@@ -205,7 +162,7 @@ func (s *playerService) UpdatePlayer(ctx context.Context, playerUpdate *dto.Upda
 
 	// Check for nickname uniqueness if it's being changed
 	if playerUpdate.NickName != nil && *playerUpdate.NickName != player.NickName {
-		dup, err := s.PlayerRepository.GetActivePlayerByNickName(ctx, *playerUpdate.NickName)
+		dup, err := s.PlayerRepository.GetPlayerByNickName(ctx, *playerUpdate.NickName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check duplicate nickname: %w", err)
 		}

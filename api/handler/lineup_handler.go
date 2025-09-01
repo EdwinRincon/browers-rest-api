@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
@@ -84,7 +85,7 @@ func (h *LineupHandler) GetLineupByID(c *gin.Context) {
 	defer cancel()
 	lineup, err := h.LineupService.GetLineupByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("lineup"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))
@@ -161,7 +162,7 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 	lineup.ID = uint64(id)
 	err = h.LineupService.UpdateLineup(ctx, &lineup)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("lineup"))
 		} else if errors.Is(err, gorm.ErrDuplicatedKey) {
 			helper.RespondWithError(c, helper.Conflict("lineup", "A lineup with these details already exists"))
@@ -199,7 +200,7 @@ func (h *LineupHandler) DeleteLineup(c *gin.Context) {
 	defer cancel()
 	err = h.LineupService.DeleteLineup(ctx, uint64(id))
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("lineup"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))
@@ -233,7 +234,7 @@ func (h *LineupHandler) GetLineupsByMatch(c *gin.Context) {
 	defer cancel()
 	lineups, err := h.LineupService.GetLineupsByMatch(ctx, matchID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.RespondWithError(c, helper.NotFound("lineup"))
 		} else {
 			helper.RespondWithError(c, helper.InternalError(err))

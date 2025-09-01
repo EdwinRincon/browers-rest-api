@@ -7,12 +7,11 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/repository"
-	"gorm.io/gorm"
 )
 
 type RoleService interface {
 	GetRoleByID(ctx context.Context, id uint64) (*model.Role, error)
-	GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error)
+	GetRoleByName(ctx context.Context, name string) (*model.Role, error)
 	CreateRole(ctx context.Context, role *model.Role) (*model.Role, error)
 	UpdateRole(ctx context.Context, id uint64, updated *model.Role) error
 	DeleteRole(ctx context.Context, id uint64) error
@@ -40,8 +39,8 @@ func (s *roleService) GetRoleByID(ctx context.Context, id uint64) (*model.Role, 
 	return role, nil
 }
 
-func (s *roleService) GetActiveRoleByName(ctx context.Context, name string) (*model.Role, error) {
-	role, err := s.RoleRepository.GetActiveRoleByName(ctx, name)
+func (s *roleService) GetRoleByName(ctx context.Context, name string) (*model.Role, error) {
+	role, err := s.RoleRepository.GetRoleByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -52,22 +51,12 @@ func (s *roleService) GetActiveRoleByName(ctx context.Context, name string) (*mo
 }
 
 func (s *roleService) CreateRole(ctx context.Context, role *model.Role) (*model.Role, error) {
-	existing, err := s.RoleRepository.GetUnscopedRoleByName(ctx, role.Name)
+	existing, err := s.RoleRepository.GetRoleByName(ctx, role.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing role: %w", err)
 	}
 
 	if existing != nil {
-		if existing.DeletedAt.Valid {
-			// Restore the soft-deleted role
-			existing.DeletedAt = gorm.DeletedAt{} // zero value = not deleted
-			existing.Description = role.Description
-			err := s.RoleRepository.UpdateRole(ctx, existing)
-			if err != nil {
-				return nil, fmt.Errorf("failed to restore role: %w", err)
-			}
-			return existing, nil
-		}
 		return nil, constants.ErrRecordAlreadyExists
 	}
 
@@ -88,7 +77,7 @@ func (s *roleService) UpdateRole(ctx context.Context, id uint64, updated *model.
 	}
 
 	if existing.Name != updated.Name {
-		duplicate, err := s.RoleRepository.GetActiveRoleByName(ctx, updated.Name)
+		duplicate, err := s.RoleRepository.GetRoleByName(ctx, updated.Name)
 		if err != nil {
 			return fmt.Errorf("failed to check duplicate role: %w", err)
 		}
