@@ -25,12 +25,12 @@ type Player struct {
 	Position      string         `gorm:"type:varchar(5);not null;" json:"position" form:"position" binding:"required,oneof=por ceni cend lati med latd del deli deld"`
 	Injured       bool           `gorm:"default:false;" json:"injured" form:"injured"`
 	CareerSummary string         `gorm:"type:varchar(1000);not null;" json:"career_summary,omitempty" form:"career_summary"`
-	PlayerTeams   []PlayerTeam   `json:"player_teams,omitempty"`
+	PlayerTeams   []PlayerTeam   `json:"player_teams,omitempty" swaggerignore:"true"`
 	Lineups       []Lineup       `gorm:"foreignKey:PlayerID;" json:"lineups,omitempty" form:"lineups" swaggerignore:"true"`
 	PlayerStats   []PlayerStat   `gorm:"foreignKey:PlayerID;" json:"player_stats,omitempty" swaggerignore:"true"`
 	MVPCount      uint8          `gorm:"type:tinyint;not null;default:0;" json:"mvp_count" form:"mvp_count"`
 	UserID        *string        `gorm:"index;" json:"user_id,omitempty" form:"user_id"`
-	User          *User          `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"user,omitempty" form:"user"`
+	User          *User          `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"user,omitempty" form:"user" swaggerignore:"true"`
 	CreatedAt     time.Time      `gorm:"type:timestamp;autoCreateTime;" json:"created_at,omitempty"`
 	UpdatedAt     time.Time      `gorm:"type:timestamp;autoUpdateTime;" json:"updated_at,omitempty"`
 	DeletedAt     gorm.DeletedAt `gorm:"type:timestamp;index;" json:",omitempty" swaggerignore:"true"`

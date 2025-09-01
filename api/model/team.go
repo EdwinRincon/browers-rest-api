@@ -14,9 +14,9 @@ type Team struct {
 	Color2      string    `gorm:"type:varchar(10);not null" json:"color2" form:"color2" binding:"required,max=10"`
 	Shield      string    `gorm:"type:varchar(200);not null" json:"shield" form:"shield" binding:"required,url"`
 	NextMatchID *uint64   `gorm:"index" json:"next_match_id,omitempty"`
-	NextMatch   *Match    `gorm:"foreignKey:NextMatchID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"next_match,omitempty"`
+	NextMatch   *Match    `gorm:"foreignKey:NextMatchID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"next_match,omitempty" swaggerignore:"true"`
 
-	PlayerTeams []PlayerTeam `json:"player_teams,omitempty"`
+	PlayerTeams []PlayerTeam `json:"player_teams,omitempty" swaggerignore:"true"`
 	HomeMatches []Match      `gorm:"foreignKey:HomeTeamID" json:"home_matches,omitempty" swaggerignore:"true"`
 	AwayMatches []Match      `gorm:"foreignKey:AwayTeamID" json:"away_matches,omitempty" swaggerignore:"true"`
 	TeamStats   []TeamStat   `gorm:"foreignKey:TeamID" json:"team_stats,omitempty" swaggerignore:"true"`

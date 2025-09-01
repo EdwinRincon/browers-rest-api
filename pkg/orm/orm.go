@@ -15,82 +15,104 @@ import (
 var (
 	instance *gorm.DB
 	once     sync.Once
+	initErr  error
 )
 
-// GetDBInstance returns a singleton *gorm.DB instance. It initializes the connection only once.
-// Returns an error if the connection or migration fails.
+// GetDBInstance returns a singleton *gorm.DB instance.
 func GetDBInstance() (*gorm.DB, error) {
-	onceErr := func() error {
-		var initErr error
-		once.Do(func() {
-			dsn, errorDBURL := config.GetDBURL()
-			if errorDBURL != nil {
-				initErr = fmt.Errorf("error getting database URL: %w", errorDBURL)
-				return
-			}
-			sqlDB, openErr := sql.Open("mysql", dsn)
-			if openErr != nil {
-				initErr = fmt.Errorf("error initializing database connection: %w", openErr)
-				return
-			}
+	once.Do(func() {
+		initErr = initializeDatabase()
+	})
+	return instance, initErr
+}
 
-			// ensure MySQL session timezone is UTC:
-			if _, err := sqlDB.Exec("SET time_zone = '+00:00'"); err != nil {
-				initErr = fmt.Errorf("error setting MySQL timezone: %w", err)
-				return
-			}
+func initializeDatabase() error {
+	dsn, err := config.GetDBURL()
+	if err != nil {
+		return fmt.Errorf("error getting database URL: %w", err)
+	}
 
-			// Initialize GORM with custom logger
-			gormConfig := &gorm.Config{
-				Logger: NewContextAwareGormLogger(),
-			}
+	sqlDB, err := openSQLConnection(dsn)
+	if err != nil {
+		return err
+	}
 
-			instance, initErr = gorm.Open(mysql.New(mysql.Config{
-				Conn: sqlDB,
-			}), gormConfig)
-			if initErr != nil {
-				initErr = fmt.Errorf("error initializing database connection gorm: %w", initErr)
-				return
-			}
+	if err := setSessionTimezone(sqlDB); err != nil {
+		return err
+	}
 
-			// Set connection pool parameters
-			sqlDB.SetMaxOpenConns(10)               // Maximum number of open connections
-			sqlDB.SetMaxIdleConns(5)                // Maximum number of idle connections
-			sqlDB.SetConnMaxLifetime(1 * time.Hour) // Maximum connection lifetime
+	gormDB, err := openGormConnection(sqlDB)
+	if err != nil {
+		return err
+	}
+	instance = gormDB
 
-			// Phase 1: Disable foreign key checks temporarily
-			if err := instance.Exec("SET FOREIGN_KEY_CHECKS = 0").Error; err != nil {
-				initErr = fmt.Errorf("error disabling foreign key checks: %w", err)
-				return
-			}
+	configureConnectionPool(sqlDB)
 
-			// First, create all tables without foreign key constraints
-			migrateErr := instance.AutoMigrate(
-				&model.Article{},
-				&model.Role{},
-				&model.Season{},
-				&model.User{},
-				&model.Player{},
-				&model.Team{},
-				&model.Match{},
-				&model.Lineup{},
-				&model.TeamStat{},
-				&model.PlayerTeam{},
-				&model.PlayerStat{},
-			)
-			if migrateErr != nil {
-				initErr = fmt.Errorf("error running migrations: %w", migrateErr)
-				return
-			}
+	if err := runMigrations(gormDB); err != nil {
+		return err
+	}
 
-			// Phase 2: Re-enable foreign key checks
-			if err := instance.Exec("SET FOREIGN_KEY_CHECKS = 1").Error; err != nil {
-				initErr = fmt.Errorf("error re-enabling foreign key checks: %w", err)
-				return
-			}
-		})
-		return initErr
-	}()
+	return nil
+}
 
-	return instance, onceErr
+func openSQLConnection(dsn string) (*sql.DB, error) {
+	sqlDB, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("error opening SQL connection: %w", err)
+	}
+	return sqlDB, nil
+}
+
+func setSessionTimezone(sqlDB *sql.DB) error {
+	if _, err := sqlDB.Exec("SET time_zone = '+00:00'"); err != nil {
+		return fmt.Errorf("error setting MySQL timezone: %w", err)
+	}
+	return nil
+}
+
+func openGormConnection(sqlDB *sql.DB) (*gorm.DB, error) {
+	gormConfig := &gorm.Config{
+		Logger: NewContextAwareGormLogger(),
+	}
+
+	gormDB, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB}), gormConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error opening GORM connection: %w", err)
+	}
+	return gormDB, nil
+}
+
+func configureConnectionPool(sqlDB *sql.DB) {
+	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+}
+
+func runMigrations(db *gorm.DB) error {
+	if err := db.Exec("SET FOREIGN_KEY_CHECKS = 0").Error; err != nil {
+		return fmt.Errorf("error disabling foreign key checks: %w", err)
+	}
+
+	if err := db.AutoMigrate(
+		&model.Article{},
+		&model.Role{},
+		&model.Season{},
+		&model.User{},
+		&model.Player{},
+		&model.Team{},
+		&model.Match{},
+		&model.Lineup{},
+		&model.TeamStat{},
+		&model.PlayerTeam{},
+		&model.PlayerStat{},
+	); err != nil {
+		return fmt.Errorf("error running migrations: %w", err)
+	}
+
+	if err := db.Exec("SET FOREIGN_KEY_CHECKS = 1").Error; err != nil {
+		return fmt.Errorf("error re-enabling foreign key checks: %w", err)
+	}
+
+	return nil
 }

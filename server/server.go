@@ -45,29 +45,31 @@ type Repositories struct {
 }
 
 type Services struct {
-	JWT      *jwt.JWTService
-	Auth     service.AuthService
-	User     service.UserService
-	Role     service.RoleService
-	Team     service.TeamService
-	Player   service.PlayerService
-	Season   service.SeasonService
-	Article  service.ArticleService
-	Lineup   service.LineupService
-	Match    service.MatchService
-	TeamStat service.TeamStatsService
+	JWT        *jwt.JWTService
+	Auth       service.AuthService
+	User       service.UserService
+	Role       service.RoleService
+	Team       service.TeamService
+	Player     service.PlayerService
+	PlayerTeam service.PlayerTeamService
+	Season     service.SeasonService
+	Article    service.ArticleService
+	Lineup     service.LineupService
+	Match      service.MatchService
+	TeamStat   service.TeamStatsService
 }
 
 type Handlers struct {
-	User     *handler.UserHandler
-	Role     *handler.RoleHandler
-	Team     *handler.TeamHandler
-	Player   *handler.PlayerHandler
-	Season   *handler.SeasonHandler
-	Article  *handler.ArticleHandler
-	Lineup   *handler.LineupHandler
-	Match    *handler.MatchHandler
-	TeamStat *handler.TeamStatsHandler
+	User       *handler.UserHandler
+	Role       *handler.RoleHandler
+	Team       *handler.TeamHandler
+	Player     *handler.PlayerHandler
+	PlayerTeam *handler.PlayerTeamHandler
+	Season     *handler.SeasonHandler
+	Article    *handler.ArticleHandler
+	Lineup     *handler.LineupHandler
+	Match      *handler.MatchHandler
+	TeamStat   *handler.TeamStatsHandler
 }
 
 // NewServer creates and configures a new server instance with middleware and security settings.
@@ -237,31 +239,33 @@ func initializeRepositories(db *gorm.DB) *Repositories {
 func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	jwtService := jwt.NewJWTService(string(jwtSecret))
 	return &Services{
-		JWT:      jwtService,
-		Auth:     service.NewAuthService(repos.User, jwtService),
-		User:     service.NewUserService(repos.User),
-		Role:     service.NewRoleService(repos.Role),
-		Team:     service.NewTeamService(repos.Team),
-		Player:   service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
-		Season:   service.NewSeasonService(repos.Season),
-		Article:  service.NewArticleService(repos.Article),
-		Lineup:   service.NewLineupService(repos.Lineup),
-		Match:    service.NewMatchService(repos.Match),
-		TeamStat: service.NewTeamStatsService(repos.TeamStat),
+		JWT:        jwtService,
+		Auth:       service.NewAuthService(repos.User, jwtService),
+		User:       service.NewUserService(repos.User),
+		Role:       service.NewRoleService(repos.Role),
+		Team:       service.NewTeamService(repos.Team),
+		Player:     service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
+		PlayerTeam: service.NewPlayerTeamService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season),
+		Season:     service.NewSeasonService(repos.Season),
+		Article:    service.NewArticleService(repos.Article),
+		Lineup:     service.NewLineupService(repos.Lineup),
+		Match:      service.NewMatchService(repos.Match),
+		TeamStat:   service.NewTeamStatsService(repos.TeamStat),
 	}
 }
 
 func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
-		User:     handler.NewUserHandler(services.Auth, services.User, services.Role),
-		Role:     handler.NewRoleHandler(services.Role),
-		Team:     handler.NewTeamHandler(services.Team),
-		Player:   handler.NewPlayerHandler(services.Player),
-		Season:   handler.NewSeasonHandler(services.Season),
-		Article:  handler.NewArticleHandler(services.Article),
-		Lineup:   handler.NewLineupHandler(services.Lineup),
-		Match:    handler.NewMatchHandler(services.Match),
-		TeamStat: handler.NewTeamStatsHandler(services.TeamStat),
+		User:       handler.NewUserHandler(services.Auth, services.User, services.Role),
+		Role:       handler.NewRoleHandler(services.Role),
+		Team:       handler.NewTeamHandler(services.Team),
+		Player:     handler.NewPlayerHandler(services.Player),
+		PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeam),
+		Season:     handler.NewSeasonHandler(services.Season),
+		Article:    handler.NewArticleHandler(services.Article),
+		Lineup:     handler.NewLineupHandler(services.Lineup),
+		Match:      handler.NewMatchHandler(services.Match),
+		TeamStat:   handler.NewTeamStatsHandler(services.TeamStat),
 	}
 }
 
@@ -270,6 +274,7 @@ func initializeRoutes(r *gin.Engine, handlers *Handlers) {
 	router.InitializeRoleRoutes(r, handlers.Role)
 	router.InitializeTeamRoutes(r, handlers.Team)
 	router.InitializePlayerRoutes(r, handlers.Player)
+	router.InitializePlayerTeamRoutes(r, handlers.PlayerTeam)
 	router.InitializeSeasonRoutes(r, handlers.Season)
 	router.InitializeArticleRoutes(r, handlers.Article)
 	router.InitializeLineupRoutes(r, handlers.Lineup)

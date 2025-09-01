@@ -7,19 +7,21 @@ import (
 )
 
 // PlayerTeam represents the many-to-many relationship between players, teams, and seasons
+// Note: The unique index includes DeletedAt to allow reusing player-team-season-startDate combinations after soft deletion
 type PlayerTeam struct {
-	PlayerID uint64 `gorm:"primaryKey;autoIncrement:false" json:"player_id"`
-	TeamID   uint64 `gorm:"primaryKey;autoIncrement:false" json:"team_id"`
-	SeasonID uint64 `gorm:"primaryKey;autoIncrement:false" json:"season_id"`
+	ID       uint64 `gorm:"primaryKey;autoIncrement" json:"id"`
+	PlayerID uint64 `gorm:"uniqueIndex:idx_player_team_unique;not null;index:fk_players_player_teams" json:"player_id"`
+	TeamID   uint64 `gorm:"uniqueIndex:idx_player_team_unique;not null" json:"team_id"`
+	SeasonID uint64 `gorm:"uniqueIndex:idx_player_team_unique;not null" json:"season_id"`
 
-	Player *Player `gorm:"foreignKey:PlayerID" json:"player,omitempty"`
-	Team   *Team   `gorm:"foreignKey:TeamID" json:"team,omitempty"`
-	Season *Season `gorm:"foreignKey:SeasonID" json:"season,omitempty"`
+	Player *Player `gorm:"foreignKey:PlayerID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"player,omitempty" swaggerignore:"true"`
+	Team   *Team   `gorm:"foreignKey:TeamID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"team,omitempty" swaggerignore:"true"`
+	Season *Season `gorm:"foreignKey:SeasonID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"season,omitempty" swaggerignore:"true"`
 
-	StartDate time.Time  `gorm:"not null" json:"start_date"`
-	EndDate   *time.Time `json:"end_date,omitempty"`
+	StartDate time.Time  `gorm:"type:timestamp;uniqueIndex:idx_player_team_unique;not null" json:"start_date"`
+	EndDate   *time.Time `gorm:"type:timestamp" json:"end_date,omitempty"`
 
 	CreatedAt time.Time      `gorm:"type:timestamp;autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt time.Time      `gorm:"type:timestamp;autoUpdateTime" json:"updated_at,omitempty"`
-	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;index" json:"-" swaggerignore:"true"`
+	DeletedAt gorm.DeletedAt `gorm:"type:timestamp;uniqueIndex:idx_player_team_unique;index" json:"-" swaggerignore:"true"`
 }

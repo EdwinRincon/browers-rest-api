@@ -32,6 +32,10 @@ const (
 var (
 	ErrRecordNotFound      = errors.New("record not found")
 	ErrRecordAlreadyExists = errors.New("record already exists")
+	ErrPlayerNotFound      = errors.New("player not found")
+	ErrTeamNotFound        = errors.New("team not found")
+	ErrSeasonNotFound      = errors.New("season not found")
+	ErrOverlappingDates    = errors.New("date range overlaps with existing player team record")
 )
 
 const APIBasePath = "/api"
