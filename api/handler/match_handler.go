@@ -43,7 +43,7 @@ func NewMatchHandler(matchService service.MatchService) *MatchHandler {
 func (h *MatchHandler) CreateMatch(c *gin.Context) {
 	var createRequest dto.CreateMatchRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid match data"))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", "Invalid match data"))
 		return
 	}
 
@@ -53,12 +53,12 @@ func (h *MatchHandler) CreateMatch(c *gin.Context) {
 
 	createdMatch, err := h.MatchService.CreateMatch(ctx, &createRequest)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	matchResponse := mapper.ToMatchShort(createdMatch)
-	helper.HandleSuccess(c, http.StatusCreated, matchResponse, "Match created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, matchResponse, "Match created successfully")
 }
 
 // GetMatchByID godoc
@@ -77,7 +77,7 @@ func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid match ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid match ID"))
 		return
 	}
 
@@ -88,15 +88,15 @@ func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 	match, err := h.MatchService.GetMatchByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("match"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("match"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	matchResponse := mapper.ToMatchResponse(match)
-	helper.HandleSuccess(c, http.StatusOK, matchResponse, "Match found successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, matchResponse, "Match found successfully")
 }
 
 // GetDetailedMatchByID godoc
@@ -115,7 +115,7 @@ func (h *MatchHandler) GetDetailedMatchByID(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid match ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid match ID"))
 		return
 	}
 
@@ -126,15 +126,15 @@ func (h *MatchHandler) GetDetailedMatchByID(c *gin.Context) {
 	match, err := h.MatchService.GetDetailedMatchByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("match"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("match"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	detailedResponse := mapper.ToMatchDetailResponse(match)
-	helper.HandleSuccess(c, http.StatusOK, detailedResponse, "Match details found successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, detailedResponse, "Match details found successfully")
 }
 
 // GetPaginatedMatches godoc
@@ -168,7 +168,7 @@ func (h *MatchHandler) GetPaginatedMatches(c *gin.Context) {
 
 	// Validate sort field
 	if err := helper.ValidateSort(model.Match{}, sort); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
 
@@ -178,7 +178,7 @@ func (h *MatchHandler) GetPaginatedMatches(c *gin.Context) {
 
 	matches, total, err := h.MatchService.GetPaginatedMatches(ctx, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -187,7 +187,7 @@ func (h *MatchHandler) GetPaginatedMatches(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Matches retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Matches retrieved successfully")
 }
 
 // GetMatchesBySeasonID godoc
@@ -208,7 +208,7 @@ func (h *MatchHandler) GetMatchesBySeasonID(c *gin.Context) {
 	seasonIDStr := c.Param("id")
 	seasonID, err := strconv.ParseUint(seasonIDStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid season ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid season ID"))
 		return
 	}
 
@@ -233,7 +233,7 @@ func (h *MatchHandler) GetMatchesBySeasonID(c *gin.Context) {
 
 	matches, total, err := h.MatchService.GetMatchesBySeasonID(ctx, seasonID, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -242,7 +242,7 @@ func (h *MatchHandler) GetMatchesBySeasonID(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Season matches retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Season matches retrieved successfully")
 }
 
 // GetMatchesByTeamID godoc
@@ -263,7 +263,7 @@ func (h *MatchHandler) GetMatchesByTeamID(c *gin.Context) {
 	teamIDStr := c.Param("id")
 	teamID, err := strconv.ParseUint(teamIDStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid team ID"))
 		return
 	}
 
@@ -288,7 +288,7 @@ func (h *MatchHandler) GetMatchesByTeamID(c *gin.Context) {
 
 	matches, total, err := h.MatchService.GetMatchesByTeamID(ctx, teamID, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -297,7 +297,7 @@ func (h *MatchHandler) GetMatchesByTeamID(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Team matches retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team matches retrieved successfully")
 }
 
 // GetNextMatchByTeamID godoc
@@ -315,7 +315,7 @@ func (h *MatchHandler) GetNextMatchByTeamID(c *gin.Context) {
 	teamIDStr := c.Param("id")
 	teamID, err := strconv.ParseUint(teamIDStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid team ID"))
 		return
 	}
 
@@ -325,16 +325,16 @@ func (h *MatchHandler) GetNextMatchByTeamID(c *gin.Context) {
 
 	match, err := h.MatchService.GetNextMatchByTeamID(ctx, teamID)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 	if match == nil {
-		helper.RespondWithError(c, helper.NotFound("No upcoming matches found for this team"))
+		helper.WriteErrorResponse(c, helper.NewNotFoundError("No upcoming matches found for this team"))
 		return
 	}
 
 	matchResponse := mapper.ToMatchResponse(match)
-	helper.HandleSuccess(c, http.StatusOK, matchResponse, "Next match found successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, matchResponse, "Next match found successfully")
 }
 
 // UpdateMatch godoc
@@ -356,13 +356,13 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid match ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid match ID"))
 		return
 	}
 
 	var updateRequest dto.UpdateMatchRequest
 	if err = c.ShouldBindJSON(&updateRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid match data"))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", "Invalid match data"))
 		return
 	}
 
@@ -373,15 +373,15 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 	updatedMatch, err := h.MatchService.UpdateMatch(ctx, id, &updateRequest)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("match"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("match"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	matchResponse := mapper.ToMatchResponse(updatedMatch)
-	helper.HandleSuccess(c, http.StatusOK, matchResponse, "Match updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, matchResponse, "Match updated successfully")
 }
 
 // DeleteMatch godoc
@@ -399,7 +399,7 @@ func (h *MatchHandler) DeleteMatch(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid match ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid match ID"))
 		return
 	}
 
@@ -409,7 +409,7 @@ func (h *MatchHandler) DeleteMatch(c *gin.Context) {
 
 	err = h.MatchService.DeleteMatch(ctx, id)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 

@@ -8,23 +8,31 @@ import (
 )
 
 func InitializeLineupRoutes(r *gin.Engine, lineupHandler *handler.LineupHandler) {
-
 	api := r.Group(constants.APIBasePath)
+
+	authRequired := middleware.JwtAuthMiddleware()
+
+	lineups := api.Group("/lineups", authRequired)
 	{
-		lineups := api.Group("/lineups")
-		{
-			lineups.Use(middleware.JwtAuthMiddleware())
+		lineups.GET("", lineupHandler.GetPaginatedLineups)
+		lineups.GET("/:id", lineupHandler.GetLineupByID)
+	}
 
-			lineups.GET("", lineupHandler.ListLineups)
-			lineups.GET("/:id", lineupHandler.GetLineupByID)
-			lineups.GET("/match/:matchID", lineupHandler.GetLineupsByMatch)
+	matchLineups := api.Group("/matches/:id/lineups", authRequired)
+	{
+		matchLineups.GET("", lineupHandler.GetLineupsByMatchID)
+	}
 
-			lineups.Use(middleware.RBACMiddleware(constants.RoleAdmin))
-			{
-				lineups.POST("", lineupHandler.CreateLineup)
-				lineups.PUT("/:id", lineupHandler.UpdateLineup)
-				lineups.DELETE("/:id", lineupHandler.DeleteLineup)
-			}
-		}
+	playerLineups := api.Group("/players/:id/lineups", authRequired)
+	{
+		playerLineups.GET("", lineupHandler.GetLineupsByPlayerID)
+	}
+
+	// --- Admin-only lineup management ---
+	adminLineups := api.Group("/admin/lineups", authRequired, middleware.RBACMiddleware(constants.RoleAdmin))
+	{
+		adminLineups.POST("", lineupHandler.CreateLineup)
+		adminLineups.PUT("/:id", lineupHandler.UpdateLineup)
+		adminLineups.DELETE("/:id", lineupHandler.DeleteLineup)
 	}
 }

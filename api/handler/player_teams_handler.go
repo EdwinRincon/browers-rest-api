@@ -42,7 +42,7 @@ func NewPlayerTeamHandler(playerTeamService service.PlayerTeamService) *PlayerTe
 func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 	var createRequest dto.CreatePlayerTeamRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid player-team data"))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", "Invalid player-team data"))
 		return
 	}
 
@@ -54,24 +54,24 @@ func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrPlayerNotFound):
-			helper.RespondWithError(c, helper.NotFound("player"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
 			return
 		case errors.Is(err, constants.ErrTeamNotFound):
-			helper.RespondWithError(c, helper.NotFound("team"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
 			return
 		case errors.Is(err, constants.ErrSeasonNotFound):
-			helper.RespondWithError(c, helper.NotFound("season"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
 			return
 		case errors.Is(err, constants.ErrOverlappingDates):
-			helper.RespondWithError(c, helper.Conflict("date_range", "Date range overlaps with an existing record"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("date_range", "Date range overlaps with an existing record"))
 			return
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, playerTeamResponse, "Player-team relationship created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, playerTeamResponse, "Player-team relationship created successfully")
 }
 
 // GetPlayerTeamByID godoc
@@ -89,7 +89,7 @@ func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid ID"))
 		return
 	}
 
@@ -100,14 +100,14 @@ func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 	playerTeamResponse, err := h.PlayerTeamService.GetPlayerTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("player-team relationship"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, playerTeamResponse, "Player-team relationship retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponse, "Player-team relationship retrieved successfully")
 }
 
 // GetPlayerTeamsByPlayerID godoc
@@ -126,7 +126,7 @@ func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 func (h *PlayerTeamHandler) GetPlayerTeamsByPlayerID(c *gin.Context) {
 	playerID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid player ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid player ID"))
 		return
 	}
 
@@ -137,14 +137,14 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByPlayerID(c *gin.Context) {
 	playerTeamResponses, err := h.PlayerTeamService.GetPlayerTeamsByPlayerID(ctx, playerID)
 	if err != nil {
 		if errors.Is(err, constants.ErrPlayerNotFound) {
-			helper.RespondWithError(c, helper.NotFound("player"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
 }
 
 // GetPlayerTeamsByTeamID godoc
@@ -163,7 +163,7 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByPlayerID(c *gin.Context) {
 func (h *PlayerTeamHandler) GetPlayerTeamsByTeamID(c *gin.Context) {
 	teamID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid team ID"))
 		return
 	}
 
@@ -174,14 +174,14 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByTeamID(c *gin.Context) {
 	playerTeamResponses, err := h.PlayerTeamService.GetPlayerTeamsByTeamID(ctx, teamID)
 	if err != nil {
 		if errors.Is(err, constants.ErrTeamNotFound) {
-			helper.RespondWithError(c, helper.NotFound("team"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
 }
 
 // GetPlayerTeamsBySeasonID godoc
@@ -200,7 +200,7 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByTeamID(c *gin.Context) {
 func (h *PlayerTeamHandler) GetPlayerTeamsBySeasonID(c *gin.Context) {
 	seasonID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid season ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid season ID"))
 		return
 	}
 
@@ -211,14 +211,14 @@ func (h *PlayerTeamHandler) GetPlayerTeamsBySeasonID(c *gin.Context) {
 	playerTeamResponses, err := h.PlayerTeamService.GetPlayerTeamsBySeasonID(ctx, seasonID)
 	if err != nil {
 		if errors.Is(err, constants.ErrSeasonNotFound) {
-			helper.RespondWithError(c, helper.NotFound("season"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
 }
 
 // GetPaginatedPlayerTeams godoc
@@ -253,7 +253,7 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 
 	// Validate sort field
 	if err := helper.ValidateSort(model.PlayerTeam{}, sort); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
 
@@ -263,7 +263,7 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 
 	playerTeams, total, err := h.PlayerTeamService.GetPaginatedPlayerTeams(ctx, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -272,7 +272,7 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player-team relationships retrieved successfully")
 }
 
 // UpdatePlayerTeam godoc
@@ -294,13 +294,13 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid ID"))
 		return
 	}
 
 	var updateRequest dto.UpdatePlayerTeamRequest
 	if err := c.ShouldBindJSON(&updateRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid player-team data"))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", "Invalid player-team data"))
 		return
 	}
 
@@ -312,18 +312,18 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
-			helper.RespondWithError(c, helper.NotFound("player-team relationship"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))
 			return
 		case errors.Is(err, constants.ErrOverlappingDates):
-			helper.RespondWithError(c, helper.Conflict("date_range", "Date range overlaps with an existing record"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("date_range", "Date range overlaps with an existing record"))
 			return
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, playerTeamResponse, "Player-team relationship updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponse, "Player-team relationship updated successfully")
 }
 
 // DeletePlayerTeam godoc
@@ -341,7 +341,7 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 func (h *PlayerTeamHandler) DeletePlayerTeam(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid ID"))
 		return
 	}
 
@@ -352,9 +352,9 @@ func (h *PlayerTeamHandler) DeletePlayerTeam(c *gin.Context) {
 	err = h.PlayerTeamService.DeletePlayerTeam(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("player-team relationship"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}

@@ -43,7 +43,7 @@ func NewPlayerHandler(playerService service.PlayerService) *PlayerHandler {
 func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 	var createRequest dto.CreatePlayerRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid player data"))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", "Invalid player data"))
 		return
 	}
 
@@ -55,15 +55,15 @@ func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
-			helper.RespondWithError(c, helper.Conflict("nick_name", "Nickname already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("nick_name", "Nickname already exists"))
 			return
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, createdPlayer, "Player created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, createdPlayer, "Player created successfully")
 }
 
 // GetPlayerByID godoc
@@ -82,7 +82,7 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 	playerID := c.Param("id")
 	id, err := strconv.ParseUint(playerID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid player ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid player ID"))
 		return
 	}
 
@@ -92,16 +92,16 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 	player, err := h.PlayerService.GetPlayerByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("player"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	playerResponse := mapper.ToPlayerResponse(player)
 
-	helper.HandleSuccess(c, http.StatusOK, playerResponse, "Player retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerResponse, "Player retrieved successfully")
 }
 
 // GetPlayerByNickName godoc
@@ -126,16 +126,16 @@ func (h *PlayerHandler) GetPlayerByNickName(c *gin.Context) {
 	player, err := h.PlayerService.GetPlayerByNickName(ctx, nickname)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("player"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	playerResponse := mapper.ToPlayerResponse(player)
 
-	helper.HandleSuccess(c, http.StatusOK, playerResponse, "Player retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerResponse, "Player retrieved successfully")
 }
 
 // GetPaginatedPlayers godoc
@@ -170,7 +170,7 @@ func (h *PlayerHandler) GetPaginatedPlayers(c *gin.Context) {
 
 	// Validate sort field
 	if err := helper.ValidateSort(model.Player{}, sort); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
 
@@ -180,7 +180,7 @@ func (h *PlayerHandler) GetPaginatedPlayers(c *gin.Context) {
 
 	players, total, err := h.PlayerService.GetPaginatedPlayers(ctx, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -189,7 +189,7 @@ func (h *PlayerHandler) GetPaginatedPlayers(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Players retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Players retrieved successfully")
 }
 
 // UpdatePlayer godoc
@@ -212,13 +212,13 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid player ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid player ID"))
 		return
 	}
 
 	var playerUpdateDTO dto.UpdatePlayerRequest
 	if err = c.ShouldBindJSON(&playerUpdateDTO); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", "Invalid player data"))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", "Invalid player data"))
 		return
 	}
 
@@ -229,17 +229,17 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 	updatedPlayer, err := h.PlayerService.UpdatePlayer(ctx, &playerUpdateDTO, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("player"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
 		} else if errors.Is(err, constants.ErrRecordAlreadyExists) {
-			helper.RespondWithError(c, helper.Conflict("nick_name", "Nickname already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("nick_name", "Nickname already exists"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	response := mapper.ToPlayerShort(updatedPlayer)
-	helper.HandleSuccess(c, http.StatusOK, response, "Player updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player updated successfully")
 }
 
 // DeletePlayer godoc
@@ -258,7 +258,7 @@ func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid player ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid player ID"))
 		return
 	}
 
@@ -267,7 +267,7 @@ func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 	defer cancel()
 	err = h.PlayerService.DeletePlayer(ctx, id)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 

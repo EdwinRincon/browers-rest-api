@@ -30,13 +30,13 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			helper.RespondWithError(c, helper.Unauthorized("Authorization header is required"))
+			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Authorization header is required"))
 			c.Abort()
 			return
 		}
 
 		if !strings.HasPrefix(authHeader, "Bearer ") {
-			helper.RespondWithError(c, helper.Unauthorized("Invalid authorization header format"))
+			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid authorization header format"))
 			c.Abort()
 			return
 		}
@@ -47,7 +47,7 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		// Get JWT secret and create validator
 		jwtSecret, err := config.GetJWTSecret()
 		if err != nil {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			c.Abort()
 			return
 		}
@@ -55,7 +55,7 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		validator := jwt.NewTokenValidator(jwtSecret)
 		claims, err := validator.ValidateToken(tokenString)
 		if err != nil {
-			helper.RespondWithError(c, helper.Unauthorized(err.Error()))
+			helper.WriteErrorResponse(c, helper.NewUnauthorizedError(err.Error()))
 			c.Abort()
 			return
 		}
@@ -78,14 +78,14 @@ func RBACMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get(string(roleKey))
 		if !exists {
-			helper.RespondWithError(c, helper.Unauthorized("Authentication required"))
+			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Authentication required"))
 			c.Abort()
 			return
 		}
 
 		userRole, ok := role.(string)
 		if !ok {
-			helper.RespondWithError(c, helper.InternalError(errors.New("invalid role format")))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(errors.New("invalid role format")))
 			c.Abort()
 			return
 		}
@@ -112,7 +112,7 @@ func RBACMiddleware(allowedRoles ...string) gin.HandlerFunc {
 			"method", c.Request.Method,
 			"ip", c.ClientIP())
 
-		helper.RespondWithError(c, helper.StatusForbidden("Insufficient permissions"))
+		helper.WriteErrorResponse(c, helper.NewForbiddenError("Insufficient permissions"))
 		c.Abort()
 	}
 }

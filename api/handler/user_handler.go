@@ -69,7 +69,7 @@ func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *model.User
 	}
 	jwtToken, err := h.AuthService.GenerateToken(user.Username, roleName)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -85,7 +85,7 @@ func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *model.User
 	c.Header("Authorization", "Bearer "+jwtToken)
 	auth.SetSecureCookie(c, "token", jwtToken, int(time.Hour/time.Second))
 
-	helper.HandleSuccess(c, http.StatusOK, gin.H{
+	helper.WriteSuccessResponse(c, http.StatusOK, gin.H{
 		"token": jwtToken,
 		"user":  authUserResponse,
 	}, "User logged in successfully")
@@ -147,13 +147,13 @@ func (h *UserHandler) validateOAuthState(c *gin.Context) bool {
 	logger.Info(c, "OAuth state validation", "query_state", state, "cookie_state", storedState)
 
 	if state == "" || state != storedState {
-		helper.RespondWithError(c, helper.Unauthorized("Invalid OAuth state"))
+		helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid OAuth state"))
 		return false
 	}
 
 	pkceParams, ok := config.GetAndDeletePKCE(state)
 	if !ok {
-		helper.RespondWithError(c, helper.Unauthorized("Invalid request"))
+		helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid request"))
 		return false
 	}
 
@@ -191,7 +191,7 @@ func (h *UserHandler) performGoogleOAuth(c *gin.Context) (*GoogleUserInfo, error
 func (h *UserHandler) GoogleCallback(c *gin.Context) {
 	googleUser, err := h.performGoogleOAuth(c)
 	if err != nil {
-		helper.RespondWithError(c, helper.Unauthorized("Authentication failed"))
+		helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Authentication failed"))
 		return
 	}
 
@@ -200,14 +200,14 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 	defer cancel()
 	user, err := h.UserService.GetUserByUsername(ctx, googleUser.Email)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	if user == nil {
 		// Validate email domain
 		if !auth.ValidateEmailDomain(googleUser.Email) {
-			helper.RespondWithError(c, helper.StatusForbidden("Email domain not allowed"))
+			helper.WriteErrorResponse(c, helper.NewForbiddenError("Email domain not allowed"))
 			return
 		}
 
@@ -216,7 +216,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 		// Get the default role for new Google users
 		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 
@@ -230,7 +230,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 
 		_, err = h.UserService.CreateUser(ctx, newUser)
 		if err != nil {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 
@@ -238,7 +238,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 
 		user, err = h.UserService.GetUserByUsername(ctx, newUser.Username)
 		if err != nil {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 	}
@@ -258,13 +258,13 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 	state, err := helper.GenerateRandomState()
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	pkceParams, err := config.GeneratePKCE()
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -277,7 +277,7 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 	}
 	url := config.OAuthConfig.AuthCodeURL(state, opts...)
 
-	helper.HandleSuccess(c, http.StatusOK, gin.H{"url": url}, "OAuth URL generated")
+	helper.WriteSuccessResponse(c, http.StatusOK, gin.H{"url": url}, "OAuth URL generated")
 }
 
 // CreateUser godoc
@@ -297,7 +297,7 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var createRequest dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidUserData))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", constants.MsgInvalidUserData))
 		return
 	}
 
@@ -310,7 +310,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		// If role_id is provided, verify it exists
 		role, err := h.RoleService.GetRoleByID(ctx, createRequest.RoleID)
 		if err != nil {
-			helper.RespondWithError(c, helper.BadRequest("role_id", "Role not found"))
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("role_id", "Role not found"))
 			return
 		}
 		roleID = role.ID
@@ -318,7 +318,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		// Get the default role if no role_id provided
 		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 		roleID = defaultRole.ID
@@ -331,15 +331,15 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
-			helper.RespondWithError(c, helper.Conflict("username", "Username already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("username", "Username already exists"))
 			return
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, createdUser, "User created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, createdUser, "User created successfully")
 }
 
 // GetUserByUsername godoc
@@ -364,20 +364,20 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 	user, err := h.UserService.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("user"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("user"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 	if user == nil {
-		helper.RespondWithError(c, helper.NotFound("user"))
+		helper.WriteErrorResponse(c, helper.NewNotFoundError("user"))
 		return
 	}
 
 	userResponse := mapper.ToUserResponse(user)
 
-	helper.HandleSuccess(c, http.StatusOK, userResponse, "User retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, userResponse, "User retrieved successfully")
 }
 
 // GetPaginatedUsers godoc
@@ -412,7 +412,7 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 
 	// Validate sort field
 	if err := helper.ValidateSort(model.User{}, sort); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
 
@@ -422,7 +422,7 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 
 	users, total, err := h.UserService.GetPaginatedUsers(ctx, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -431,7 +431,7 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Users retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Users retrieved successfully")
 }
 
 // UpdateUser godoc
@@ -452,13 +452,13 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userIDStr := c.Param("id")
 	if _, err := uuid.Parse(userIDStr); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid user ID format"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid user ID format"))
 		return
 	}
 
 	var userUpdateDTO dto.UpdateUserRequest
 	if err := c.ShouldBindJSON(&userUpdateDTO); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidUserData))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", constants.MsgInvalidUserData))
 		return
 	}
 
@@ -469,19 +469,19 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdateDTO, userIDStr)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("user"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("user"))
 			return
 		}
 		if errors.Is(err, constants.ErrRecordAlreadyExists) {
-			helper.RespondWithError(c, helper.Conflict("username", "Username already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("username", "Username already exists"))
 			return
 		}
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := mapper.ToUserShort(updatedUser)
-	helper.HandleSuccess(c, http.StatusOK, response, "User updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "User updated successfully")
 }
 
 // DeleteUser godoc
@@ -498,7 +498,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid UUID format"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid UUID format"))
 		return
 	}
 
@@ -507,7 +507,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	defer cancel()
 	err = h.UserService.DeleteUser(ctx, id.String())
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 

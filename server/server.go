@@ -248,9 +248,9 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		PlayerTeam: service.NewPlayerTeamService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season),
 		Season:     service.NewSeasonService(repos.Season),
 		Article:    service.NewArticleService(repos.Article),
-		Lineup:     service.NewLineupService(repos.Lineup),
 		Match:      service.NewMatchService(repos.Match),
 		TeamStat:   service.NewTeamStatsService(repos.TeamStat),
+		Lineup:     service.NewLineupService(repos.Lineup, service.NewMatchService(repos.Match)),
 	}
 }
 
@@ -263,7 +263,7 @@ func initializeHandlers(services *Services) *Handlers {
 		PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeam),
 		Season:     handler.NewSeasonHandler(services.Season),
 		Article:    handler.NewArticleHandler(services.Article),
-		Lineup:     handler.NewLineupHandler(services.Lineup),
+		Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
 		Match:      handler.NewMatchHandler(services.Match),
 		TeamStat:   handler.NewTeamStatsHandler(services.TeamStat),
 	}

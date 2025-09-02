@@ -22,10 +22,16 @@ const (
 	MsgInvalidData       = "Invalid data"
 	MsgInvalidTeamData   = "Invalid team data"
 	MsgInvalidUserData   = "Invalid user data"
+	MsgInvalidLineupID   = "Invalid lineup ID format"
+	MsgInvalidMatchID    = "Invalid match ID format"
 	MsgNotFound          = "Resource not found"
 	MsgUnauthorized      = "Unauthorized access"
 	MsgForbidden         = "Forbidden access"
 	MsgInternalError     = "An unexpected error occurred"
+	MsgLineupCreated     = "Lineup created successfully"
+	MsgLineupRetrieved   = "Lineup retrieved successfully"
+	MsgLineupsRetrieved  = "Lineups retrieved successfully"
+	MsgLineupUpdated     = "Lineup updated successfully"
 )
 
 // Error messages

@@ -40,8 +40,8 @@ func newAppError(code int, message string, opts ...func(*AppError)) *AppError {
 	return err
 }
 
-// BadRequest creates a user-safe 400 error
-func BadRequest(field, message string) *AppError {
+// NewBadRequestError creates a user-safe 400 error
+func NewBadRequestError(field, message string) *AppError {
 	return newAppError(
 		http.StatusBadRequest,
 		message,
@@ -51,8 +51,8 @@ func BadRequest(field, message string) *AppError {
 	)
 }
 
-// Unauthorized creates a user-safe 401 error
-func Unauthorized(detail string) *AppError {
+// NewUnauthorizedError creates a user-safe 401 error
+func NewUnauthorizedError(detail string) *AppError {
 	return newAppError(
 		http.StatusUnauthorized,
 		"Unauthorized access",
@@ -61,8 +61,8 @@ func Unauthorized(detail string) *AppError {
 	)
 }
 
-// StatusForbidden creates a user-safe 403 error
-func StatusForbidden(detail string) *AppError {
+// NewForbiddenError creates a user-safe 403 error
+func NewForbiddenError(detail string) *AppError {
 	return newAppError(
 		http.StatusForbidden,
 		"Forbidden access",
@@ -71,8 +71,8 @@ func StatusForbidden(detail string) *AppError {
 	)
 }
 
-// NotFound creates a user-safe 404 error
-func NotFound(resource string) *AppError {
+// NewNotFoundError creates a user-safe 404 error
+func NewNotFoundError(resource string) *AppError {
 	return newAppError(
 		http.StatusNotFound,
 		fmt.Sprintf("%s not found", resource),
@@ -81,8 +81,8 @@ func NotFound(resource string) *AppError {
 	)
 }
 
-// Conflict creates a user-safe 409 error
-func Conflict(resource string, detail string) *AppError {
+// NewConflictError creates a user-safe 409 error
+func NewConflictError(resource string, detail string) *AppError {
 	return newAppError(
 		http.StatusConflict,
 		fmt.Sprintf("%s already exists", resource),
@@ -91,8 +91,8 @@ func Conflict(resource string, detail string) *AppError {
 	)
 }
 
-// InternalError creates a 500 error that logs but doesn't expose details
-func InternalError(err error) *AppError {
+// NewInternalServerError creates a 500 error that logs but doesn't expose details
+func NewInternalServerError(err error) *AppError {
 	return newAppError(
 		http.StatusInternalServerError,
 		"Internal server error",
@@ -101,8 +101,8 @@ func InternalError(err error) *AppError {
 	)
 }
 
-// ValidationError creates a user-safe validation error with structured field errors
-func ValidationError(validation map[string]string) *AppError {
+// ValidationErrorFromBinding creates a user-safe validation error with structured field errors
+func ValidationErrorFromBinding(validation map[string]string) *AppError {
 	return newAppError(
 		http.StatusBadRequest,
 		"Validation failed",
@@ -112,12 +112,12 @@ func ValidationError(validation map[string]string) *AppError {
 	)
 }
 
-// ProcessValidationError is a convenience function to handle validator errors
+// BuildValidationErrorFromBinding is a convenience function to handle validator errors
 // It extracts validation errors if present, or returns a generic bad request error otherwise
-func ProcessValidationError(err error, field, defaultMessage string) *AppError {
+func BuildValidationErrorFromBinding(err error, field, defaultMessage string) *AppError {
 	validationErrs := validation.ExtractValidationErrors(err)
 	if len(validationErrs) > 0 {
-		return ValidationError(validationErrs)
+		return ValidationErrorFromBinding(validationErrs)
 	}
 	return newAppError(
 		http.StatusBadRequest,
@@ -242,8 +242,8 @@ func (e *AppError) ToResponse() map[string]interface{} {
 	return response
 }
 
-// RespondWithError sends an error response to the client
-func RespondWithError(c *gin.Context, err *AppError) {
+// WriteErrorResponse sends an error response to the client
+func WriteErrorResponse(c *gin.Context, err *AppError) {
 	// Store the error in the context for later logging by the middleware
 	logger.StoreErrorForLogging(c, err)
 
@@ -263,6 +263,6 @@ func newAppSuccess(code int, data interface{}, detail string) *AppSuccess {
 	}
 }
 
-func HandleSuccess(c *gin.Context, code int, data interface{}, detail string) {
+func WriteSuccessResponse(c *gin.Context, code int, data interface{}, detail string) {
 	c.JSON(code, newAppSuccess(code, data, detail))
 }

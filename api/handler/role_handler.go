@@ -43,22 +43,22 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", msgInvalidRoleID))
 		return
 	}
 
 	role, err := h.RoleService.GetRoleByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("role"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
 			return
 		}
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := mapper.ToRoleResponse(role)
-	helper.HandleSuccess(c, http.StatusOK, response, "Role retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Role retrieved successfully")
 }
 
 // CreateRole godoc
@@ -77,7 +77,7 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var roleDTO dto.CreateRoleRequest
 	if err := c.ShouldBindJSON(&roleDTO); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidRoleData))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", constants.MsgInvalidRoleData))
 		return
 	}
 
@@ -90,15 +90,15 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
-			helper.RespondWithError(c, helper.Conflict("role", "A role with this name already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("role", "A role with this name already exists"))
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	response := mapper.ToRoleResponse(createdRole)
-	helper.HandleSuccess(c, http.StatusCreated, response, "Role created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, response, "Role created successfully")
 }
 
 // UpdateRole godoc
@@ -120,13 +120,13 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", msgInvalidRoleID))
 		return
 	}
 
 	var updateRoleDTO dto.UpdateRoleRequest
 	if err = c.ShouldBindJSON(&updateRoleDTO); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidRoleData))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", constants.MsgInvalidRoleData))
 		return
 	}
 
@@ -140,23 +140,23 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
-			helper.RespondWithError(c, helper.NotFound("role"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
-			helper.RespondWithError(c, helper.Conflict("role", "A role with these details already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("role", "A role with these details already exists"))
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	updatedRole, err := h.RoleService.GetRoleByName(ctx, updateRole.Name)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := mapper.ToRoleResponse(updatedRole)
-	helper.HandleSuccess(c, http.StatusOK, response, "Role updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Role updated successfully")
 }
 
 // DeleteRole godoc
@@ -173,7 +173,7 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", msgInvalidRoleID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", msgInvalidRoleID))
 		return
 	}
 
@@ -218,7 +218,7 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 
 	// Validate sort field
 	if err := helper.ValidateSort(model.Role{}, sort); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
 
@@ -227,7 +227,7 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	defer cancel()
 	roles, total, err := h.RoleService.GetPaginatedRoles(ctx, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -236,5 +236,5 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Roles retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Roles retrieved successfully")
 }

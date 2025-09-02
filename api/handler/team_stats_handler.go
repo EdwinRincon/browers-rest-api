@@ -40,7 +40,7 @@ func NewTeamStatsHandler(teamStatsService service.TeamStatsService) *TeamStatsHa
 func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 	var teamStats model.TeamStat
 	if err := c.ShouldBindJSON(&teamStats); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team stats data"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("body", "Invalid team stats data"))
 		return
 	}
 
@@ -50,15 +50,15 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 	err := h.TeamStatsService.CreateTeamStat(ctx, &teamStats)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			helper.RespondWithError(c, helper.Conflict("team-stats", "Stats for this team/season already exist"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("team-stats", "Stats for this team/season already exist"))
 			return
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, teamStats, "Team stats created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, teamStats, "Team stats created successfully")
 }
 
 // GetTeamStatsByID godoc
@@ -76,7 +76,7 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team stats ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid team stats ID"))
 		return
 	}
 
@@ -85,11 +85,11 @@ func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 	defer cancel()
 	teamStats, err := h.TeamStatsService.GetTeamStatByID(ctx, id)
 	if err != nil {
-		helper.RespondWithError(c, helper.NotFound("team stats"))
+		helper.WriteErrorResponse(c, helper.NewNotFoundError("team stats"))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, teamStats, "Team stats retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, teamStats, "Team stats retrieved successfully")
 }
 
 // ListTeamStats godoc
@@ -107,7 +107,7 @@ func (h *TeamStatsHandler) ListTeamStats(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
 	page, err := strconv.ParseUint(pageStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("page", "Invalid page number"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("page", "Invalid page number"))
 		return
 	}
 
@@ -116,11 +116,11 @@ func (h *TeamStatsHandler) ListTeamStats(c *gin.Context) {
 	defer cancel()
 	teamStats, err := h.TeamStatsService.ListTeamStats(ctx, page)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, teamStats, "Team stats listed successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, teamStats, "Team stats listed successfully")
 }
 
 // UpdateTeamStats godoc
@@ -141,13 +141,13 @@ func (h *TeamStatsHandler) ListTeamStats(c *gin.Context) {
 func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team stats ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid team stats ID"))
 		return
 	}
 
 	var teamStats model.TeamStat
 	if err = c.ShouldBindJSON(&teamStats); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid team stats data"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("body", "Invalid team stats data"))
 		return
 	}
 
@@ -158,14 +158,14 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	err = h.TeamStatsService.UpdateTeamStat(ctx, &teamStats)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("team stats"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team stats"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, teamStats, "Team stats updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, teamStats, "Team stats updated successfully")
 }
 
 // DeleteTeamStats godoc
@@ -183,7 +183,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 func (h *TeamStatsHandler) DeleteTeamStats(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid team stats ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid team stats ID"))
 		return
 	}
 
@@ -192,7 +192,7 @@ func (h *TeamStatsHandler) DeleteTeamStats(c *gin.Context) {
 	defer cancel()
 	err = h.TeamStatsService.DeleteTeamStat(ctx, id)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 

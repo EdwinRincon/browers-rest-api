@@ -39,7 +39,7 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 	articleID := c.Param("id")
 	id, err := strconv.ParseUint(articleID, 10, 64)
 	if err != nil || id > uint64(math.MaxUint32) {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid or too large article ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid or too large article ID"))
 		return
 	}
 
@@ -48,11 +48,11 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 	defer cancel()
 	article, err := h.ArticleService.GetArticleByID(ctx, id)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, article, "Article found successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, article, "Article found successfully")
 }
 
 // CreateArticle godoc
@@ -72,7 +72,7 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 	var article model.Article
 	if err := c.ShouldBindJSON(&article); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid article data"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("body", "Invalid article data"))
 		return
 	}
 	article.ID = 0
@@ -82,11 +82,11 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 	defer cancel()
 	err := h.ArticleService.CreateArticle(ctx, &article)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, article, "Article created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, article, "Article created successfully")
 }
 
 // UpdateArticle godoc
@@ -108,18 +108,18 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	articleID := c.Param("id")
 	id, err := strconv.ParseUint(articleID, 10, 64)
 	if err != nil || id > uint64(math.MaxUint32) {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid or too large article ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid or too large article ID"))
 		return
 	}
 
 	var article model.Article
 	if err = c.ShouldBindJSON(&article); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid article data"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("body", "Invalid article data"))
 		return
 	}
 
 	if article.ID != 0 && article.ID != id {
-		helper.RespondWithError(c, helper.BadRequest("id", "Mismatched article ID in body and URL"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Mismatched article ID in body and URL"))
 		return
 	}
 
@@ -130,11 +130,11 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	defer cancel()
 	err = h.ArticleService.UpdateArticle(ctx, &article)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, article, "Article updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, article, "Article updated successfully")
 }
 
 // DeleteArticle godoc
@@ -153,7 +153,7 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	articleID := c.Param("id")
 	id, err := strconv.ParseUint(articleID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", "Invalid article ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid article ID"))
 		return
 	}
 
@@ -162,7 +162,7 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	defer cancel()
 	err = h.ArticleService.DeleteArticle(ctx, id)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -187,12 +187,12 @@ func (h *ArticleHandler) GetAllArticles(c *gin.Context) {
 
 	page, err := strconv.ParseUint(pageStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("page", "Invalid page number"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("page", "Invalid page number"))
 		return
 	}
 	pageSize, err := strconv.ParseUint(pageSizeStr, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("pageSize", "Invalid page size"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("pageSize", "Invalid page size"))
 		return
 	}
 
@@ -201,9 +201,9 @@ func (h *ArticleHandler) GetAllArticles(c *gin.Context) {
 	defer cancel()
 	articles, err := h.ArticleService.GetAllArticles(ctx, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, articles, "Articles retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, articles, "Articles retrieved successfully")
 }

@@ -44,13 +44,13 @@ func NewSeasonHandler(seasonService service.SeasonService) *SeasonHandler {
 func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 	var createRequest dto.CreateSeasonRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("body", "Invalid season data"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("body", "Invalid season data"))
 		return
 	}
 
 	// Validate additional business rules
 	if createRequest.EndDate.Before(createRequest.StartDate) {
-		helper.RespondWithError(c, helper.BadRequest("end_date", "End date must be after start date"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("end_date", "End date must be after start date"))
 		return
 	}
 
@@ -61,14 +61,14 @@ func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 	seasonResponse, err := h.SeasonService.CreateSeason(ctx, &createRequest)
 	if err != nil {
 		if err == constants.ErrRecordAlreadyExists {
-			helper.RespondWithError(c, helper.Conflict("season", "A season with this year already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("season", "A season with this year already exists"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, seasonResponse, "Season created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, seasonResponse, "Season created successfully")
 }
 
 // GetSeasonByID godoc
@@ -87,7 +87,7 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", errInvalidSeasonID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", errInvalidSeasonID))
 		return
 	}
 
@@ -98,15 +98,15 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 	season, err := h.SeasonService.GetSeasonByID(ctx, id)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
-			helper.RespondWithError(c, helper.NotFound("season"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	seasonResponse := mapper.ToSeasonResponse(season)
-	helper.HandleSuccess(c, http.StatusOK, seasonResponse, "Season found successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Season found successfully")
 }
 
 // GetCurrentSeason godoc
@@ -127,15 +127,15 @@ func (h *SeasonHandler) GetCurrentSeason(c *gin.Context) {
 	season, err := h.SeasonService.GetCurrentSeason(ctx)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
-			helper.RespondWithError(c, helper.NotFound("current season"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("current season"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	seasonResponse := mapper.ToSeasonResponse(season)
-	helper.HandleSuccess(c, http.StatusOK, seasonResponse, "Current season retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Current season retrieved successfully")
 }
 
 // GetPaginatedSeasons godoc
@@ -173,7 +173,7 @@ func (h *SeasonHandler) GetPaginatedSeasons(c *gin.Context) {
 
 	// Validate sort field
 	if err := helper.ValidateSort(model.Season{}, sort); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
 
@@ -183,7 +183,7 @@ func (h *SeasonHandler) GetPaginatedSeasons(c *gin.Context) {
 
 	seasons, total, err := h.SeasonService.GetPaginatedSeasons(ctx, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -194,7 +194,7 @@ func (h *SeasonHandler) GetPaginatedSeasons(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Seasons retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Seasons retrieved successfully")
 }
 
 // UpdateSeason godoc
@@ -217,20 +217,20 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", errInvalidSeasonID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", errInvalidSeasonID))
 		return
 	}
 
 	var updateRequest dto.UpdateSeasonRequest
 	if err = c.ShouldBindJSON(&updateRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidSeasonData))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", constants.MsgInvalidSeasonData))
 		return
 	}
 
 	// Additional validations for date consistency
 	if updateRequest.StartDate != nil && updateRequest.EndDate != nil {
 		if updateRequest.EndDate.Before(*updateRequest.StartDate) {
-			helper.RespondWithError(c, helper.BadRequest("end_date", "End date must be after start date"))
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("end_date", "End date must be after start date"))
 			return
 		}
 	}
@@ -243,16 +243,16 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case constants.ErrRecordNotFound:
-			helper.RespondWithError(c, helper.NotFound("season"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
 		case constants.ErrRecordAlreadyExists:
-			helper.RespondWithError(c, helper.Conflict("year", "A season with this year already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("year", "A season with this year already exists"))
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, seasonResponse, "Season updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Season updated successfully")
 }
 
 // SetCurrentSeason godoc
@@ -271,7 +271,7 @@ func (h *SeasonHandler) SetCurrentSeason(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", errInvalidSeasonID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", errInvalidSeasonID))
 		return
 	}
 
@@ -282,9 +282,9 @@ func (h *SeasonHandler) SetCurrentSeason(c *gin.Context) {
 	err = h.SeasonService.SetCurrentSeason(ctx, id)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
-			helper.RespondWithError(c, helper.NotFound("season"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
@@ -294,7 +294,7 @@ func (h *SeasonHandler) SetCurrentSeason(c *gin.Context) {
 		"id":      id,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Season set as current successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Season set as current successfully")
 }
 
 // DeleteSeason godoc
@@ -313,7 +313,7 @@ func (h *SeasonHandler) DeleteSeason(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", errInvalidSeasonID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", errInvalidSeasonID))
 		return
 	}
 
@@ -324,9 +324,9 @@ func (h *SeasonHandler) DeleteSeason(c *gin.Context) {
 	err = h.SeasonService.DeleteSeason(ctx, id)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
-			helper.RespondWithError(c, helper.NotFound("season"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}

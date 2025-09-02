@@ -43,7 +43,7 @@ func NewTeamHandler(teamService service.TeamService) *TeamHandler {
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var createRequest dto.CreateTeamRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidTeamData))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", constants.MsgInvalidTeamData))
 		return
 	}
 
@@ -58,15 +58,15 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
-			helper.RespondWithError(c, helper.Conflict("team", "A team with this name already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("team", "A team with this name already exists"))
 			return
 		default:
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
 		}
 	}
 
-	helper.HandleSuccess(c, http.StatusCreated, createdTeam, "Team created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, createdTeam, "Team created successfully")
 }
 
 // GetTeamByID godoc
@@ -85,7 +85,7 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", constants.MsgInvalidTeamID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", constants.MsgInvalidTeamID))
 		return
 	}
 
@@ -95,14 +95,14 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 	team, err := h.TeamService.GetTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("team"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, team, "Team found successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, team, "Team found successfully")
 }
 
 // GetPaginatedTeams godoc
@@ -134,7 +134,7 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 
 	// Validate sort field
 	if err := helper.ValidateSort(model.Team{}, sort); err != nil {
-		helper.RespondWithError(c, helper.BadRequest("sort", err.Error()))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
 
@@ -144,7 +144,7 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 
 	teams, total, err := h.TeamService.GetPaginatedTeams(ctx, sort, order, page, pageSize)
 	if err != nil {
-		helper.RespondWithError(c, helper.InternalError(err))
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.HandleSuccess(c, http.StatusOK, response, "Teams retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, "Teams retrieved successfully")
 }
 
 // UpdateTeam godoc
@@ -176,13 +176,13 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", constants.MsgInvalidTeamID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", constants.MsgInvalidTeamID))
 		return
 	}
 
 	var updateTeamRequest dto.UpdateTeamRequest
 	if err = c.ShouldBindJSON(&updateTeamRequest); err != nil {
-		helper.RespondWithError(c, helper.ProcessValidationError(err, "body", constants.MsgInvalidTeamData))
+		helper.WriteErrorResponse(c, helper.BuildValidationErrorFromBinding(err, "body", constants.MsgInvalidTeamData))
 		return
 	}
 
@@ -193,17 +193,17 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	updatedTeam, err := h.TeamService.UpdateTeam(ctx, &updateTeamRequest, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("team"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
 		} else if errors.Is(err, constants.ErrRecordAlreadyExists) {
-			helper.RespondWithError(c, helper.Conflict("team", "A team with this name already exists"))
+			helper.WriteErrorResponse(c, helper.NewConflictError("team", "A team with this name already exists"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
 	teamResponse := mapper.ToTeamResponse(updatedTeam)
-	helper.HandleSuccess(c, http.StatusOK, teamResponse, "Team updated successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, teamResponse, "Team updated successfully")
 }
 
 // DeleteTeam godoc
@@ -222,7 +222,7 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
 	if err != nil {
-		helper.RespondWithError(c, helper.BadRequest("id", constants.MsgInvalidTeamID))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", constants.MsgInvalidTeamID))
 		return
 	}
 
@@ -232,9 +232,9 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	err = h.TeamService.DeleteTeam(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.RespondWithError(c, helper.NotFound("team"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
 		} else {
-			helper.RespondWithError(c, helper.InternalError(err))
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
