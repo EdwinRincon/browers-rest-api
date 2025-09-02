@@ -54,9 +54,9 @@ type PlayerResponse struct {
 	Injured       bool                    `json:"injured"`
 	CareerSummary string                  `json:"career_summary,omitempty"`
 	MVPCount      uint8                   `json:"mvp_count"`
-	User          *UserShort              `json:"user,omitempty"`
-	Teams         []TeamShort             `json:"teams,omitempty"`
-	PlayerStats   []PlayerStatResponseDTO `json:"player_stats,omitempty"`
+	User          *UserShort             `json:"user,omitempty"`
+	Teams         []TeamShort            `json:"teams,omitempty"`
+	PlayerStats   []PlayerStatResponse   `json:"player_stats,omitempty"`
 	CreatedAt     time.Time               `json:"created_at"`
 	UpdatedAt     time.Time               `json:"updated_at"`
 }

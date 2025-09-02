@@ -15,10 +15,10 @@ type PlayerStat struct {
 	Goals         uint8  `gorm:"type:tinyint;not null;default:0" json:"goals"`
 	Assists       uint8  `gorm:"type:tinyint;not null;default:0" json:"assists"`
 	Saves         uint8  `gorm:"type:tinyint;not null;default:0" json:"saves"`
-	YC            uint8  `gorm:"type:tinyint;not null;default:0" json:"yellow_cards"`
-	RC            uint8  `gorm:"type:tinyint;not null;default:0" json:"red_cards"`
+	YellowCards   uint8  `gorm:"type:tinyint;not null;default:0" json:"yellow_cards"`
+	RedCards      uint8  `gorm:"type:tinyint;not null;default:0" json:"red_cards"`
 	Rating        uint8  `gorm:"type:tinyint;not null;default:0;check:rating <= 100" json:"rating"`
-	Starting      bool   `gorm:"default:false" json:"starting"`
+	IsStarting    bool   `gorm:"default:false" json:"starting"`
 	MinutesPlayed uint8  `gorm:"type:tinyint;not null;default:0" json:"minutes_played"`
 	IsMVP         bool   `gorm:"default:false" json:"is_mvp"`
 	Position      string `gorm:"type:varchar(5)" json:"position"`

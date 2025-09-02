@@ -208,7 +208,7 @@ func mapPlayerStats(stats []model.PlayerStat) []dto.PlayerStatShort {
 				Goals:    stat.Goals,
 				Assists:  stat.Assists,
 				Minutes:  stat.MinutesPlayed,
-				RedCards: stat.RC,
+				RedCards: stat.RedCards,
 			})
 		}
 	}

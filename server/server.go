@@ -42,6 +42,7 @@ type Repositories struct {
 	Lineup     repository.LineupRepository
 	Match      repository.MatchRepository
 	TeamStat   repository.TeamStatsRepository
+	PlayerStat repository.PlayerStatsRepository
 }
 
 type Services struct {
@@ -57,6 +58,7 @@ type Services struct {
 	Lineup     service.LineupService
 	Match      service.MatchService
 	TeamStat   service.TeamStatsService
+	PlayerStat service.PlayerStatsService
 }
 
 type Handlers struct {
@@ -70,6 +72,7 @@ type Handlers struct {
 	Lineup     *handler.LineupHandler
 	Match      *handler.MatchHandler
 	TeamStat   *handler.TeamStatsHandler
+	PlayerStat *handler.PlayerStatsHandler
 }
 
 // NewServer creates and configures a new server instance with middleware and security settings.
@@ -233,6 +236,7 @@ func initializeRepositories(db *gorm.DB) *Repositories {
 		Lineup:     repository.NewLineupRepository(db),
 		Match:      repository.NewMatchRepository(db),
 		TeamStat:   repository.NewTeamStatsRepository(db),
+		PlayerStat: repository.NewPlayerStatsRepository(db),
 	}
 }
 
@@ -251,6 +255,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		Match:      service.NewMatchService(repos.Match),
 		TeamStat:   service.NewTeamStatsService(repos.TeamStat),
 		Lineup:     service.NewLineupService(repos.Lineup, service.NewMatchService(repos.Match)),
+		PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
 	}
 }
 
@@ -266,6 +271,7 @@ func initializeHandlers(services *Services) *Handlers {
 		Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
 		Match:      handler.NewMatchHandler(services.Match),
 		TeamStat:   handler.NewTeamStatsHandler(services.TeamStat),
+		PlayerStat: handler.NewPlayerStatsHandler(services.PlayerStat),
 	}
 }
 
@@ -280,4 +286,5 @@ func initializeRoutes(r *gin.Engine, handlers *Handlers) {
 	router.InitializeLineupRoutes(r, handlers.Lineup)
 	router.InitializeMatchRoutes(r, handlers.Match)
 	router.InitializeTeamStatsRoutes(r, handlers.TeamStat)
+	router.InitializePlayerStatsRoutes(r, handlers.PlayerStat)
 }

@@ -225,6 +225,7 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
 	roles, total, err := h.RoleService.GetPaginatedRoles(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
