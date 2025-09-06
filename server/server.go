@@ -11,11 +11,13 @@ import (
 
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
 	router "github.com/EdwinRincon/browersfc-api/api/router"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/config"
 	docs "github.com/EdwinRincon/browersfc-api/docs"
+	"github.com/EdwinRincon/browersfc-api/internal/adapters"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 	"github.com/EdwinRincon/browersfc-api/pkg/jwt"
 	"github.com/EdwinRincon/browersfc-api/pkg/orm"
 	"github.com/gin-gonic/gin"
@@ -32,17 +34,17 @@ type Server struct {
 
 // Dependency containers for type-safe injection
 type Repositories struct {
-	User       repository.UserRepository
-	Role       repository.RoleRepository
-	Team       repository.TeamRepository
-	Player     repository.PlayerRepository
-	PlayerTeam repository.PlayerTeamRepository
-	Season     repository.SeasonRepository
-	Article    repository.ArticleRepository
-	Lineup     repository.LineupRepository
-	Match      repository.MatchRepository
-	TeamStat   repository.TeamStatsRepository
-	PlayerStat repository.PlayerStatsRepository
+	User       persistence.UserRepository
+	Role       persistence.RoleRepository
+	Team       persistence.TeamRepository
+	Player     persistence.PlayerRepository
+	PlayerTeam persistence.PlayerTeamRepository
+	Season     persistence.SeasonRepository
+	Article    persistence.ArticleRepository
+	Lineup     persistence.LineupRepository
+	Match      persistence.MatchRepository
+	TeamStat   persistence.TeamStatsRepository
+	PlayerStat persistence.PlayerStatsRepository
 }
 
 type Services struct {
@@ -59,6 +61,11 @@ type Services struct {
 	Match      service.MatchService
 	TeamStat   service.TeamStatsService
 	PlayerStat service.PlayerStatsService
+
+	// Domain-based services (hexagonal architecture)
+	PlayerDomain service.PlayerDomainService
+	RoleDomain   *domainservice.RoleDomainService
+	// TODO: Add TeamDomain service.TeamDomainService when complete
 }
 
 type Handlers struct {
@@ -226,17 +233,17 @@ func gracefulShutdown(server *http.Server) {
 
 func initializeRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		User:       repository.NewUserRepository(db),
-		Role:       repository.NewRoleRepository(db),
-		Team:       repository.NewTeamRepository(db),
-		Player:     repository.NewPlayerRepository(db),
-		PlayerTeam: repository.NewPlayerTeamRepository(db),
-		Season:     repository.NewSeasonRepository(db),
-		Article:    repository.NewArticleRepository(db),
-		Lineup:     repository.NewLineupRepository(db),
-		Match:      repository.NewMatchRepository(db),
-		TeamStat:   repository.NewTeamStatsRepository(db),
-		PlayerStat: repository.NewPlayerStatsRepository(db),
+		User:       persistence.NewUserRepository(db),
+		Role:       persistence.NewRoleRepository(db),
+		Team:       persistence.NewTeamRepository(db),
+		Player:     persistence.NewPlayerRepository(db),
+		PlayerTeam: persistence.NewPlayerTeamRepository(db),
+		Season:     persistence.NewSeasonRepository(db),
+		Article:    persistence.NewArticleRepository(db),
+		Lineup:     persistence.NewLineupRepository(db),
+		Match:      persistence.NewMatchRepository(db),
+		TeamStat:   persistence.NewTeamStatsRepository(db),
+		PlayerStat: persistence.NewPlayerStatsRepository(db),
 	}
 }
 
@@ -245,6 +252,13 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 
 	seasonService := service.NewSeasonService(repos.Season)
 	matchService := service.NewMatchService(repos.Match)
+
+	// Create domain adapters for hexagonal architecture
+	playerDomainAdapter := adapters.NewPlayerDomainAdapter(repos.Player)
+	seasonDomainAdapter := adapters.NewSeasonDomainAdapter(repos.Season)
+
+	// Initialize role domain service
+	roleDomainService := CreateRoleDomainService(repos.Role)
 
 	return &Services{
 		JWT:        jwtService,
@@ -260,13 +274,17 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		TeamStat:   service.NewTeamStatsService(repos.TeamStat, repos.Team, repos.Season),
 		Lineup:     service.NewLineupService(repos.Lineup, matchService),
 		PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
+
+		// Domain-based services using adapters
+		PlayerDomain: service.NewPlayerDomainService(playerDomainAdapter, seasonDomainAdapter, repos.PlayerTeam),
+		RoleDomain:   roleDomainService,
 	}
 }
 
 func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
 		User:       handler.NewUserHandler(services.Auth, services.User, services.Role),
-		Role:       handler.NewRoleHandler(services.Role),
+		Role:       handler.NewRoleHandler(services.RoleDomain),
 		Team:       handler.NewTeamHandler(services.Team),
 		Player:     handler.NewPlayerHandler(services.Player),
 		PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeam),

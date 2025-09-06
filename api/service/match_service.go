@@ -8,7 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type MatchService interface {
@@ -24,10 +24,10 @@ type MatchService interface {
 }
 
 type matchService struct {
-	MatchRepository repository.MatchRepository
+	MatchRepository persistence.MatchRepository
 }
 
-func NewMatchService(matchRepo repository.MatchRepository) MatchService {
+func NewMatchService(matchRepo persistence.MatchRepository) MatchService {
 	return &matchService{
 		MatchRepository: matchRepo,
 	}

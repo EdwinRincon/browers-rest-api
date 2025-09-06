@@ -7,7 +7,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type PlayerTeamService interface {
@@ -22,17 +22,17 @@ type PlayerTeamService interface {
 }
 
 type PlayerTeamServiceImpl struct {
-	PlayerTeamRepository repository.PlayerTeamRepository
-	PlayerRepository     repository.PlayerRepository
-	TeamRepository       repository.TeamRepository
-	SeasonRepository     repository.SeasonRepository
+	PlayerTeamRepository persistence.PlayerTeamRepository
+	PlayerRepository     persistence.PlayerRepository
+	TeamRepository       persistence.TeamRepository
+	SeasonRepository     persistence.SeasonRepository
 }
 
 func NewPlayerTeamService(
-	playerTeamRepo repository.PlayerTeamRepository,
-	playerRepo repository.PlayerRepository,
-	teamRepo repository.TeamRepository,
-	seasonRepo repository.SeasonRepository,
+	playerTeamRepo persistence.PlayerTeamRepository,
+	playerRepo persistence.PlayerRepository,
+	teamRepo persistence.TeamRepository,
+	seasonRepo persistence.SeasonRepository,
 ) PlayerTeamService {
 	return &PlayerTeamServiceImpl{
 		PlayerTeamRepository: playerTeamRepo,
@@ -63,7 +63,7 @@ func (s *PlayerTeamServiceImpl) CreatePlayerTeam(ctx context.Context, createRequ
 	// Check for date overlaps
 	hasOverlap, err := s.PlayerTeamRepository.CheckOverlappingDates(
 		ctx,
-		repository.OverlapCheckData{
+		persistence.OverlapCheckData{
 			PlayerID:  createRequest.PlayerID,
 			TeamID:    createRequest.TeamID,
 			SeasonID:  createRequest.SeasonID,
@@ -190,7 +190,7 @@ func (s *PlayerTeamServiceImpl) UpdatePlayerTeam(ctx context.Context, id uint64,
 	// Check for date overlaps (exclude the current record being updated)
 	hasOverlap, err := s.PlayerTeamRepository.CheckOverlappingDates(
 		ctx,
-		repository.OverlapCheckData{
+		persistence.OverlapCheckData{
 			PlayerID:  existingPlayerTeam.PlayerID,
 			TeamID:    existingPlayerTeam.TeamID,
 			SeasonID:  existingPlayerTeam.SeasonID,

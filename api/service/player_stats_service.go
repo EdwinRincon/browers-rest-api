@@ -8,7 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type PlayerStatsService interface {
@@ -23,19 +23,19 @@ type PlayerStatsService interface {
 }
 
 type playerStatsService struct {
-	PlayerStatsRepository repository.PlayerStatsRepository
-	PlayerRepository      repository.PlayerRepository
-	MatchRepository       repository.MatchRepository
-	SeasonRepository      repository.SeasonRepository
-	TeamRepository        repository.TeamRepository
+	PlayerStatsRepository persistence.PlayerStatsRepository
+	PlayerRepository      persistence.PlayerRepository
+	MatchRepository       persistence.MatchRepository
+	SeasonRepository      persistence.SeasonRepository
+	TeamRepository        persistence.TeamRepository
 }
 
 func NewPlayerStatsService(
-	playerStatsRepo repository.PlayerStatsRepository,
-	playerRepo repository.PlayerRepository,
-	matchRepo repository.MatchRepository,
-	seasonRepo repository.SeasonRepository,
-	teamRepo repository.TeamRepository,
+	playerStatsRepo persistence.PlayerStatsRepository,
+	playerRepo persistence.PlayerRepository,
+	matchRepo persistence.MatchRepository,
+	seasonRepo persistence.SeasonRepository,
+	teamRepo persistence.TeamRepository,
 ) PlayerStatsService {
 	return &playerStatsService{
 		PlayerStatsRepository: playerStatsRepo,

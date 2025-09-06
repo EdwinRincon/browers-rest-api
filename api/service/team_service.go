@@ -8,7 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type TeamService interface {
@@ -21,10 +21,10 @@ type TeamService interface {
 }
 
 type teamService struct {
-	TeamRepository repository.TeamRepository
+	TeamRepository persistence.TeamRepository
 }
 
-func NewTeamService(teamRepo repository.TeamRepository) TeamService {
+func NewTeamService(teamRepo persistence.TeamRepository) TeamService {
 	return &teamService{
 		TeamRepository: teamRepo,
 	}

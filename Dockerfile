@@ -22,6 +22,8 @@ COPY docs/     ./docs/
 COPY helper/   ./helper/
 COPY pkg/      ./pkg/
 COPY server/   ./server/
+COPY domain/   ./domain/
+COPY internal/ ./internal/
 
 
 ENV CGO_ENABLED=0

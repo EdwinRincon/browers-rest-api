@@ -11,8 +11,8 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,11 +21,11 @@ const (
 )
 
 type RoleHandler struct {
-	RoleService service.RoleService
+	RoleDomainService *domainservice.RoleDomainService
 }
 
-func NewRoleHandler(roleService service.RoleService) *RoleHandler {
-	return &RoleHandler{RoleService: roleService}
+func NewRoleHandler(roleDomainService *domainservice.RoleDomainService) *RoleHandler {
+	return &RoleHandler{RoleDomainService: roleDomainService}
 }
 
 // GetRoleByID godoc
@@ -47,9 +47,9 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 		return
 	}
 
-	role, err := h.RoleService.GetRoleByID(c.Request.Context(), id)
+	domainRole, err := h.RoleDomainService.GetRoleByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, constants.ErrRecordNotFound) {
+		if errors.Is(err, domainservice.ErrRoleNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
 			return
 		}
@@ -57,7 +57,8 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToRoleResponse(role)
+	// Convert domain role directly to response DTO
+	response := mapper.DomainToRoleResponse(domainRole)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Role retrieved successfully")
 }
 
@@ -84,20 +85,27 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	role := mapper.ToRole(&roleDTO)
 
-	createdRole, err := h.RoleService.CreateRole(ctx, role)
+	// Convert DTO to domain role
+	roleMapper := mapper.NewRoleDomainMapper()
+	modelRole := mapper.ToRole(&roleDTO)
+	domainRole := roleMapper.ToDomain(modelRole)
+
+	createdRole, err := h.RoleDomainService.CreateRole(ctx, domainRole)
 	if err != nil {
 		switch {
-		case errors.Is(err, constants.ErrRecordAlreadyExists):
+		case errors.Is(err, domainservice.ErrRoleAlreadyExists):
 			helper.WriteErrorResponse(c, helper.NewConflictError("role", "A role with this name already exists"))
+		case errors.Is(err, domainservice.ErrInvalidRole):
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("role", "Invalid role data"))
 		default:
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	response := mapper.ToRoleResponse(createdRole)
+	// Convert domain role directly to response DTO
+	response := mapper.DomainToRoleResponse(createdRole)
 	helper.WriteSuccessResponse(c, http.StatusCreated, response, "Role created successfully")
 }
 
@@ -135,27 +143,28 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	defer cancel()
 
 	// Convert DTO to domain model
-	updateRole := mapper.ToRoleFromUpdate(&updateRoleDTO)
-	err = h.RoleService.UpdateRole(ctx, id, updateRole)
+	roleMapper := mapper.NewRoleDomainMapper()
+	updateModel := mapper.ToRoleFromUpdate(&updateRoleDTO)
+	updateDomain := roleMapper.ToDomain(updateModel)
+	updateDomain.ID = id // Set the ID from URL parameter
+
+	updatedRole, err := h.RoleDomainService.UpdateRole(ctx, updateDomain)
 	if err != nil {
 		switch {
-		case errors.Is(err, constants.ErrRecordNotFound):
+		case errors.Is(err, domainservice.ErrRoleNotFound):
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
-		case errors.Is(err, constants.ErrRecordAlreadyExists):
+		case errors.Is(err, domainservice.ErrRoleAlreadyExists):
 			helper.WriteErrorResponse(c, helper.NewConflictError("role", "A role with these details already exists"))
+		case errors.Is(err, domainservice.ErrInvalidRole):
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("role", "Invalid role data"))
 		default:
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	updatedRole, err := h.RoleService.GetRoleByName(ctx, updateRole.Name)
-	if err != nil {
-		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
-		return
-	}
-
-	response := mapper.ToRoleResponse(updatedRole)
+	// Convert domain role directly to response DTO
+	response := mapper.DomainToRoleResponse(updatedRole)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Role updated successfully")
 }
 
@@ -180,7 +189,21 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	_ = h.RoleService.DeleteRole(ctx, id)
+
+	err = h.RoleDomainService.DeleteRole(ctx, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, domainservice.ErrRoleNotFound):
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
+		case errors.Is(err, domainservice.ErrCannotDeleteSystemRole):
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("role", "Cannot delete system role"))
+		case errors.Is(err, domainservice.ErrInvalidRole):
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("id", msgInvalidRoleID))
+		default:
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		}
+		return
+	}
 
 	c.Status(http.StatusNoContent)
 }
@@ -226,14 +249,16 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	roles, total, err := h.RoleService.GetPaginatedRoles(ctx, sort, order, page, pageSize)
+	// Convert page to 1-based indexing for domain service
+	domainRoles, total, err := h.RoleDomainService.GetPaginatedRoles(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
+	// Convert domain roles directly to response DTOs
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToRoleResponseList(roles),
+		Items:      mapper.DomainToRoleResponseList(domainRoles),
 		TotalCount: total,
 	}
 

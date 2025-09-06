@@ -6,7 +6,7 @@ import (
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type RoleService interface {
@@ -19,10 +19,10 @@ type RoleService interface {
 }
 
 type roleService struct {
-	RoleRepository repository.RoleRepository
+	RoleRepository persistence.RoleRepository
 }
 
-func NewRoleService(roleRepo repository.RoleRepository) RoleService {
+func NewRoleService(roleRepo persistence.RoleRepository) RoleService {
 	return &roleService{
 		RoleRepository: roleRepo,
 	}

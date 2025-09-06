@@ -8,7 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type LineupService interface {
@@ -23,11 +23,11 @@ type LineupService interface {
 }
 
 type lineupService struct {
-	LineupRepository repository.LineupRepository
+	LineupRepository persistence.LineupRepository
 	MatchService     MatchService
 }
 
-func NewLineupService(lineupRepo repository.LineupRepository, matchService MatchService) LineupService {
+func NewLineupService(lineupRepo persistence.LineupRepository, matchService MatchService) LineupService {
 	return &lineupService{
 		LineupRepository: lineupRepo,
 		MatchService:     matchService,

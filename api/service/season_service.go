@@ -8,7 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 const errFailedToGetSeason = "failed to get season: %w"
@@ -25,10 +25,10 @@ type SeasonService interface {
 }
 
 type seasonService struct {
-	SeasonRepository repository.SeasonRepository
+	SeasonRepository persistence.SeasonRepository
 }
 
-func NewSeasonService(seasonRepo repository.SeasonRepository) SeasonService {
+func NewSeasonService(seasonRepo persistence.SeasonRepository) SeasonService {
 	return &seasonService{
 		SeasonRepository: seasonRepo,
 	}

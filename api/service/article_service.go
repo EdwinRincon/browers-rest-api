@@ -8,7 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/repository"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type ArticleService interface {
@@ -21,11 +21,11 @@ type ArticleService interface {
 }
 
 type articleService struct {
-	ArticleRepository repository.ArticleRepository
+	ArticleRepository persistence.ArticleRepository
 	SeasonService     SeasonService
 }
 
-func NewArticleService(articleRepo repository.ArticleRepository, seasonService SeasonService) ArticleService {
+func NewArticleService(articleRepo persistence.ArticleRepository, seasonService SeasonService) ArticleService {
 	return &articleService{
 		ArticleRepository: articleRepo,
 		SeasonService:     seasonService,
