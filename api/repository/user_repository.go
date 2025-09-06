@@ -76,7 +76,7 @@ func (ur *UserRepositoryImpl) GetPaginatedUsers(ctx context.Context, sort string
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	}
 
 	// Apply pagination

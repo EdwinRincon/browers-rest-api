@@ -85,7 +85,8 @@ func (pr *PlayerRepositoryImpl) GetPaginatedPlayers(ctx context.Context, sort st
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		// Escape the sort field with backticks to handle reserved words
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	}
 
 	// Apply pagination

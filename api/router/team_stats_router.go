@@ -9,20 +9,28 @@ import (
 
 func InitializeTeamStatsRoutes(r *gin.Engine, teamStatsHandler *handler.TeamStatsHandler) {
 	api := r.Group(constants.APIBasePath)
+	auth := api.Group("")
+	auth.Use(middleware.JwtAuthMiddleware())
+
+	// Team Stats routes for authenticated users
+	teamStats := auth.Group("/team-stats")
 	{
-		teamStats := api.Group("/team-stats")
-		{
-			teamStats.Use(middleware.JwtAuthMiddleware())
+		teamStats.GET("", teamStatsHandler.GetPaginatedTeamStats)
+		teamStats.GET("/:id", teamStatsHandler.GetTeamStatsByID)
+	}
 
-			teamStats.GET("", teamStatsHandler.ListTeamStats)
-			teamStats.GET("/:id", teamStatsHandler.GetTeamStatsByID)
+	// Team-specific stats
+	auth.GET("/teams/:id/stats", teamStatsHandler.GetTeamStatsByTeamID)
 
-			teamStats.Use(middleware.RBACMiddleware(constants.RoleAdmin))
-			{
-				teamStats.POST("", teamStatsHandler.CreateTeamStats)
-				teamStats.PUT("/:id", teamStatsHandler.UpdateTeamStats)
-				teamStats.DELETE("/:id", teamStatsHandler.DeleteTeamStats)
-			}
-		}
+	// Season-specific stats
+	auth.GET("/seasons/:id/team-stats", teamStatsHandler.GetTeamStatsBySeasonID)
+
+	// Admin-only routes
+	admin := api.Group("/admin/team-stats")
+	admin.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+	{
+		admin.POST("", teamStatsHandler.CreateTeamStats)
+		admin.PUT("/:id", teamStatsHandler.UpdateTeamStats)
+		admin.DELETE("/:id", teamStatsHandler.DeleteTeamStats)
 	}
 }

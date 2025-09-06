@@ -32,9 +32,13 @@ func (tr *TeamRepositoryImpl) CreateTeam(ctx context.Context, team *model.Team) 
 
 func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*model.Team, error) {
 	var team model.Team
-	err := tr.db.WithContext(ctx).First(&team, id).Error
-	if err != nil {
-		return nil, err
+	result := tr.db.WithContext(ctx).First(&team, id)
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if result.Error != nil {
+		return nil, fmt.Errorf("error getting team by ID: %w", result.Error)
 	}
 	return &team, nil
 }
@@ -70,7 +74,7 @@ func (tr *TeamRepositoryImpl) GetPaginatedTeams(ctx context.Context, sort string
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	}
 
 	// Apply pagination

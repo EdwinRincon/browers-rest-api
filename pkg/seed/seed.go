@@ -258,9 +258,9 @@ func seedTeamStats(db *gorm.DB, teams []model.Team, seasons []model.Season) erro
 	for _, team := range teams {
 		for _, season := range seasons {
 			// Generate random stats for each team in each season
-			wins := uint8(rand.Intn(15))
-			draws := uint8(rand.Intn(10))
-			losses := uint8(rand.Intn(15))
+			wins := uint16(rand.Intn(15))
+			draws := uint16(rand.Intn(10))
+			losses := uint16(rand.Intn(15))
 			goalsFor := uint16(rand.Intn(60))
 			goalsAgainst := uint16(rand.Intn(40))
 
@@ -272,8 +272,8 @@ func seedTeamStats(db *gorm.DB, teams []model.Team, seasons []model.Season) erro
 				Losses:       losses,
 				GoalsFor:     goalsFor,
 				GoalsAgainst: goalsAgainst,
-				Points:       uint16(wins*3 + draws),
-				Rank:         uint8(1 + rand.Intn(10)),
+				Points:       int16(wins*3 + draws),
+				Rank:         uint16(1 + rand.Intn(10)),
 			})
 		}
 	}

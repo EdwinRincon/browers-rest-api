@@ -121,7 +121,7 @@ func (sr *SeasonRepositoryImpl) GetPaginatedSeasons(ctx context.Context, sort st
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	} else {
 		// Default ordering by year in descending order
 		query = query.Order("year desc")

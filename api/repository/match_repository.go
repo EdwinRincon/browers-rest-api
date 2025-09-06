@@ -97,7 +97,8 @@ func (mr *MatchRepositoryImpl) GetPaginatedMatches(ctx context.Context, sort str
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		// Escape the sort field with backticks to handle reserved words
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	}
 
 	// Apply pagination
@@ -132,10 +133,11 @@ func (mr *MatchRepositoryImpl) GetMatchesBySeasonID(ctx context.Context, seasonI
 
 	// Apply sorting
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		// Escape the sort field with backticks to handle reserved words
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	} else {
 		// Default sort by date
-		query = query.Order("date desc")
+		query = query.Order("`date` desc")
 	}
 
 	// Apply pagination
@@ -172,10 +174,11 @@ func (mr *MatchRepositoryImpl) GetMatchesByTeamID(ctx context.Context, teamID ui
 
 	// Apply sorting
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		// Escape the sort field with backticks to handle reserved words
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	} else {
 		// Default sort by date
-		query = query.Order("date desc")
+		query = query.Order("`date` desc")
 	}
 
 	// Apply pagination
@@ -198,9 +201,9 @@ func (mr *MatchRepositoryImpl) GetNextMatchByTeamID(ctx context.Context, teamID 
 		Preload("AwayTeam").
 		Preload("Season").
 		Where("(home_team_id = ? OR away_team_id = ?)", teamID, teamID).
-		Where("date >= CURRENT_DATE").
+		Where("`date` >= CURRENT_DATE").
 		Where("status = ?", "scheduled").
-		Order("date ASC, time ASC").
+		Order("`date` ASC, `time` ASC").
 		First(&match)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {

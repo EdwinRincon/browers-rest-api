@@ -253,7 +253,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		Season:     service.NewSeasonService(repos.Season),
 		Article:    service.NewArticleService(repos.Article),
 		Match:      service.NewMatchService(repos.Match),
-		TeamStat:   service.NewTeamStatsService(repos.TeamStat),
+		TeamStat:   service.NewTeamStatsService(repos.TeamStat, repos.Team, repos.Season),
 		Lineup:     service.NewLineupService(repos.Lineup, service.NewMatchService(repos.Match)),
 		PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
 	}

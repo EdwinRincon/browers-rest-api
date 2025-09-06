@@ -155,7 +155,8 @@ func (r *PlayerTeamRepositoryImpl) GetPaginatedPlayerTeams(ctx context.Context, 
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("%s %s", sort, order))
+		// Escape the sort field with backticks to handle reserved words
+		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
 	}
 
 	// Apply pagination
