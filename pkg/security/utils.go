@@ -1,27 +1,24 @@
-package auth
+package security
 
 import (
 	"slices"
 	"strings"
 
-	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/gin-gonic/gin"
 )
 
-// Security package provides authentication and security related utilities
-
-// ValidateEmailDomain checks if the email domain is allowed
+// ValidateEmailDomain checks if the email domain is allowed for account creation
 func ValidateEmailDomain(email string) bool {
 	_, domain := splitEmail(email)
 	if domain == "" {
 		return false
 	}
 
-	return slices.Contains(constants.AllowedEmailDomains, domain)
+	return slices.Contains(AllowedEmailDomains, domain)
 }
 
-// SetSecureCookie sets a cookie with security configurations
+// SetSecureCookie sets a cookie with security configurations from the app config
 func SetSecureCookie(c *gin.Context, name, value string, maxAge int) {
 	cfg := config.Config.CookieConfig
 	c.SetCookie(
@@ -35,7 +32,7 @@ func SetSecureCookie(c *gin.Context, name, value string, maxAge int) {
 	)
 }
 
-// splitEmail splits an email into local part and domain
+// splitEmail splits an email address into local part and domain
 func splitEmail(email string) (string, string) {
 	username, domain, found := strings.Cut(email, "@")
 	if !found || username == "" || domain == "" {

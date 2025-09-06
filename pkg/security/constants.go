@@ -1,4 +1,4 @@
-package constants
+package security
 
 // OAuth2 Security Constants
 const (
@@ -13,21 +13,10 @@ const (
 	MaxNewAccountsPerEmail = 1  // Maximum accounts per email domain
 )
 
-// Allowed email domains for account creation
+// AllowedEmailDomains defines the email domains allowed for account creation
 var AllowedEmailDomains = []string{
 	"gmail.com",
 	"outlook.com",
 	"hotmail.com",
 	"yahoo.com",
-}
-
-// Security Headers
-var SecurityHeaders = map[string]string{
-	"Content-Security-Policy":           "default-src 'self'; img-src 'self' https://*.googleusercontent.com; script-src 'self'",
-	"X-Frame-Options":                   "DENY",
-	"X-Content-Type-Options":            "nosniff",
-	"Referrer-Policy":                   "strict-origin-when-cross-origin",
-	"X-XSS-Protection":                  "1; mode=block",
-	"X-Permitted-Cross-Domain-Policies": "none",
-	"Access-Control-Allow-Origin":       "*", //TODO: Restrict this in production
 }

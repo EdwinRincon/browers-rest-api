@@ -34,16 +34,21 @@ type CookieSecurityConfig struct {
 	MaxAge   time.Duration
 }
 
-var Config SecurityConfig
-
-func InitSecurityConfig() {
+var Config = func() SecurityConfig {
 	isDev := os.Getenv("GIN_MODE") != "release"
 
-	Config = SecurityConfig{
+	// Build script sources based on environment
+	scriptSrc := []string{"'self'", "https://apis.google.com"}
+	if isDev {
+		// Allow unsafe-inline only in development for easier debugging
+		scriptSrc = append(scriptSrc, "'unsafe-inline'")
+	}
+
+	return SecurityConfig{
 		IsDevelopment: isDev,
 		CSPConfig: ContentSecurityPolicyConfig{
 			DefaultSrc:     []string{"'self'"},
-			ScriptSrc:      []string{"'self'", "'unsafe-inline'", "https://apis.google.com"},
+			ScriptSrc:      scriptSrc,
 			StyleSrc:       []string{"'self'", "'unsafe-inline'"},
 			ImgSrc:         []string{"'self'", "https://*.googleusercontent.com", "data:"},
 			ConnectSrc:     []string{"'self'", "https://accounts.google.com"},
@@ -56,13 +61,13 @@ func InitSecurityConfig() {
 		CookieConfig: CookieSecurityConfig{
 			Secure:   !isDev,
 			HTTPOnly: true,
-			SameSite: "Lax",
+			SameSite: "Strict",
 			Path:     "/",
 			Domain:   "",
 			MaxAge:   24 * time.Hour,
 		},
 	}
-}
+}()
 
 // BuildCSPHeader constructs the Content-Security-Policy header value
 // using the current configuration. It returns a string suitable for use
@@ -94,5 +99,6 @@ func BuildCSPHeader() string {
 			parts = append(parts, d.name+" "+strings.Join(d.sources, " "))
 		}
 	}
-	return strings.Join(parts, "; ")
+	// Add trailing semicolon for better browser compatibility
+	return strings.Join(parts, "; ") + ";"
 }

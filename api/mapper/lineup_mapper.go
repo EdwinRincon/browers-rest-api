@@ -81,15 +81,6 @@ func ToLineupShortResponse(lineup *model.Lineup) *dto.LineupShortResponse {
 	}
 }
 
-// ToLineupShortResponseList maps a slice of Lineup models to a slice of LineupShortResponse DTOs
-func ToLineupShortResponseList(lineups []model.Lineup) []dto.LineupShortResponse {
-	lineupResponses := make([]dto.LineupShortResponse, len(lineups))
-	for i, lineup := range lineups {
-		lineupResponses[i] = *ToLineupShortResponse(&lineup)
-	}
-	return lineupResponses
-}
-
 // OrganizeLineupsByMatchID groups lineups by whether they are starting or substitutes
 func OrganizeLineupsByMatchID(match *model.Match, lineups []model.Lineup) *dto.MatchLineupResponse {
 	if match == nil {

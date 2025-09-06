@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/EdwinRincon/browersfc-api/api/constants"
+	"github.com/EdwinRincon/browersfc-api/pkg/security"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -104,7 +104,7 @@ func validateAllowedDomain(fl validator.FieldLevel) bool {
 	if domain == "" {
 		return false
 	}
-	for _, allowed := range constants.AllowedEmailDomains {
+	for _, allowed := range security.AllowedEmailDomains {
 		if domain == allowed {
 			return true
 		}

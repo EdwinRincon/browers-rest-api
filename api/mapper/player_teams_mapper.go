@@ -16,16 +16,6 @@ func ToPlayerTeam(dto *dto.CreatePlayerTeamRequest) *model.PlayerTeam {
 	}
 }
 
-// UpdatePlayerTeamFromDTO updates a PlayerTeam model from an UpdatePlayerTeamRequest DTO
-func UpdatePlayerTeamFromDTO(playerTeam *model.PlayerTeam, dto *dto.UpdatePlayerTeamRequest) {
-	if dto.StartDate != nil {
-		playerTeam.StartDate = *dto.StartDate
-	}
-	if dto.EndDate != nil {
-		playerTeam.EndDate = dto.EndDate
-	}
-}
-
 // ToPlayerTeamResponse converts a PlayerTeam model to a PlayerTeamResponse DTO
 func ToPlayerTeamResponse(playerTeam *model.PlayerTeam) *dto.PlayerTeamResponse {
 	if playerTeam == nil {
@@ -73,16 +63,4 @@ func ToPlayerTeamResponseList(playerTeams []model.PlayerTeam) []dto.PlayerTeamRe
 		responses[i] = *ToPlayerTeamResponse(&playerTeam)
 	}
 	return responses
-}
-
-// ToPlayerTeamShort converts a PlayerTeam model to a PlayerTeamShort DTO
-func ToPlayerTeamShort(playerTeam *model.PlayerTeam) *dto.PlayerTeamShort {
-	return &dto.PlayerTeamShort{
-		ID:        playerTeam.ID,
-		PlayerID:  playerTeam.PlayerID,
-		TeamID:    playerTeam.TeamID,
-		SeasonID:  playerTeam.SeasonID,
-		StartDate: playerTeam.StartDate,
-		EndDate:   playerTeam.EndDate,
-	}
 }

@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/api/auth"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
+	"github.com/EdwinRincon/browersfc-api/pkg/security"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
@@ -83,7 +83,7 @@ func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *model.User
 	}
 
 	c.Header("Authorization", "Bearer "+jwtToken)
-	auth.SetSecureCookie(c, "token", jwtToken, int(time.Hour/time.Second))
+	security.SetSecureCookie(c, "token", jwtToken, int(time.Hour/time.Second))
 
 	helper.WriteSuccessResponse(c, http.StatusOK, gin.H{
 		"token": jwtToken,
@@ -206,7 +206,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 
 	if user == nil {
 		// Validate email domain
-		if !auth.ValidateEmailDomain(googleUser.Email) {
+		if !security.ValidateEmailDomain(googleUser.Email) {
 			helper.WriteErrorResponse(c, helper.NewForbiddenError("Email domain not allowed"))
 			return
 		}
@@ -270,7 +270,7 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 
 	config.StorePKCE(state, pkceParams)
 
-	auth.SetSecureCookie(c, "oauth_state", state, int(10*time.Minute/time.Second))
+	security.SetSecureCookie(c, "oauth_state", state, int(10*time.Minute/time.Second))
 	opts := []oauth2.AuthCodeOption{
 		oauth2.SetAuthURLParam("code_challenge", pkceParams.Challenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),

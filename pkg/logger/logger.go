@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -121,11 +120,6 @@ func GetRequestID(ctx context.Context) (string, bool) {
 	return "", false
 }
 
-// WithRequestID adds a request ID to the logger
-func WithRequestID(l *slog.Logger, requestID string) *slog.Logger {
-	return l.With(slog.String(RequestIDKey, requestID))
-}
-
 // WithHTTPRequest enriches logger with HTTP request metadata from Gin context
 func WithHTTPRequest(l *slog.Logger, c *gin.Context, durationMs float64) *slog.Logger {
 	// Build full path with query parameters if present
@@ -220,20 +214,4 @@ func LogHTTPRequest(c *gin.Context, durationMs float64, shouldSkip bool) {
 // This allows non-handler code to contribute error details without direct logging
 func StoreErrorForLogging(c *gin.Context, err LoggableError) {
 	c.Set(AppErrorKey, err)
-}
-
-// GetDefaultLevel returns the default log level based on environment
-func GetDefaultLevel() slog.Level {
-	if os.Getenv("GIN_MODE") == "release" {
-		return slog.LevelInfo
-	}
-	return slog.LevelDebug
-}
-
-// GetDefaultFormat returns the default log format based on environment
-func GetDefaultFormat() LogFormat {
-	if os.Getenv("GIN_MODE") == "release" {
-		return JSONFormat
-	}
-	return TextFormat
 }

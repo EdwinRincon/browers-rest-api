@@ -132,14 +132,3 @@ func (l *ContextAwareGormLogger) Trace(ctx context.Context, begin time.Time, fc 
 		)...)
 	}
 }
-
-// GetContextWithRequestID tries to extract a request ID from a gin context and add it
-// to a new context for database operations.
-func GetContextWithRequestID(ctx context.Context) context.Context {
-	// If it's already a gin context, use it directly
-	if ginCtx, ok := ctx.(*gin.Context); ok {
-		return ginCtx
-	}
-
-	return ctx
-}

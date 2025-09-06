@@ -15,12 +15,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// contextKey type to avoid collisions in context values
-type contextKey string
-
+// Context keys for storing user information in Gin context
 const (
-	usernameKey contextKey = "username"
-	roleKey     contextKey = "role"
+	usernameKey = "username"
+	roleKey     = "role"
 )
 
 // JwtAuthMiddleware authenticates requests using JWT tokens.
@@ -55,14 +53,20 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		validator := jwt.NewTokenValidator(jwtSecret)
 		claims, err := validator.ValidateToken(tokenString)
 		if err != nil {
-			helper.WriteErrorResponse(c, helper.NewUnauthorizedError(err.Error()))
+			// Log detailed error for debugging but return generic message to client
+			logger.Debug(c, "JWT token validation failed",
+				"error", err.Error(),
+				"ip", c.ClientIP(),
+				"user_agent", c.Request.UserAgent())
+			
+			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid or expired token"))
 			c.Abort()
 			return
 		}
 
-		// Store claims in context using type-safe keys
-		c.Set(string(usernameKey), claims.Username)
-		c.Set(string(roleKey), claims.Role)
+		// Store claims in context using string keys
+		c.Set(usernameKey, claims.Username)
+		c.Set(roleKey, claims.Role)
 
 		logger.Debug(c, "Successfully authenticated request",
 			"username", claims.Username,
@@ -76,7 +80,7 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 // authenticated user's role is allowed to access the requested resource.
 func RBACMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		role, exists := c.Get(string(roleKey))
+		role, exists := c.Get(roleKey)
 		if !exists {
 			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Authentication required"))
 			c.Abort()
@@ -90,11 +94,11 @@ func RBACMiddleware(allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
-		username, _ := c.Get(string(usernameKey))
+		username, _ := c.Get(usernameKey)
 
 		// Check if user's role is allowed
 		if slices.Contains(allowedRoles, userRole) {
-			logger.Debug(c, "Access granted",
+			logger.Info(c, "Access granted",
 				"username", username,
 				"role", userRole,
 				"path", c.Request.URL.Path,
@@ -103,8 +107,8 @@ func RBACMiddleware(allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
-		// Log access denied event
-		logger.Info(c, "Access denied",
+		// Log access denied event as warning since it may indicate security issues
+		logger.Warn(c, "Access denied",
 			"username", username,
 			"role", userRole,
 			"allowedRoles", allowedRoles,
@@ -139,9 +143,9 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 	cspHeader := config.BuildCSPHeader()
 
 	return func(c *gin.Context) {
-		// Host check in development only
+		// Host check in development only - allow any localhost port
 		if config.Config.IsDevelopment {
-			if c.Request.Host != "localhost:5050" {
+			if !strings.HasPrefix(c.Request.Host, "localhost:") {
 				logger.Warn(c, "Invalid host header in development",
 					"host", c.Request.Host,
 					"ip", c.ClientIP())
