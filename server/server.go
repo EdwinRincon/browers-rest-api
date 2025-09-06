@@ -242,6 +242,10 @@ func initializeRepositories(db *gorm.DB) *Repositories {
 
 func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	jwtService := jwt.NewJWTService(string(jwtSecret))
+
+	seasonService := service.NewSeasonService(repos.Season)
+	matchService := service.NewMatchService(repos.Match)
+
 	return &Services{
 		JWT:        jwtService,
 		Auth:       service.NewAuthService(repos.User, jwtService),
@@ -250,11 +254,11 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		Team:       service.NewTeamService(repos.Team),
 		Player:     service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
 		PlayerTeam: service.NewPlayerTeamService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season),
-		Season:     service.NewSeasonService(repos.Season),
-		Article:    service.NewArticleService(repos.Article),
-		Match:      service.NewMatchService(repos.Match),
+		Season:     seasonService,
+		Article:    service.NewArticleService(repos.Article, seasonService),
+		Match:      matchService,
 		TeamStat:   service.NewTeamStatsService(repos.TeamStat, repos.Team, repos.Season),
-		Lineup:     service.NewLineupService(repos.Lineup, service.NewMatchService(repos.Match)),
+		Lineup:     service.NewLineupService(repos.Lineup, matchService),
 		PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
 	}
 }

@@ -8,20 +8,27 @@ import (
 )
 
 func InitializeArticleRoutes(r *gin.Engine, articleHandler *handler.ArticleHandler) {
-
 	api := r.Group(constants.APIBasePath)
 	{
+
 		articles := api.Group("/articles")
 		{
-			articles.GET("", articleHandler.GetAllArticles)
+			articles.GET("", articleHandler.GetPaginatedArticles)
 			articles.GET("/:id", articleHandler.GetArticleByID)
-			articles.Use(middleware.JwtAuthMiddleware())
-			articles.Use(middleware.RBACMiddleware(constants.RoleAdmin))
-			{
-				articles.POST("", articleHandler.CreateArticle)
-				articles.PUT("/:id", articleHandler.UpdateArticle)
-				articles.DELETE("/:id", articleHandler.DeleteArticle)
-			}
+		}
+
+		seasons := api.Group("/seasons")
+		{
+			seasons.GET("/:id/articles", articleHandler.GetArticlesBySeasonID)
+		}
+
+		// Articles routes requiring authentication and role-based access control
+		protected := api.Group("/admin/articles")
+		protected.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+		{
+			protected.POST("", articleHandler.CreateArticle)
+			protected.PUT("/:id", articleHandler.UpdateArticle)
+			protected.DELETE("/:id", articleHandler.DeleteArticle)
 		}
 	}
 }
