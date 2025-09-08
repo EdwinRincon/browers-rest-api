@@ -65,6 +65,7 @@ type Services struct {
 	// Domain-based services (hexagonal architecture)
 	PlayerDomain service.PlayerDomainService
 	RoleDomain   *domainservice.RoleDomainService
+	SeasonDomain *domainservice.SeasonDomainService
 	// TODO: Add TeamDomain service.TeamDomainService when complete
 }
 
@@ -253,12 +254,13 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	seasonService := service.NewSeasonService(repos.Season)
 	matchService := service.NewMatchService(repos.Match)
 
-	// Create domain adapters for hexagonal architecture
+	// Create domain adapters
 	playerDomainAdapter := adapters.NewPlayerDomainAdapter(repos.Player)
 	seasonDomainAdapter := adapters.NewSeasonDomainAdapter(repos.Season)
 
-	// Initialize role domain service
+	// Create domain services
 	roleDomainService := CreateRoleDomainService(repos.Role)
+	seasonDomainService := domainservice.NewSeasonDomainService(seasonDomainAdapter)
 
 	return &Services{
 		JWT:        jwtService,
@@ -278,6 +280,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		// Domain-based services using adapters
 		PlayerDomain: service.NewPlayerDomainService(playerDomainAdapter, seasonDomainAdapter, repos.PlayerTeam),
 		RoleDomain:   roleDomainService,
+		SeasonDomain: seasonDomainService,
 	}
 }
 
@@ -288,7 +291,7 @@ func initializeHandlers(services *Services) *Handlers {
 		Team:       handler.NewTeamHandler(services.Team),
 		Player:     handler.NewPlayerHandler(services.Player),
 		PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeam),
-		Season:     handler.NewSeasonHandler(services.Season),
+		Season:     handler.NewSeasonHandler(services.SeasonDomain),
 		Article:    handler.NewArticleHandler(services.Article),
 		Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
 		Match:      handler.NewMatchHandler(services.Match),

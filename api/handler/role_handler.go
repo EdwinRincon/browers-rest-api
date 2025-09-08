@@ -49,7 +49,7 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 
 	domainRole, err := h.RoleDomainService.GetRoleByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, domainservice.ErrRoleNotFound) {
+		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
 			return
 		}
@@ -93,12 +93,9 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 
 	createdRole, err := h.RoleDomainService.CreateRole(ctx, domainRole)
 	if err != nil {
-		switch {
-		case errors.Is(err, domainservice.ErrRoleAlreadyExists):
+		if err == constants.ErrRecordAlreadyExists {
 			helper.WriteErrorResponse(c, helper.NewConflictError("role", "A role with this name already exists"))
-		case errors.Is(err, domainservice.ErrInvalidRole):
-			helper.WriteErrorResponse(c, helper.NewBadRequestError("role", "Invalid role data"))
-		default:
+		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
@@ -150,14 +147,11 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 
 	updatedRole, err := h.RoleDomainService.UpdateRole(ctx, updateDomain)
 	if err != nil {
-		switch {
-		case errors.Is(err, domainservice.ErrRoleNotFound):
+		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
-		case errors.Is(err, domainservice.ErrRoleAlreadyExists):
+		} else if err == constants.ErrRecordAlreadyExists {
 			helper.WriteErrorResponse(c, helper.NewConflictError("role", "A role with these details already exists"))
-		case errors.Is(err, domainservice.ErrInvalidRole):
-			helper.WriteErrorResponse(c, helper.NewBadRequestError("role", "Invalid role data"))
-		default:
+		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
@@ -192,14 +186,11 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 
 	err = h.RoleDomainService.DeleteRole(ctx, id)
 	if err != nil {
-		switch {
-		case errors.Is(err, domainservice.ErrRoleNotFound):
+		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
-		case errors.Is(err, domainservice.ErrCannotDeleteSystemRole):
+		} else if errors.Is(err, domainservice.ErrCannotDeleteSystemRole) {
 			helper.WriteErrorResponse(c, helper.NewBadRequestError("role", "Cannot delete system role"))
-		case errors.Is(err, domainservice.ErrInvalidRole):
-			helper.WriteErrorResponse(c, helper.NewBadRequestError("id", msgInvalidRoleID))
-		default:
+		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return

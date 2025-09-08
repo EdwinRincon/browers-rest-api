@@ -10,20 +10,20 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainService "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 const errInvalidSeasonID = "Invalid season ID"
 
 type SeasonHandler struct {
-	SeasonService service.SeasonService
+	SeasonDomainService *domainService.SeasonDomainService
 }
 
-func NewSeasonHandler(seasonService service.SeasonService) *SeasonHandler {
+func NewSeasonHandler(seasonDomainService *domainService.SeasonDomainService) *SeasonHandler {
 	return &SeasonHandler{
-		SeasonService: seasonService,
+		SeasonDomainService: seasonDomainService,
 	}
 }
 
@@ -54,12 +54,12 @@ func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 		return
 	}
 
-	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	seasonResponse, err := h.SeasonService.CreateSeason(ctx, &createRequest)
-	if err != nil {
+	// Use domain service (hexagonal architecture)
+	domainSeason := mapper.CreateRequestToDomain(&createRequest)
+	if err := h.SeasonDomainService.CreateSeason(ctx, domainSeason); err != nil {
 		if err == constants.ErrRecordAlreadyExists {
 			helper.WriteErrorResponse(c, helper.NewConflictError("season", "A season with this year already exists"))
 		} else {
@@ -68,6 +68,7 @@ func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 		return
 	}
 
+	seasonResponse := mapper.DomainSeasonToResponse(domainSeason)
 	helper.WriteSuccessResponse(c, http.StatusCreated, seasonResponse, "Season created successfully")
 }
 
@@ -91,11 +92,11 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 		return
 	}
 
-	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	season, err := h.SeasonService.GetSeasonByID(ctx, id)
+	// Use domain service (hexagonal architecture)
+	domainSeason, err := h.SeasonDomainService.GetSeasonByID(ctx, id)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
@@ -105,7 +106,7 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 		return
 	}
 
-	seasonResponse := mapper.ToSeasonResponse(season)
+	seasonResponse := mapper.DomainSeasonToResponse(domainSeason)
 	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Season found successfully")
 }
 
@@ -120,11 +121,11 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 // @Router       /seasons/current [get]
 // @Security     ApiKeyAuth
 func (h *SeasonHandler) GetCurrentSeason(c *gin.Context) {
-	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	season, err := h.SeasonService.GetCurrentSeason(ctx)
+	// Use domain service (hexagonal architecture)
+	domainSeason, err := h.SeasonDomainService.GetCurrentSeason(ctx)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("current season"))
@@ -134,7 +135,7 @@ func (h *SeasonHandler) GetCurrentSeason(c *gin.Context) {
 		return
 	}
 
-	seasonResponse := mapper.ToSeasonResponse(season)
+	seasonResponse := mapper.DomainSeasonToResponse(domainSeason)
 	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Current season retrieved successfully")
 }
 
@@ -181,13 +182,14 @@ func (h *SeasonHandler) GetPaginatedSeasons(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	seasons, total, err := h.SeasonService.GetPaginatedSeasons(ctx, sort, order, page, pageSize)
+	// Use domain service (hexagonal architecture)
+	domainSeasons, total, err := h.SeasonDomainService.GetPaginatedSeasons(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	seasonResponses := mapper.ToSeasonResponseList(seasons)
+	seasonResponses := mapper.DomainSeasonListToResponse(domainSeasons)
 
 	response := helper.PaginatedResponse{
 		Items:      seasonResponses,
@@ -239,19 +241,42 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	seasonResponse, err := h.SeasonService.UpdateSeason(ctx, id, &updateRequest)
+	// Use domain service (hexagonal architecture)
+	// First get existing season to merge updates
+	existingSeason, err := h.SeasonDomainService.GetSeasonByID(ctx, id)
 	if err != nil {
-		switch err {
-		case constants.ErrRecordNotFound:
+		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
-		case constants.ErrRecordAlreadyExists:
-			helper.WriteErrorResponse(c, helper.NewConflictError("year", "A season with this year already exists"))
-		default:
+		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
+	// Convert update request to domain season
+	updatedSeason := mapper.UpdateRequestToDomain(&updateRequest, existingSeason)
+
+	// Update season
+	err = h.SeasonDomainService.UpdateSeason(ctx, id, updatedSeason)
+	if err != nil {
+		if err == constants.ErrRecordNotFound {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
+		} else if err == constants.ErrRecordAlreadyExists {
+			helper.WriteErrorResponse(c, helper.NewConflictError("year", "A season with this year already exists"))
+		} else {
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		}
+		return
+	}
+
+	// Get updated season and return response
+	updatedSeasonResponse, err := h.SeasonDomainService.GetSeasonByID(ctx, id)
+	if err != nil {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+
+	seasonResponse := mapper.DomainSeasonToResponse(updatedSeasonResponse)
 	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Season updated successfully")
 }
 
@@ -279,7 +304,8 @@ func (h *SeasonHandler) SetCurrentSeason(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	err = h.SeasonService.SetCurrentSeason(ctx, id)
+	// Use domain service (hexagonal architecture)
+	err = h.SeasonDomainService.SetCurrentSeason(ctx, id)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
@@ -321,7 +347,8 @@ func (h *SeasonHandler) DeleteSeason(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	err = h.SeasonService.DeleteSeason(ctx, id)
+	// Use domain service (hexagonal architecture)
+	err = h.SeasonDomainService.DeleteSeason(ctx, id)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))

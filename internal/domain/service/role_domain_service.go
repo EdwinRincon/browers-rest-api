@@ -5,26 +5,22 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/internal/ports"
 )
 
 var (
-	ErrRoleNotFound           = errors.New("role not found")
-	ErrRoleAlreadyExists      = errors.New("role already exists")
 	ErrInvalidRole            = errors.New("invalid role data")
 	ErrCannotDeleteSystemRole = errors.New("cannot delete system role")
 )
 
-// RoleDomainService handles role domain operations and business logic.
-// It orchestrates role-related use cases in the domain layer.
 type RoleDomainService struct {
 	rolePort   ports.RolePort
 	roleMapper *mapper.RoleDomainMapper
 }
 
-// NewRoleDomainService creates a new RoleDomainService instance.
 func NewRoleDomainService(
 	rolePort ports.RolePort,
 	roleMapper *mapper.RoleDomainMapper,
@@ -48,7 +44,7 @@ func (s *RoleDomainService) CreateRole(ctx context.Context, role *domain.Role) (
 		return nil, fmt.Errorf("failed to check existing role: %w", err)
 	}
 	if existingRole != nil {
-		return nil, ErrRoleAlreadyExists
+		return nil, constants.ErrRecordAlreadyExists
 	}
 
 	// Convert to model and create
@@ -73,7 +69,7 @@ func (s *RoleDomainService) GetRoleByID(ctx context.Context, id uint64) (*domain
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
 	if modelRole == nil {
-		return nil, ErrRoleNotFound
+		return nil, constants.ErrRecordNotFound
 	}
 
 	return s.roleMapper.ToDomain(modelRole), nil
@@ -90,7 +86,7 @@ func (s *RoleDomainService) GetRoleByName(ctx context.Context, name string) (*do
 		return nil, fmt.Errorf("failed to get role by name: %w", err)
 	}
 	if modelRole == nil {
-		return nil, ErrRoleNotFound
+		return nil, constants.ErrRecordNotFound
 	}
 
 	return s.roleMapper.ToDomain(modelRole), nil
@@ -109,7 +105,7 @@ func (s *RoleDomainService) UpdateRole(ctx context.Context, role *domain.Role) (
 		return nil, fmt.Errorf("failed to check existing role: %w", err)
 	}
 	if existingRole == nil {
-		return nil, ErrRoleNotFound
+		return nil, constants.ErrRecordNotFound
 	}
 
 	// Check if name is being changed to an existing name
@@ -119,7 +115,7 @@ func (s *RoleDomainService) UpdateRole(ctx context.Context, role *domain.Role) (
 			return nil, fmt.Errorf("failed to check name conflict: %w", err)
 		}
 		if conflictingRole != nil && conflictingRole.ID != role.ID {
-			return nil, ErrRoleAlreadyExists
+			return nil, constants.ErrRecordAlreadyExists
 		}
 	}
 
@@ -146,7 +142,7 @@ func (s *RoleDomainService) DeleteRole(ctx context.Context, id uint64) error {
 		return fmt.Errorf("failed to get role for deletion: %w", err)
 	}
 	if modelRole == nil {
-		return ErrRoleNotFound
+		return constants.ErrRecordNotFound
 	}
 
 	// Apply domain business rules

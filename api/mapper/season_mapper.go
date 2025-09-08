@@ -3,6 +3,7 @@ package mapper
 import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 )
 
 // ToSeason converts a CreateSeasonRequest DTO to a Season model
@@ -44,11 +45,70 @@ func ToSeasonResponse(season *model.Season) *dto.SeasonResponse {
 	}
 }
 
-// ToSeasonResponseList converts a slice of Season models to a slice of SeasonResponse DTOs
-func ToSeasonResponseList(seasons []model.Season) []dto.SeasonResponse {
-	seasonResponses := make([]dto.SeasonResponse, len(seasons))
-	for i, season := range seasons {
-		seasonResponses[i] = *ToSeasonResponse(&season)
+// DomainSeasonToResponse converts a domain Season directly to SeasonResponse DTO
+// This avoids coupling the HTTP layer to persistence structure
+func DomainSeasonToResponse(domainSeason *domain.Season) *dto.SeasonResponse {
+	if domainSeason == nil {
+		return nil
 	}
-	return seasonResponses
+
+	return &dto.SeasonResponse{
+		ID:        domainSeason.ID,
+		Year:      domainSeason.Year,
+		StartDate: domainSeason.StartDate,
+		EndDate:   domainSeason.EndDate,
+		IsCurrent: domainSeason.IsCurrent,
+		CreatedAt: domainSeason.CreatedAt,
+		UpdatedAt: domainSeason.UpdatedAt,
+	}
+}
+
+// CreateRequestToDomain converts CreateSeasonRequest DTO to domain Season
+func CreateRequestToDomain(createRequest *dto.CreateSeasonRequest) *domain.Season {
+	if createRequest == nil {
+		return nil
+	}
+
+	return &domain.Season{
+		Year:      createRequest.Year,
+		StartDate: createRequest.StartDate,
+		EndDate:   createRequest.EndDate,
+		IsCurrent: createRequest.IsCurrent,
+	}
+}
+
+// UpdateRequestToDomain converts UpdateSeasonRequest DTO to domain Season
+// Note: This creates a new domain season with only the provided fields set
+func UpdateRequestToDomain(updateRequest *dto.UpdateSeasonRequest, existingSeason *domain.Season) *domain.Season {
+	if updateRequest == nil || existingSeason == nil {
+		return nil
+	}
+
+	// Start with a copy of the existing season
+	updatedSeason := *existingSeason
+
+	// Apply updates from the request
+	if updateRequest.Year != nil {
+		updatedSeason.Year = *updateRequest.Year
+	}
+	if updateRequest.StartDate != nil {
+		updatedSeason.StartDate = *updateRequest.StartDate
+	}
+	if updateRequest.EndDate != nil {
+		updatedSeason.EndDate = *updateRequest.EndDate
+	}
+	if updateRequest.IsCurrent != nil {
+		updatedSeason.IsCurrent = *updateRequest.IsCurrent
+	}
+
+	return &updatedSeason
+}
+
+// DomainSeasonListToResponse converts a slice of domain Seasons to SeasonResponse DTOs
+func DomainSeasonListToResponse(domainSeasons []domain.Season) []dto.SeasonResponse {
+	responses := make([]dto.SeasonResponse, len(domainSeasons))
+	for i, domainSeason := range domainSeasons {
+		responses[i] = *DomainSeasonToResponse(&domainSeason)
+	}
+	return responses
 }
