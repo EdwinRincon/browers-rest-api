@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 	"github.com/EdwinRincon/browersfc-api/pkg/jwt"
 )
 
@@ -12,15 +11,13 @@ type AuthService interface {
 
 // authService implements the AuthService interface
 type authService struct {
-	UserRepository persistence.UserRepository
-	JWTService     *jwt.JWTService
+	JWTService *jwt.JWTService
 }
 
 // NewAuthService creates a new authentication service instance
-func NewAuthService(userRepo persistence.UserRepository, jwtService *jwt.JWTService) AuthService {
+func NewAuthService(jwtService *jwt.JWTService) AuthService {
 	return &authService{
-		UserRepository: userRepo,
-		JWTService:     jwtService,
+		JWTService: jwtService,
 	}
 }
 

@@ -5,36 +5,32 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
-// UserRepository defines the interface for user data access.
-type UserRepository interface {
-	CreateUser(ctx context.Context, user *model.User) error
-	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
-	GetUserByID(ctx context.Context, id string) (*model.User, error)
-	GetPaginatedUsers(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.User, int64, error)
-	UpdateUser(ctx context.Context, id string, user *model.User) error
-	DeleteUser(ctx context.Context, id string) error
-}
-
 // UserRepositoryImpl implements the UserRepository interface using GORM.
 type UserRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.UserMapper
 }
 
 // NewUserRepository creates a new UserRepository instance.
-func NewUserRepository(db *gorm.DB) UserRepository {
-	return &UserRepositoryImpl{db: db}
+func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
+	return &UserRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewUserMapper(),
+	}
 }
 
-func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username string) (*model.User, error) {
-	var user model.User
+func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+	var userModel model.User
 	result := ur.db.WithContext(ctx).
 		Preload("Role").
 		Where("username = ?", username).
-		First(&user)
+		First(&userModel)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -42,25 +38,30 @@ func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username st
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting user by username: %w", result.Error)
 	}
-	return &user, nil
+	
+	return ur.mapper.ModelToDomain(&userModel), nil
 }
 
 // GetUserByID retrieves a user by their ID, preloading the Role.
-func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*model.User, error) {
-	var user model.User
+func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*domain.User, error) {
+	var userModel model.User
 	result := ur.db.WithContext(ctx).
 		Preload("Role").
 		Where("id = ?", id).
-		First(&user)
+		First(&userModel)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	return &user, result.Error
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	
+	return ur.mapper.ModelToDomain(&userModel), nil
 }
 
 // GetPaginatedUsers retrieves a paginated list of users with their roles and total count.
-func (ur *UserRepositoryImpl) GetPaginatedUsers(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.User, int64, error) {
+func (ur *UserRepositoryImpl) GetPaginatedUsers(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.User, int64, error) {
 	var users []model.User
 	var total int64
 
@@ -88,19 +89,21 @@ func (ur *UserRepositoryImpl) GetPaginatedUsers(ctx context.Context, sort string
 		return nil, 0, fmt.Errorf("error fetching users: %w", err)
 	}
 
-	return users, total, nil
+	return ur.mapper.ModelListToDomain(users), total, nil
 }
 
-func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *model.User) error {
-	return ur.db.WithContext(ctx).Create(user).Error
+func (ur *UserRepositoryImpl) CreateUser(ctx context.Context, user *domain.User) error {
+	userModel := ur.mapper.DomainToModel(user)
+	return ur.db.WithContext(ctx).Create(userModel).Error
 }
 
-func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, id string, user *model.User) error {
+func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, id string, user *domain.User) error {
+	userModel := ur.mapper.DomainToModel(user)
 	return ur.db.WithContext(ctx).
 		Model(&model.User{}).
 		Where("id = ?", id).
 		Select("*").
-		Updates(user).Error
+		Updates(userModel).Error
 }
 
 func (ur *UserRepositoryImpl) DeleteUser(ctx context.Context, id string) error {

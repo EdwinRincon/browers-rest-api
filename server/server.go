@@ -15,10 +15,8 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/config"
 	docs "github.com/EdwinRincon/browersfc-api/docs"
-	"github.com/EdwinRincon/browersfc-api/internal/adapters"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
-	"github.com/EdwinRincon/browersfc-api/internal/ports"
 	"github.com/EdwinRincon/browersfc-api/pkg/jwt"
 	"github.com/EdwinRincon/browersfc-api/pkg/orm"
 	"github.com/gin-gonic/gin"
@@ -35,7 +33,7 @@ type Server struct {
 
 // Dependency containers for type-safe injection
 type Repositories struct {
-	User       persistence.UserRepository
+	User       *persistence.UserRepositoryImpl
 	Role       *persistence.RoleRepositoryImpl
 	Team       persistence.TeamRepository
 	Player     persistence.PlayerRepository
@@ -51,7 +49,6 @@ type Repositories struct {
 type Services struct {
 	JWT  *jwt.JWTService
 	Auth service.AuthService
-	User service.UserService
 	Team service.TeamService
 	// Note: Following services removed until their entities are migrated to hexagonal architecture:
 	// Player     service.PlayerService
@@ -66,7 +63,7 @@ type Services struct {
 	// PlayerDomain service.PlayerDomainService // Will be added after Player migration
 	RoleDomain   *domainservice.RoleDomainService
 	SeasonDomain *domainservice.SeasonDomainService
-	UserDomain   ports.UserPort
+	UserDomain   *domainservice.UserDomainService
 	// TODO: Add TeamDomain service.TeamDomainService when complete
 }
 
@@ -255,18 +252,14 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 
 	matchService := service.NewMatchService(repos.Match)
 
-	// Create domain adapters (for entities not yet migrated)
-	userDomainAdapter := adapters.NewUserDomainAdapter(repos.User)
-
 	// Create domain services using domain factory
 	roleDomainService := CreateRoleDomainService(repos.Role)
 	seasonDomainService := CreateSeasonDomainService(repos.Season)
-	userDomainService := domainservice.NewUserDomainService(userDomainAdapter)
+	userDomainService := CreateUserDomainService(repos.User)
 
 	return &Services{
 		JWT:  jwtService,
-		Auth: service.NewAuthService(repos.User, jwtService),
-		User: service.NewUserService(repos.User),
+		Auth: service.NewAuthService(jwtService),
 		Team: service.NewTeamService(repos.Team),
 		// Note: Following services will fail compilation until their entities are migrated:
 		// Player:     service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
@@ -287,7 +280,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 
 func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
-		User: handler.NewUserHandler(services.Auth, services.User, services.UserDomain, services.RoleDomain),
+		User: handler.NewUserHandler(services.Auth, services.UserDomain, services.RoleDomain),
 		Role: handler.NewRoleHandler(services.RoleDomain),
 		Team: handler.NewTeamHandler(services.Team),
 		// Note: Following handlers commented out until their entities are migrated:

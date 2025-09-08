@@ -19,3 +19,10 @@ func CreateSeasonDomainService(seasonRepo *persistence.SeasonRepositoryImpl) *do
 	var seasonRepository domain.SeasonRepository = seasonRepo
 	return domainservice.NewSeasonDomainService(seasonRepository)
 }
+
+// CreateUserDomainService creates a user domain service with repository implementing domain interface
+func CreateUserDomainService(userRepo *persistence.UserRepositoryImpl) *domainservice.UserDomainService {
+	// Repository implements domain.UserRepository interface directly
+	var userRepository domain.UserRepository = userRepo
+	return domainservice.NewUserDomainService(userRepository)
+}

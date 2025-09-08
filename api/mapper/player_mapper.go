@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 )
@@ -47,7 +48,8 @@ func UpdatePlayerFromDTO(player *model.Player, dto *dto.UpdatePlayerRequest) {
 func ToPlayerResponse(player *model.Player) *dto.PlayerResponse {
 	var userShort *dto.UserShort
 	if player.User != nil {
-		userShort = ToUserShort(player.User)
+		userMapper := mapper.NewUserMapper()
+		userShort = userMapper.ModelToShortDTO(player.User)
 	}
 
 	// Map PlayerTeams to TeamShort objects

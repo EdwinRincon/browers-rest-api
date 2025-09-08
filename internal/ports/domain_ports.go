@@ -28,15 +28,3 @@ type TeamPort interface {
 	DeleteTeam(ctx context.Context, id uint64) error
 }
 
-// UserPort defines the interface for user operations.
-// This port works with pure domain entities and serves both:
-// - Domain services (inbound port for handlers)
-// - Persistence adapters (outbound port for data access)
-type UserPort interface {
-	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
-	GetUserByID(ctx context.Context, id string) (*domain.User, error)
-	GetPaginatedUsers(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.User, int64, error)
-	UpdateUser(ctx context.Context, id string, user *domain.User) (*domain.User, error)
-	DeleteUser(ctx context.Context, id string) error
-}
