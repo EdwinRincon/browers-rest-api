@@ -7,21 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type PlayerTeamHandler struct {
-	PlayerTeamService service.PlayerTeamService
+	PlayerTeamDomainService *domainservice.PlayerTeamDomainService
+	PlayerTeamMapper        *mapper.PlayerTeamMapper
 }
 
-func NewPlayerTeamHandler(playerTeamService service.PlayerTeamService) *PlayerTeamHandler {
+func NewPlayerTeamHandler(playerTeamDomainService *domainservice.PlayerTeamDomainService) *PlayerTeamHandler {
 	return &PlayerTeamHandler{
-		PlayerTeamService: playerTeamService,
+		PlayerTeamDomainService: playerTeamDomainService,
+		PlayerTeamMapper:        mapper.NewPlayerTeamMapper(),
 	}
 }
 
@@ -50,7 +53,10 @@ func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerTeamResponse, err := h.PlayerTeamService.CreatePlayerTeam(ctx, &createRequest)
+	// Map DTO to domain
+	playerTeam := h.PlayerTeamMapper.DTOToDomain(&createRequest)
+
+	createdPlayerTeam, err := h.PlayerTeamDomainService.CreatePlayerTeam(ctx, playerTeam)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrPlayerNotFound):
@@ -71,6 +77,7 @@ func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 		}
 	}
 
+	playerTeamResponse := h.PlayerTeamMapper.DomainToDTO(createdPlayerTeam)
 	helper.WriteSuccessResponse(c, http.StatusCreated, playerTeamResponse, "Player-team relationship created successfully")
 }
 
@@ -97,7 +104,7 @@ func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerTeamResponse, err := h.PlayerTeamService.GetPlayerTeamByID(ctx, id)
+	playerTeam, err := h.PlayerTeamDomainService.GetPlayerTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))
@@ -106,6 +113,8 @@ func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 		}
 		return
 	}
+
+	playerTeamResponse := h.PlayerTeamMapper.DomainToDTO(playerTeam)
 
 	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponse, "Player-team relationship retrieved successfully")
 }
@@ -134,7 +143,13 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByPlayerID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerTeamResponses, err := h.PlayerTeamService.GetPlayerTeamsByPlayerID(ctx, playerID)
+	playerTeams, err := h.PlayerTeamDomainService.GetPlayerTeamsByPlayerID(ctx, playerID)
+	if err != nil {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+
+	playerTeamResponses := h.PlayerTeamMapper.DomainListToDTO(playerTeams)
 	if err != nil {
 		if errors.Is(err, constants.ErrPlayerNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
@@ -171,7 +186,13 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByTeamID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerTeamResponses, err := h.PlayerTeamService.GetPlayerTeamsByTeamID(ctx, teamID)
+	playerTeams, err := h.PlayerTeamDomainService.GetPlayerTeamsByTeamID(ctx, teamID)
+	if err != nil {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+
+	playerTeamResponses := h.PlayerTeamMapper.DomainListToDTO(playerTeams)
 	if err != nil {
 		if errors.Is(err, constants.ErrTeamNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
@@ -208,7 +229,13 @@ func (h *PlayerTeamHandler) GetPlayerTeamsBySeasonID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerTeamResponses, err := h.PlayerTeamService.GetPlayerTeamsBySeasonID(ctx, seasonID)
+	playerTeams, err := h.PlayerTeamDomainService.GetPlayerTeamsBySeasonID(ctx, seasonID)
+	if err != nil {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+
+	playerTeamResponses := h.PlayerTeamMapper.DomainListToDTO(playerTeams)
 	if err != nil {
 		if errors.Is(err, constants.ErrSeasonNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
@@ -252,7 +279,7 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 	}
 
 	// Validate sort field
-	if err := helper.ValidateSort(model.PlayerTeam{}, sort); err != nil {
+	if err := helper.ValidateSort(domain.PlayerTeam{}, sort); err != nil {
 		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
@@ -261,14 +288,16 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerTeams, total, err := h.PlayerTeamService.GetPaginatedPlayerTeams(ctx, sort, order, page, pageSize)
+	playerTeams, total, err := h.PlayerTeamDomainService.GetPaginatedPlayerTeams(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
+	playerTeamResponses := h.PlayerTeamMapper.DomainListToDTO(playerTeams)
+
 	response := helper.PaginatedResponse{
-		Items:      playerTeams,
+		Items:      playerTeamResponses,
 		TotalCount: total,
 	}
 
@@ -308,7 +337,28 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerTeamResponse, err := h.PlayerTeamService.UpdatePlayerTeam(ctx, id, &updateRequest)
+	// Get existing player team first
+	existingPlayerTeam, err := h.PlayerTeamDomainService.GetPlayerTeamByID(ctx, id)
+	if err != nil {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+
+	// Update only the provided fields
+	if updateRequest.StartDate != nil {
+		existingPlayerTeam.StartDate = *updateRequest.StartDate
+	}
+	if updateRequest.EndDate != nil {
+		existingPlayerTeam.EndDate = updateRequest.EndDate
+	}
+
+	playerTeam, err := h.PlayerTeamDomainService.UpdatePlayerTeam(ctx, id, existingPlayerTeam)
+	if err != nil {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+
+	playerTeamResponse := h.PlayerTeamMapper.DomainToDTO(playerTeam)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
@@ -349,7 +399,7 @@ func (h *PlayerTeamHandler) DeletePlayerTeam(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	err = h.PlayerTeamService.DeletePlayerTeam(ctx, id)
+	err = h.PlayerTeamDomainService.DeletePlayerTeam(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))

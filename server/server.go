@@ -37,7 +37,7 @@ type Repositories struct {
 	Role       *persistence.RoleRepositoryImpl
 	Team       *persistence.TeamRepositoryImpl
 	Player     *persistence.PlayerRepositoryImpl
-	PlayerTeam persistence.PlayerTeamRepository
+	PlayerTeam *persistence.PlayerTeamRepositoryImpl
 	Season     *persistence.SeasonRepositoryImpl
 	Article    persistence.ArticleRepository
 	Lineup     persistence.LineupRepository
@@ -59,21 +59,21 @@ type Services struct {
 	Match service.MatchService
 
 	// Domain-based services (hexagonal architecture)
-	PlayerDomain *domainservice.PlayerDomainService
-	RoleDomain   *domainservice.RoleDomainService
-	SeasonDomain *domainservice.SeasonDomainService
-	UserDomain   *domainservice.UserDomainService
-	TeamDomain   *domainservice.TeamDomainService
+	PlayerDomain     *domainservice.PlayerDomainService
+	PlayerTeamDomain *domainservice.PlayerTeamDomainService
+	RoleDomain       *domainservice.RoleDomainService
+	SeasonDomain     *domainservice.SeasonDomainService
+	UserDomain       *domainservice.UserDomainService
+	TeamDomain       *domainservice.TeamDomainService
 }
 
 type Handlers struct {
-	User   *handler.UserHandler
-	Role   *handler.RoleHandler
-	Team   *handler.TeamHandler
-	Player *handler.PlayerHandler
-	// Note: Following handlers removed until their entities are migrated:
-	// PlayerTeam *handler.PlayerTeamHandler
-	Season *handler.SeasonHandler
+	User       *handler.UserHandler
+	Role       *handler.RoleHandler
+	Team       *handler.TeamHandler
+	Player     *handler.PlayerHandler
+	PlayerTeam *handler.PlayerTeamHandler
+	Season     *handler.SeasonHandler
 	// Article    *handler.ArticleHandler
 	// Lineup     *handler.LineupHandler
 	Match *handler.MatchHandler
@@ -257,6 +257,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	userDomainService := CreateUserDomainService(repos.User)
 	teamDomainService := CreateTeamDomainService(repos.Team)
 	playerDomainService := CreatePlayerDomainService(repos.Player)
+	playerTeamDomainService := CreatePlayerTeamDomainService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season)
 
 	return &Services{
 		JWT:  jwtService,
@@ -271,23 +272,23 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		// PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
 
 		// Domain-based services (hexagonal architecture)
-		PlayerDomain: playerDomainService,
-		RoleDomain:   roleDomainService,
-		SeasonDomain: seasonDomainService,
-		UserDomain:   userDomainService,
-		TeamDomain:   teamDomainService,
+		PlayerDomain:     playerDomainService,
+		PlayerTeamDomain: playerTeamDomainService,
+		RoleDomain:       roleDomainService,
+		SeasonDomain:     seasonDomainService,
+		UserDomain:       userDomainService,
+		TeamDomain:       teamDomainService,
 	}
 }
 
 func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
-		User:   handler.NewUserHandler(services.Auth, services.UserDomain, services.RoleDomain),
-		Role:   handler.NewRoleHandler(services.RoleDomain),
-		Team:   handler.NewTeamHandler(services.TeamDomain),
-		Player: handler.NewPlayerHandler(services.PlayerDomain),
-		// Note: Following handlers commented out until their entities are migrated:
-		// PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeam),
-		Season: handler.NewSeasonHandler(services.SeasonDomain),
+		User:       handler.NewUserHandler(services.Auth, services.UserDomain, services.RoleDomain),
+		Role:       handler.NewRoleHandler(services.RoleDomain),
+		Team:       handler.NewTeamHandler(services.TeamDomain),
+		Player:     handler.NewPlayerHandler(services.PlayerDomain),
+		PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeamDomain),
+		Season:     handler.NewSeasonHandler(services.SeasonDomain),
 		// Article:    handler.NewArticleHandler(services.Article),
 		// Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
 		Match: handler.NewMatchHandler(services.Match),
@@ -301,8 +302,7 @@ func initializeRoutes(r *gin.Engine, handlers *Handlers) {
 	router.InitializeRoleRoutes(r, handlers.Role)
 	router.InitializeTeamRoutes(r, handlers.Team)
 	router.InitializePlayerRoutes(r, handlers.Player)
-	// Note: Following routes commented out until their entities are migrated:
-	// router.InitializePlayerTeamRoutes(r, handlers.PlayerTeam)
+	router.InitializePlayerTeamRoutes(r, handlers.PlayerTeam)
 	router.InitializeSeasonRoutes(r, handlers.Season)
 	// router.InitializeArticleRoutes(r, handlers.Article)
 	// router.InitializeLineupRoutes(r, handlers.Lineup)

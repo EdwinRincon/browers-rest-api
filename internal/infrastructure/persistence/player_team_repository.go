@@ -6,60 +6,41 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
 const wherePlayerTeamIDs = "player_id = ? AND team_id = ? AND season_id = ?"
 
-// OverlapCheckData holds the data needed for overlap checks
-type OverlapCheckData struct {
-	PlayerID  uint64
-	TeamID    uint64
-	SeasonID  uint64
-	StartDate time.Time
-	EndDate   *time.Time
-	IsUpdate  bool
-	ID        uint64
-}
-
-// PlayerTeamRepository defines the interface for player-team association operations
-type PlayerTeamRepository interface {
-	Create(ctx context.Context, playerTeam *model.PlayerTeam) error
-	GetByPlayerID(ctx context.Context, playerID uint64) ([]model.PlayerTeam, error)
-	DeleteByPlayerID(ctx context.Context, playerID uint64) error
-
-	GetPlayerTeamByID(ctx context.Context, id uint64) (*model.PlayerTeam, error)
-	GetPlayerTeamsByTeamID(ctx context.Context, teamID uint64) ([]model.PlayerTeam, error)
-	GetPlayerTeamsBySeasonID(ctx context.Context, seasonID uint64) ([]model.PlayerTeam, error)
-	GetPaginatedPlayerTeams(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.PlayerTeam, int64, error)
-	UpdatePlayerTeam(ctx context.Context, playerTeam *model.PlayerTeam) error
-	DeletePlayerTeam(ctx context.Context, id uint64) error
-	CheckOverlappingDates(ctx context.Context, data OverlapCheckData) (bool, error)
-}
-
-// PlayerTeamRepositoryImpl implements PlayerTeamRepository
+// PlayerTeamRepositoryImpl implements domain.PlayerTeamRepository interface.
 type PlayerTeamRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.PlayerTeamMapper
 }
 
-// NewPlayerTeamRepository creates a new PlayerTeamRepository
-func NewPlayerTeamRepository(db *gorm.DB) PlayerTeamRepository {
+// NewPlayerTeamRepository creates a new PlayerTeamRepository implementation.
+func NewPlayerTeamRepository(db *gorm.DB) *PlayerTeamRepositoryImpl {
 	return &PlayerTeamRepositoryImpl{
-		db: db,
+		db:     db,
+		mapper: mapper.NewPlayerTeamMapper(),
 	}
 }
 
 // Create adds a new player-team association
-func (r *PlayerTeamRepositoryImpl) Create(ctx context.Context, playerTeam *model.PlayerTeam) error {
-	if err := r.db.WithContext(ctx).Create(playerTeam).Error; err != nil {
+func (r *PlayerTeamRepositoryImpl) Create(ctx context.Context, playerTeam *domain.PlayerTeam) error {
+	modelPlayerTeam := r.mapper.DomainToModel(playerTeam)
+	if err := r.db.WithContext(ctx).Create(modelPlayerTeam).Error; err != nil {
 		return fmt.Errorf("failed to create player team association: %w", err)
 	}
+
+	*playerTeam = *r.mapper.ModelToDomain(modelPlayerTeam)
 	return nil
 }
 
 // GetByPlayerID gets all team associations for a player
-func (r *PlayerTeamRepositoryImpl) GetByPlayerID(ctx context.Context, playerID uint64) ([]model.PlayerTeam, error) {
+func (r *PlayerTeamRepositoryImpl) GetByPlayerID(ctx context.Context, playerID uint64) ([]domain.PlayerTeam, error) {
 	var playerTeams []model.PlayerTeam
 
 	result := r.db.WithContext(ctx).
@@ -73,7 +54,7 @@ func (r *PlayerTeamRepositoryImpl) GetByPlayerID(ctx context.Context, playerID u
 		return nil, result.Error
 	}
 
-	return playerTeams, nil
+	return r.mapper.ModelListToDomain(playerTeams), nil
 }
 
 // DeleteByPlayerID removes all team associations for a player
@@ -87,7 +68,7 @@ func (r *PlayerTeamRepositoryImpl) DeleteByPlayerID(ctx context.Context, playerI
 }
 
 // GetPlayerTeamByID retrieves a player-team relationship by its ID
-func (r *PlayerTeamRepositoryImpl) GetPlayerTeamByID(ctx context.Context, id uint64) (*model.PlayerTeam, error) {
+func (r *PlayerTeamRepositoryImpl) GetPlayerTeamByID(ctx context.Context, id uint64) (*domain.PlayerTeam, error) {
 	var playerTeam model.PlayerTeam
 	result := r.db.WithContext(ctx).
 		Preload("Player").
@@ -101,11 +82,11 @@ func (r *PlayerTeamRepositoryImpl) GetPlayerTeamByID(ctx context.Context, id uin
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting player team relationship by ID: %w", result.Error)
 	}
-	return &playerTeam, nil
+	return r.mapper.ModelToDomain(&playerTeam), nil
 }
 
 // GetPlayerTeamsByTeamID retrieves all player relationships for a specific team
-func (r *PlayerTeamRepositoryImpl) GetPlayerTeamsByTeamID(ctx context.Context, teamID uint64) ([]model.PlayerTeam, error) {
+func (r *PlayerTeamRepositoryImpl) GetPlayerTeamsByTeamID(ctx context.Context, teamID uint64) ([]domain.PlayerTeam, error) {
 	var playerTeams []model.PlayerTeam
 	err := r.db.WithContext(ctx).
 		Preload("Player").
@@ -117,11 +98,11 @@ func (r *PlayerTeamRepositoryImpl) GetPlayerTeamsByTeamID(ctx context.Context, t
 	if err != nil {
 		return nil, fmt.Errorf("error getting player teams by team ID: %w", err)
 	}
-	return playerTeams, nil
+	return r.mapper.ModelListToDomain(playerTeams), nil
 }
 
 // GetPlayerTeamsBySeasonID retrieves all player-team relationships for a specific season
-func (r *PlayerTeamRepositoryImpl) GetPlayerTeamsBySeasonID(ctx context.Context, seasonID uint64) ([]model.PlayerTeam, error) {
+func (r *PlayerTeamRepositoryImpl) GetPlayerTeamsBySeasonID(ctx context.Context, seasonID uint64) ([]domain.PlayerTeam, error) {
 	var playerTeams []model.PlayerTeam
 	err := r.db.WithContext(ctx).
 		Preload("Player").
@@ -133,11 +114,11 @@ func (r *PlayerTeamRepositoryImpl) GetPlayerTeamsBySeasonID(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("error getting player teams by season ID: %w", err)
 	}
-	return playerTeams, nil
+	return r.mapper.ModelListToDomain(playerTeams), nil
 }
 
 // GetPaginatedPlayerTeams retrieves a paginated list of player-team relationships
-func (r *PlayerTeamRepositoryImpl) GetPaginatedPlayerTeams(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.PlayerTeam, int64, error) {
+func (r *PlayerTeamRepositoryImpl) GetPaginatedPlayerTeams(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.PlayerTeam, int64, error) {
 	var playerTeams []model.PlayerTeam
 	var total int64
 
@@ -168,20 +149,21 @@ func (r *PlayerTeamRepositoryImpl) GetPaginatedPlayerTeams(ctx context.Context, 
 		return nil, 0, fmt.Errorf("error fetching player teams: %w", err)
 	}
 
-	return playerTeams, total, nil
+	return r.mapper.ModelListToDomain(playerTeams), total, nil
 }
 
 // UpdatePlayerTeam updates an existing player-team relationship
-func (r *PlayerTeamRepositoryImpl) UpdatePlayerTeam(ctx context.Context, playerTeam *model.PlayerTeam) error {
+func (r *PlayerTeamRepositoryImpl) UpdatePlayerTeam(ctx context.Context, playerTeam *domain.PlayerTeam) error {
+	modelPlayerTeam := r.mapper.DomainToModel(playerTeam)
 	return r.db.WithContext(ctx).
 		Model(&model.PlayerTeam{}).
-		Where("id = ?", playerTeam.ID).
+		Where("id = ?", modelPlayerTeam.ID).
 		Updates(map[string]interface{}{
-			"player_id":  playerTeam.PlayerID,
-			"team_id":    playerTeam.TeamID,
-			"season_id":  playerTeam.SeasonID,
-			"start_date": playerTeam.StartDate,
-			"end_date":   playerTeam.EndDate,
+			"player_id":  modelPlayerTeam.PlayerID,
+			"team_id":    modelPlayerTeam.TeamID,
+			"season_id":  modelPlayerTeam.SeasonID,
+			"start_date": modelPlayerTeam.StartDate,
+			"end_date":   modelPlayerTeam.EndDate,
 		}).Error
 }
 
@@ -215,12 +197,12 @@ func (r *PlayerTeamRepositoryImpl) checkExistingDates(query *gorm.DB, startDate 
 }
 
 // CheckOverlappingDates checks if there are overlapping dates for the same player-team-season combination
-func (r *PlayerTeamRepositoryImpl) CheckOverlappingDates(ctx context.Context, data OverlapCheckData) (bool, error) {
+func (r *PlayerTeamRepositoryImpl) CheckOverlappingDates(ctx context.Context, data domain.OverlapCheckData) (bool, error) {
 	return r.checkDateOverlaps(ctx, data)
 }
 
 // checkDateOverlaps is a helper function to reduce parameter count
-func (r *PlayerTeamRepositoryImpl) checkDateOverlaps(ctx context.Context, data OverlapCheckData) (bool, error) {
+func (r *PlayerTeamRepositoryImpl) checkDateOverlaps(ctx context.Context, data domain.OverlapCheckData) (bool, error) {
 	// Build the base query to find records with the same player-team-season
 	query := r.db.WithContext(ctx).Model(&model.PlayerTeam{}).
 		Where(wherePlayerTeamIDs, data.PlayerID, data.TeamID, data.SeasonID)

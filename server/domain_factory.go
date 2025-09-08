@@ -40,3 +40,18 @@ func CreatePlayerDomainService(playerRepo *persistence.PlayerRepositoryImpl) *do
 	var playerRepository domain.PlayerRepository = playerRepo
 	return domainservice.NewPlayerDomainService(playerRepository)
 }
+
+// CreatePlayerTeamDomainService creates a player team domain service with repository implementing domain interface
+func CreatePlayerTeamDomainService(
+	playerTeamRepo *persistence.PlayerTeamRepositoryImpl,
+	playerRepo *persistence.PlayerRepositoryImpl,
+	teamRepo *persistence.TeamRepositoryImpl,
+	seasonRepo *persistence.SeasonRepositoryImpl,
+) *domainservice.PlayerTeamDomainService {
+	// Repositories implement domain interfaces directly
+	var playerTeamRepository domain.PlayerTeamRepository = playerTeamRepo
+	var playerRepository domain.PlayerRepository = playerRepo
+	var teamRepository domain.TeamRepository = teamRepo
+	var seasonRepository domain.SeasonRepository = seasonRepo
+	return domainservice.NewPlayerTeamDomainService(playerTeamRepository, playerRepository, teamRepository, seasonRepository)
+}
