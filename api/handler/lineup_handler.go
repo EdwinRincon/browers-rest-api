@@ -13,16 +13,17 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type LineupHandler struct {
 	LineupService service.LineupService
-	PlayerService service.PlayerService
+	PlayerService domainservice.PlayerDomainService
 	MatchService  service.MatchService
 }
 
-func NewLineupHandler(lineupService service.LineupService, playerService service.PlayerService, matchService service.MatchService) *LineupHandler {
+func NewLineupHandler(lineupService service.LineupService, playerService domainservice.PlayerDomainService, matchService service.MatchService) *LineupHandler {
 	return &LineupHandler{
 		LineupService: lineupService,
 		PlayerService: playerService,

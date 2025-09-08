@@ -8,6 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
@@ -24,11 +25,11 @@ type TeamStatsService interface {
 
 type teamStatsService struct {
 	TeamStatsRepository persistence.TeamStatsRepository
-	TeamRepository      persistence.TeamRepository
-	SeasonRepository    persistence.SeasonRepository
+	TeamRepository      domain.TeamRepository
+	SeasonRepository    domain.SeasonRepository
 }
 
-func NewTeamStatsService(teamStatsRepo persistence.TeamStatsRepository, teamRepo persistence.TeamRepository, seasonRepo persistence.SeasonRepository) TeamStatsService {
+func NewTeamStatsService(teamStatsRepo persistence.TeamStatsRepository, teamRepo domain.TeamRepository, seasonRepo domain.SeasonRepository) TeamStatsService {
 	return &teamStatsService{
 		TeamStatsRepository: teamStatsRepo,
 		TeamRepository:      teamRepo,

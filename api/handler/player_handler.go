@@ -7,22 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type PlayerHandler struct {
-	PlayerService service.PlayerService
+	PlayerDomainService *domainservice.PlayerDomainService
+	PlayerMapper        *mapper.PlayerMapper
 }
 
-func NewPlayerHandler(playerService service.PlayerService) *PlayerHandler {
+func NewPlayerHandler(playerDomainService *domainservice.PlayerDomainService) *PlayerHandler {
 	return &PlayerHandler{
-		PlayerService: playerService,
+		PlayerDomainService: playerDomainService,
+		PlayerMapper:        mapper.NewPlayerMapper(),
 	}
 }
 
@@ -51,11 +53,18 @@ func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	createdPlayer, err := h.PlayerService.CreatePlayer(ctx, &createRequest)
+	// Convert DTO to domain entity
+	player := h.PlayerMapper.DTOToDomain(&createRequest)
+
+	// Create player through domain service
+	err := h.PlayerDomainService.CreatePlayer(ctx, player)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
 			helper.WriteErrorResponse(c, helper.NewConflictError("nick_name", "Nickname already exists"))
+			return
+		case errors.Is(err, constants.ErrInvalidData):
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("player", "Invalid player data"))
 			return
 		default:
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
@@ -63,7 +72,9 @@ func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 		}
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusCreated, createdPlayer, "Player created successfully")
+	// Return short player response
+	playerShort := h.PlayerMapper.DomainToShortDTO(player)
+	helper.WriteSuccessResponse(c, http.StatusCreated, playerShort, "Player created successfully")
 }
 
 // GetPlayerByID godoc
@@ -89,7 +100,7 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	player, err := h.PlayerService.GetPlayerByID(ctx, id)
+	player, err := h.PlayerDomainService.GetPlayerByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
@@ -99,7 +110,7 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 		return
 	}
 
-	playerResponse := mapper.ToPlayerResponse(player)
+	playerResponse := h.PlayerMapper.DomainToDTO(player)
 
 	helper.WriteSuccessResponse(c, http.StatusOK, playerResponse, "Player retrieved successfully")
 }
@@ -123,7 +134,7 @@ func (h *PlayerHandler) GetPlayerByNickName(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	player, err := h.PlayerService.GetPlayerByNickName(ctx, nickname)
+	player, err := h.PlayerDomainService.GetPlayerByNickName(ctx, nickname)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
@@ -133,7 +144,7 @@ func (h *PlayerHandler) GetPlayerByNickName(c *gin.Context) {
 		return
 	}
 
-	playerResponse := mapper.ToPlayerResponse(player)
+	playerResponse := h.PlayerMapper.DomainToDTO(player)
 
 	helper.WriteSuccessResponse(c, http.StatusOK, playerResponse, "Player retrieved successfully")
 }
@@ -178,14 +189,14 @@ func (h *PlayerHandler) GetPaginatedPlayers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	players, total, err := h.PlayerService.GetPaginatedPlayers(ctx, sort, order, page, pageSize)
+	players, total, err := h.PlayerDomainService.GetPaginatedPlayers(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToPlayerResponseList(players),
+		Items:      h.PlayerMapper.DomainListToDTO(players),
 		TotalCount: total,
 	}
 
@@ -226,19 +237,24 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	updatedPlayer, err := h.PlayerService.UpdatePlayer(ctx, &playerUpdateDTO, id)
+	// Convert DTO to domain entity
+	playerUpdate := h.PlayerMapper.UpdateDTOToDomain(&playerUpdateDTO)
+
+	updatedPlayer, err := h.PlayerDomainService.UpdatePlayer(ctx, id, playerUpdate)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
 		} else if errors.Is(err, constants.ErrRecordAlreadyExists) {
 			helper.WriteErrorResponse(c, helper.NewConflictError("nick_name", "Nickname already exists"))
+		} else if errors.Is(err, constants.ErrInvalidData) {
+			helper.WriteErrorResponse(c, helper.NewBadRequestError("player", "Invalid player data"))
 		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return
 	}
 
-	response := mapper.ToPlayerShort(updatedPlayer)
+	response := h.PlayerMapper.DomainToShortDTO(updatedPlayer)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player updated successfully")
 }
 
@@ -265,7 +281,7 @@ func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err = h.PlayerService.DeletePlayer(ctx, id)
+	err = h.PlayerDomainService.DeletePlayer(ctx, id)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return

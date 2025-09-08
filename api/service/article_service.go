@@ -8,6 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
@@ -22,19 +23,19 @@ type ArticleService interface {
 
 type articleService struct {
 	ArticleRepository persistence.ArticleRepository
-	SeasonService     SeasonService
+	SeasonRepository  domain.SeasonRepository
 }
 
-func NewArticleService(articleRepo persistence.ArticleRepository, seasonService SeasonService) ArticleService {
+func NewArticleService(articleRepo persistence.ArticleRepository, seasonRepo domain.SeasonRepository) ArticleService {
 	return &articleService{
 		ArticleRepository: articleRepo,
-		SeasonService:     seasonService,
+		SeasonRepository:  seasonRepo,
 	}
 }
 
 func (s *articleService) CreateArticle(ctx context.Context, article *model.Article) (*dto.ArticleShort, error) {
 	// Verify that the season exists
-	_, err := s.SeasonService.GetSeasonByID(ctx, article.SeasonID)
+	_, err := s.SeasonRepository.GetSeasonByID(ctx, article.SeasonID)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
 			return nil, constants.ErrSeasonNotFound
@@ -66,7 +67,7 @@ func (s *articleService) GetPaginatedArticles(ctx context.Context, sort string, 
 
 func (s *articleService) GetArticlesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]model.Article, int64, error) {
 	// Verify that the season exists
-	_, err := s.SeasonService.GetSeasonByID(ctx, seasonID)
+	_, err := s.SeasonRepository.GetSeasonByID(ctx, seasonID)
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
 			return nil, 0, constants.ErrSeasonNotFound
@@ -88,7 +89,7 @@ func (s *articleService) UpdateArticle(ctx context.Context, articleUpdate *dto.U
 
 	// If updating season, verify it exists
 	if articleUpdate.SeasonID != nil {
-		_, err := s.SeasonService.GetSeasonByID(ctx, *articleUpdate.SeasonID)
+		_, err := s.SeasonRepository.GetSeasonByID(ctx, *articleUpdate.SeasonID)
 		if err != nil {
 			if err == constants.ErrRecordNotFound {
 				return nil, constants.ErrSeasonNotFound

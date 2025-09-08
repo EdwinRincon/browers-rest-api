@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
@@ -19,23 +21,27 @@ const (
 )
 
 type PlayerRepository interface {
-	CreatePlayer(ctx context.Context, player *model.Player) error
-	GetPlayerByID(ctx context.Context, id uint64) (*model.Player, error)
-	GetPlayerByNickName(ctx context.Context, nickName string) (*model.Player, error)
-	GetPaginatedPlayers(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Player, int64, error)
-	UpdatePlayer(ctx context.Context, id uint64, player *model.Player) error
+	CreatePlayer(ctx context.Context, player *domain.Player) error
+	GetPlayerByID(ctx context.Context, id uint64) (*domain.Player, error)
+	GetPlayerByNickName(ctx context.Context, nickName string) (*domain.Player, error)
+	GetPaginatedPlayers(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Player, int64, error)
+	UpdatePlayer(ctx context.Context, id uint64, player *domain.Player) error
 	DeletePlayer(ctx context.Context, id uint64) error
 }
 
 type PlayerRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.PlayerMapper
 }
 
-func NewPlayerRepository(db *gorm.DB) PlayerRepository {
-	return &PlayerRepositoryImpl{db: db}
+func NewPlayerRepository(db *gorm.DB) *PlayerRepositoryImpl {
+	return &PlayerRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewPlayerMapper(),
+	}
 }
 
-func (pr *PlayerRepositoryImpl) GetPlayerByNickName(ctx context.Context, nickName string) (*model.Player, error) {
+func (pr *PlayerRepositoryImpl) GetPlayerByNickName(ctx context.Context, nickName string) (*domain.Player, error) {
 	var player model.Player
 	result := pr.db.WithContext(ctx).
 		Preload(PreloadUser).
@@ -49,11 +55,11 @@ func (pr *PlayerRepositoryImpl) GetPlayerByNickName(ctx context.Context, nickNam
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting player by nickname: %w", result.Error)
 	}
-	return &player, nil
+	return pr.mapper.ModelToDomain(&player), nil
 }
 
 // GetPlayerByID retrieves a player by their ID with preloaded relations.
-func (pr *PlayerRepositoryImpl) GetPlayerByID(ctx context.Context, id uint64) (*model.Player, error) {
+func (pr *PlayerRepositoryImpl) GetPlayerByID(ctx context.Context, id uint64) (*domain.Player, error) {
 	var player model.Player
 	result := pr.db.WithContext(ctx).
 		Preload(PreloadUser).
@@ -64,11 +70,14 @@ func (pr *PlayerRepositoryImpl) GetPlayerByID(ctx context.Context, id uint64) (*
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	return &player, result.Error
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return pr.mapper.ModelToDomain(&player), nil
 }
 
 // GetPaginatedPlayers retrieves a paginated list of players with their teams, user and total count.
-func (pr *PlayerRepositoryImpl) GetPaginatedPlayers(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Player, int64, error) {
+func (pr *PlayerRepositoryImpl) GetPaginatedPlayers(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Player, int64, error) {
 	var players []model.Player
 	var total int64
 
@@ -98,19 +107,21 @@ func (pr *PlayerRepositoryImpl) GetPaginatedPlayers(ctx context.Context, sort st
 		return nil, 0, fmt.Errorf("error fetching players: %w", err)
 	}
 
-	return players, total, nil
+	return pr.mapper.ModelListToDomain(players), total, nil
 }
 
-func (pr *PlayerRepositoryImpl) CreatePlayer(ctx context.Context, player *model.Player) error {
-	return pr.db.WithContext(ctx).Create(player).Error
+func (pr *PlayerRepositoryImpl) CreatePlayer(ctx context.Context, player *domain.Player) error {
+	modelPlayer := pr.mapper.DomainToModel(player)
+	return pr.db.WithContext(ctx).Create(modelPlayer).Error
 }
 
-func (pr *PlayerRepositoryImpl) UpdatePlayer(ctx context.Context, id uint64, player *model.Player) error {
+func (pr *PlayerRepositoryImpl) UpdatePlayer(ctx context.Context, id uint64, player *domain.Player) error {
+	modelPlayer := pr.mapper.DomainToModel(player)
 	return pr.db.WithContext(ctx).
 		Model(&model.Player{}).
 		Where(WhereIDEquals, id).
 		Select("*").
-		Updates(player).Error
+		Updates(modelPlayer).Error
 }
 
 func (pr *PlayerRepositoryImpl) DeletePlayer(ctx context.Context, id uint64) error {

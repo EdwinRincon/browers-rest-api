@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 )
@@ -45,7 +46,7 @@ func ToLineupResponse(lineup *model.Lineup) *dto.LineupResponse {
 
 	// Add player information if available
 	if lineup.Player != nil {
-		playerShort := ToPlayerShort(lineup.Player)
+		playerShort := mapper.ToPlayerShort(lineup.Player)
 		if playerShort != nil {
 			response.Player = *playerShort
 		}

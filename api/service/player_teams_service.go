@@ -7,6 +7,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
@@ -23,16 +24,16 @@ type PlayerTeamService interface {
 
 type PlayerTeamServiceImpl struct {
 	PlayerTeamRepository persistence.PlayerTeamRepository
-	PlayerRepository     persistence.PlayerRepository
-	TeamRepository       persistence.TeamRepository
-	SeasonRepository     persistence.SeasonRepository
+	PlayerRepository     domain.PlayerRepository
+	TeamRepository       domain.TeamRepository
+	SeasonRepository     domain.SeasonRepository
 }
 
 func NewPlayerTeamService(
 	playerTeamRepo persistence.PlayerTeamRepository,
-	playerRepo persistence.PlayerRepository,
-	teamRepo persistence.TeamRepository,
-	seasonRepo persistence.SeasonRepository,
+	playerRepo domain.PlayerRepository,
+	teamRepo domain.TeamRepository,
+	seasonRepo domain.SeasonRepository,
 ) PlayerTeamService {
 	return &PlayerTeamServiceImpl{
 		PlayerTeamRepository: playerTeamRepo,

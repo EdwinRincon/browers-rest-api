@@ -188,7 +188,7 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	if err != nil {
 		if err == constants.ErrRecordNotFound {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
-		} else if errors.Is(err, domainservice.ErrCannotDeleteSystemRole) {
+		} else if errors.Is(err, constants.ErrCannotDeleteSystemRole) {
 			helper.WriteErrorResponse(c, helper.NewBadRequestError("role", "Cannot delete system role"))
 		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))

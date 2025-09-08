@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 )
@@ -86,7 +87,7 @@ func ToPlayerStatResponse(playerStat *model.PlayerStat) *dto.PlayerStatResponse 
 
 	// Add nested objects when available
 	if playerStat.Player != nil {
-		response.Player = *ToPlayerShort(playerStat.Player)
+		response.Player = *mapper.ToPlayerShort(playerStat.Player)
 	}
 
 	if playerStat.Match != nil {

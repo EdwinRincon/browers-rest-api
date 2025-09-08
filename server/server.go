@@ -36,7 +36,7 @@ type Repositories struct {
 	User       *persistence.UserRepositoryImpl
 	Role       *persistence.RoleRepositoryImpl
 	Team       *persistence.TeamRepositoryImpl
-	Player     persistence.PlayerRepository
+	Player     *persistence.PlayerRepositoryImpl
 	PlayerTeam persistence.PlayerTeamRepository
 	Season     *persistence.SeasonRepositoryImpl
 	Article    persistence.ArticleRepository
@@ -59,7 +59,7 @@ type Services struct {
 	Match service.MatchService
 
 	// Domain-based services (hexagonal architecture)
-	// PlayerDomain service.PlayerDomainService // Will be added after Player migration
+	PlayerDomain *domainservice.PlayerDomainService
 	RoleDomain   *domainservice.RoleDomainService
 	SeasonDomain *domainservice.SeasonDomainService
 	UserDomain   *domainservice.UserDomainService
@@ -67,11 +67,11 @@ type Services struct {
 }
 
 type Handlers struct {
-	User *handler.UserHandler
-	Role *handler.RoleHandler
-	Team *handler.TeamHandler
+	User   *handler.UserHandler
+	Role   *handler.RoleHandler
+	Team   *handler.TeamHandler
+	Player *handler.PlayerHandler
 	// Note: Following handlers removed until their entities are migrated:
-	// Player     *handler.PlayerHandler
 	// PlayerTeam *handler.PlayerTeamHandler
 	Season *handler.SeasonHandler
 	// Article    *handler.ArticleHandler
@@ -256,6 +256,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	seasonDomainService := CreateSeasonDomainService(repos.Season)
 	userDomainService := CreateUserDomainService(repos.User)
 	teamDomainService := CreateTeamDomainService(repos.Team)
+	playerDomainService := CreatePlayerDomainService(repos.Player)
 
 	return &Services{
 		JWT:  jwtService,
@@ -270,7 +271,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		// PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
 
 		// Domain-based services (hexagonal architecture)
-		// PlayerDomain: service.NewPlayerDomainService(playerDomainAdapter, seasonPort, repos.PlayerTeam), // Will fail until Player migration
+		PlayerDomain: playerDomainService,
 		RoleDomain:   roleDomainService,
 		SeasonDomain: seasonDomainService,
 		UserDomain:   userDomainService,
@@ -280,11 +281,11 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 
 func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
-		User: handler.NewUserHandler(services.Auth, services.UserDomain, services.RoleDomain),
-		Role: handler.NewRoleHandler(services.RoleDomain),
-		Team: handler.NewTeamHandler(services.TeamDomain),
+		User:   handler.NewUserHandler(services.Auth, services.UserDomain, services.RoleDomain),
+		Role:   handler.NewRoleHandler(services.RoleDomain),
+		Team:   handler.NewTeamHandler(services.TeamDomain),
+		Player: handler.NewPlayerHandler(services.PlayerDomain),
 		// Note: Following handlers commented out until their entities are migrated:
-		// Player:     handler.NewPlayerHandler(services.Player),
 		// PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeam),
 		Season: handler.NewSeasonHandler(services.SeasonDomain),
 		// Article:    handler.NewArticleHandler(services.Article),
@@ -299,8 +300,8 @@ func initializeRoutes(r *gin.Engine, handlers *Handlers) {
 	router.InitializeUserRoutes(r, handlers.User)
 	router.InitializeRoleRoutes(r, handlers.Role)
 	router.InitializeTeamRoutes(r, handlers.Team)
+	router.InitializePlayerRoutes(r, handlers.Player)
 	// Note: Following routes commented out until their entities are migrated:
-	// router.InitializePlayerRoutes(r, handlers.Player)
 	// router.InitializePlayerTeamRoutes(r, handlers.PlayerTeam)
 	router.InitializeSeasonRoutes(r, handlers.Season)
 	// router.InitializeArticleRoutes(r, handlers.Article)

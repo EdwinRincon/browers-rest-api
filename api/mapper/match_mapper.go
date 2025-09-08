@@ -95,7 +95,7 @@ func ToMatchResponse(match *model.Match) *dto.MatchResponse {
 	}
 
 	if match.MVPPlayer != nil {
-		mvpPlayer := ToPlayerShort(match.MVPPlayer)
+		mvpPlayer := mapper.ToPlayerShort(match.MVPPlayer)
 		resp.MVPPlayer = mvpPlayer
 	}
 
@@ -163,7 +163,7 @@ func ToMatchDetailResponse(match *model.Match) *dto.MatchDetailResponse {
 	}
 
 	if match.MVPPlayer != nil {
-		detail.MVPPlayer = ToPlayerShort(match.MVPPlayer)
+		detail.MVPPlayer = mapper.ToPlayerShort(match.MVPPlayer)
 	}
 
 	// Map lineups if available
@@ -183,7 +183,7 @@ func mapLineups(lineups []model.Lineup) []dto.LineupShort {
 
 	result := make([]dto.LineupShort, 0, len(lineups))
 	for _, lineup := range lineups {
-		if playerShort := ToPlayerShort(lineup.Player); playerShort != nil {
+		if playerShort := mapper.ToPlayerShort(lineup.Player); playerShort != nil {
 			result = append(result, dto.LineupShort{
 				ID:     lineup.ID,
 				Player: *playerShort,
@@ -201,7 +201,7 @@ func mapPlayerStats(stats []model.PlayerStat) []dto.PlayerStatShort {
 
 	result := make([]dto.PlayerStatShort, 0, len(stats))
 	for _, stat := range stats {
-		if playerShort := ToPlayerShort(stat.Player); playerShort != nil {
+		if playerShort := mapper.ToPlayerShort(stat.Player); playerShort != nil {
 			result = append(result, dto.PlayerStatShort{
 				ID:       stat.ID,
 				Player:   *playerShort,
