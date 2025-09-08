@@ -41,7 +41,7 @@ func NewPlayerHandler(playerDomainService *domainservice.PlayerDomainService) *P
 // @Failure      409     {object}  helper.AppError "Conflict (e.g., nickname exists)"
 // @Failure      500     {object}  helper.AppError "Internal server error"
 // @Router       /admin/players [post]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 	var createRequest dto.CreatePlayerRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -88,7 +88,7 @@ func (h *PlayerHandler) CreatePlayer(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Player not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /players/{id} [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 	playerID := c.Param("id")
 	id, err := strconv.ParseUint(playerID, 10, 64)
@@ -126,7 +126,7 @@ func (h *PlayerHandler) GetPlayerByID(c *gin.Context) {
 // @Failure      404       {object}  helper.AppError "Player not found"
 // @Failure      500       {object}  helper.AppError "Internal server error"
 // @Router       /players/nickname/{nickname} [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerHandler) GetPlayerByNickName(c *gin.Context) {
 	nickname := c.Param("nickname")
 
@@ -150,19 +150,20 @@ func (h *PlayerHandler) GetPlayerByNickName(c *gin.Context) {
 }
 
 // GetPaginatedPlayers godoc
-// @Summary      Get paginated players
-// @Description  Retrieves a paginated list of players with sorting and ordering
-// @Tags         players
-// @ID           getPaginatedPlayers
-// @Param        page      query     int     false  "Page number (0-based)"
-// @Param        pageSize  query     int     false  "Number of items per page (default 10)"
-// @Param        sort      query     string  false  "Sort field (e.g., nickname, rating)"
-// @Param        order     query     string  false  "Sort order (asc/desc)"
-// @Success      200       {object}  map[string]interface{} "Players retrieved successfully"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /players [get]
-// @Security     ApiKeyAuth
+// @Summary Get paginated players
+// @Description Retrieve players with pagination, optional sorting, and ordering.
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.PlayerResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /players [get]
+// @Security BearerAuth
 func (h *PlayerHandler) GetPaginatedPlayers(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "created_at")
 	order := c.DefaultQuery("order", "desc")
@@ -218,7 +219,7 @@ func (h *PlayerHandler) GetPaginatedPlayers(c *gin.Context) {
 // @Failure      409     {object}  helper.AppError "Conflict (e.g., nickname exists)"
 // @Failure      500     {object}  helper.AppError "Internal server error"
 // @Router       /admin/players/{id} [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -269,7 +270,7 @@ func (h *PlayerHandler) UpdatePlayer(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Player not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /admin/players/{id} [delete]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerHandler) DeletePlayer(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)

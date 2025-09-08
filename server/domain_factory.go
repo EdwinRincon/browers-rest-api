@@ -45,3 +45,12 @@ func CreatePlayerTeamDomainService(
 ) *domainservice.PlayerTeamDomainService {
 	return domainservice.NewPlayerTeamDomainService(playerTeamRepo, playerRepo, teamRepo, seasonRepo)
 }
+
+// CreateLineupDomainService creates a lineup domain service with repository implementing domain interface
+func CreateLineupDomainService(
+	lineupRepo domain.LineupRepository,
+	matchRepo domain.MatchRepository,
+	playerRepo domain.PlayerRepository,
+) *domainservice.LineupDomainService {
+	return domainservice.NewLineupDomainService(lineupRepo, matchRepo, playerRepo)
+}

@@ -39,10 +39,10 @@ func NewRoleHandler(roleDomainService *domainservice.RoleDomainService) *RoleHan
 // @ID           getRoleByID
 // @Param        id   path      int  true  "Role ID"
 // @Success      200  {object}  dto.RoleResponse
-// @Failure      400  {object}  helper.AppError
-// @Failure      404  {object}  helper.AppError
+// @Failure      400  {object}  helper.AppError "Invalid input"
+// @Failure      404  {object}  helper.AppError "Role not found"
 // @Router       /admin/roles/{id} [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 64)
@@ -75,10 +75,10 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 // @Produce      json
 // @Param        role  body      dto.CreateRoleRequest  true  "Role data"
 // @Success      201   {object}  dto.RoleResponse
-// @Failure      400   {object}  helper.AppError
-// @Failure      409   {object}  helper.AppError
+// @Failure      400   {object}  helper.AppError "Invalid input"
+// @Failure      409   {object}  helper.AppError "Role already exists"
 // @Router       /admin/roles [post]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var roleDTO dto.CreateRoleRequest
 	if err := c.ShouldBindJSON(&roleDTO); err != nil {
@@ -118,11 +118,11 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 // @Param        id    path      int  true  "Role ID"
 // @Param        role  body      dto.UpdateRoleRequest  true  "Updated role data"
 // @Success      200   {object}  dto.RoleResponse
-// @Failure      400   {object}  helper.AppError
-// @Failure      404   {object}  helper.AppError
-// @Failure      409   {object}  helper.AppError
+// @Failure      400   {object}  helper.AppError "Invalid input"
+// @Failure      404   {object}  helper.AppError "Role not found"
+// @Failure      409   {object}  helper.AppError "Role already exists"
 // @Router       /admin/roles/{id} [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 64)
@@ -171,7 +171,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 // @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Router       /admin/roles/{id} [delete]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	roleID := c.Param("id")
 	id, err := strconv.ParseUint(roleID, 10, 64)
@@ -200,20 +200,19 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 }
 
 // GetPaginatedRoles godoc
-// @Summary      List paginated roles
-// @Description  Retrieves a paginated list of roles with optional sorting
-// @Tags         roles
-// @ID           listPaginatedRoles
-// @Produce      json
-// @Param        sort      query     string  false  "Field to sort by (e.g. name, created_at)"
-// @Param        order     query     string  false  "Sort direction: asc or desc"  Enums(asc, desc)
-// @Param        page      query     int     false  "Page number (starts at 0)"
-// @Param        pageSize  query     int     false  "Number of items per page"
-// @Success      200       {object}  helper.PaginatedResponse{items=[]dto.RoleResponse, totalCount=int}
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError
-// @Router       /admin/roles [get]
-// @Security     ApiKeyAuth
+// @Summary Get paginated roles
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.RoleResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/roles [get]
+// @Security BearerAuth
 func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "created_at")
 	order := c.DefaultQuery("order", "desc")

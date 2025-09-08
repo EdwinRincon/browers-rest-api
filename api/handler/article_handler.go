@@ -39,7 +39,7 @@ func NewArticleHandler(articleService service.ArticleService) *ArticleHandler {
 // @Failure      404   {object}  helper.AppError "Season not found"
 // @Failure      500   {object}  helper.AppError "Internal server error"
 // @Router       /admin/articles [post]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 	var createRequest dto.CreateArticleRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -110,15 +110,19 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 // @Summary      Get paginated articles
 // @Description  Retrieves a paginated list of articles with sorting and ordering
 // @Tags         articles
-// @ID           getPaginatedArticles
-// @Param        page      query     int     false  "Page number (0-based)"
-// @Param        pageSize  query     int     false  "Number of items per page (default 10)"
-// @Param        sort      query     string  false  "Sort field (e.g., title, date, created_at)"
-// @Param        order     query     string  false  "Sort order (asc/desc)"
-// @Success      200       {object}  map[string]interface{} "Articles retrieved successfully"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /articles [get]
+// @Summary Get paginated articles
+// @Description Retrieve articles with pagination, optional sorting, and ordering.
+// @Tags articles
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.ArticleResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /articles [get]
 func (h *ArticleHandler) GetPaginatedArticles(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "created_at")
 	order := c.DefaultQuery("order", "desc")
@@ -241,7 +245,7 @@ func (h *ArticleHandler) GetArticlesBySeasonID(c *gin.Context) {
 // @Failure      404      {object}  helper.AppError "Article or Season not found"
 // @Failure      500      {object}  helper.AppError "Internal server error"
 // @Router       /admin/articles/{id} [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -288,7 +292,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 // @Success      204 "No Content"
 // @Failure      400  {object}  helper.AppError "Invalid ID format"
 // @Router       /admin/articles/{id} [delete]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)

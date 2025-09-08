@@ -40,7 +40,7 @@ func NewTeamStatsHandler(teamStatsService service.TeamStatsService) *TeamStatsHa
 // @Failure      409        {object}  helper.AppError "Conflict (e.g., stats already exist for this team/season)"
 // @Failure      500        {object}  helper.AppError "Internal server error"
 // @Router       /admin/team-stats [post]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 	var createRequest dto.CreateTeamStatsRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -87,7 +87,7 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Team stats not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /team-stats/{id} [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -125,7 +125,7 @@ func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 // @Failure      404        {object}  helper.AppError "Season not found"
 // @Failure      500        {object}  helper.AppError "Internal server error"
 // @Router       /seasons/{id}/team-stats [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *TeamStatsHandler) GetTeamStatsBySeasonID(c *gin.Context) {
 	seasonIDStr := c.Param("id")
 	seasonID, err := strconv.ParseUint(seasonIDStr, 10, 64)
@@ -163,7 +163,7 @@ func (h *TeamStatsHandler) GetTeamStatsBySeasonID(c *gin.Context) {
 // @Failure      404      {object}  helper.AppError "Team not found"
 // @Failure      500      {object}  helper.AppError "Internal server error"
 // @Router       /teams/{id}/stats [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *TeamStatsHandler) GetTeamStatsByTeamID(c *gin.Context) {
 	teamIDStr := c.Param("id")
 	teamID, err := strconv.ParseUint(teamIDStr, 10, 64)
@@ -194,16 +194,20 @@ func (h *TeamStatsHandler) GetTeamStatsByTeamID(c *gin.Context) {
 // @Summary      Get paginated team stats
 // @Description  Returns a paginated list of team statistics
 // @Tags         team-stats
-// @ID           getPaginatedTeamStats
-// @Param        page      query     int     false  "Page number (default: 0)"
-// @Param        pageSize  query     int     false  "Page size (default: 10)"
-// @Param        sort      query     string  false  "Sort field (default: rank)"
-// @Param        order     query     string  false  "Sort order (asc or desc, default: asc)"
-// @Success      200       {object}  helper.PaginatedResponse{data=[]dto.TeamStatsResponse} "Success"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /team-stats [get]
-// @Security     ApiKeyAuth
+// @Summary Get paginated team stats
+// @Description Retrieve team stats with pagination, optional sorting, and ordering.
+// @Tags team-stats
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(asc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.TeamStatsResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /team-stats [get]
+// @Security BearerAuth
 func (h *TeamStatsHandler) GetPaginatedTeamStats(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "rank")
 	order := c.DefaultQuery("order", "asc")
@@ -256,7 +260,7 @@ func (h *TeamStatsHandler) GetPaginatedTeamStats(c *gin.Context) {
 // @Failure      409        {object}  helper.AppError "Conflict (e.g., duplicate team/season combination)"
 // @Failure      500        {object}  helper.AppError "Internal server error"
 // @Router       /admin/team-stats/{id} [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -310,7 +314,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /admin/team-stats/{id} [delete]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *TeamStatsHandler) DeleteTeamStats(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)

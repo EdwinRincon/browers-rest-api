@@ -29,19 +29,18 @@ func NewTeamHandler(teamDomainService *domainservice.TeamDomainService) *TeamHan
 }
 
 // CreateTeam godoc
-// @Summary      Create a new team
-// @Description  Creates a new team with the provided data
-// @Tags         teams
-// @ID           createTeam
-// @Accept       json
-// @Produce      json
-// @Param        team  body      dto.CreateTeamRequest  true  "Team data"
-// @Success      201   {object}  dto.TeamShort "Created"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      409   {object}  helper.AppError "Conflict (e.g., team name exists)"
-// @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /admin/teams [post]
-// @Security     ApiKeyAuth
+// @Summary Create a new team
+// @Tags teams
+// @ID createTeam
+// @Accept json
+// @Produce json
+// @Param team body dto.CreateTeamRequest true "Team data"
+// @Success 201 {object} dto.TeamShort "Created"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 409 {object} helper.AppError "Conflict (e.g., team name exists)"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/teams [post]
+// @Security BearerAuth
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var createRequest dto.CreateTeamRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -73,17 +72,16 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 }
 
 // GetTeamByID godoc
-// @Summary      Get a team by ID
-// @Description  Returns the details of a team by its ID
-// @Tags         teams
-// @ID           getTeamByID
-// @Param        id   path      int  true  "Team ID"
-// @Success      200  {object}  model.Team "Success"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Team not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /teams/{id} [get]
-// @Security     ApiKeyAuth
+// @Summary Get a team by ID
+// @Tags teams
+// @ID getTeamByID
+// @Param id path int true "Team ID"
+// @Success 200 {object} model.Team "Success"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Team not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /teams/{id} [get]
+// @Security BearerAuth
 func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
@@ -110,19 +108,19 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 }
 
 // GetPaginatedTeams godoc
-// @Summary      List teams
-// @Description  Returns a paginated list of teams
-// @Tags         teams
-// @ID           GetPaginatedTeams
-// @Param        page      query     int     false  "Page number (default: 0)"
-// @Param        pageSize  query     int     false  "Page size (default: 10)"
-// @Param        sort      query     string  false  "Sort field (default: id)"
-// @Param        order     query     string  false  "Sort order (asc or desc, default: asc)"
-// @Success      200       {object}  helper.PaginatedResponse{data=[]dto.TeamResponse} "Success"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /teams [get]
-// @Security     ApiKeyAuth
+// @Summary Get paginated teams
+// @Tags teams
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(asc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.TeamResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /teams [get]
+// @Security BearerAuth
 func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "id")
 	order := c.DefaultQuery("order", "asc")
@@ -161,21 +159,20 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 }
 
 // UpdateTeam godoc
-// @Summary      Update a team
-// @Description  Updates a team with the provided data
-// @Tags         teams
-// @ID           updateTeam
-// @Accept       json
-// @Produce      json
-// @Param        id    path      int                  true  "Team ID"
-// @Param        team  body      dto.UpdateTeamRequest  true  "Updated team data"
-// @Success      200   {object}  dto.TeamResponse "Success"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      404   {object}  helper.AppError "Team not found"
-// @Failure      409   {object}  helper.AppError "Conflict (e.g., team name exists)"
-// @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /admin/teams/{id} [put]
-// @Security     ApiKeyAuth
+// @Summary Update a team
+// @Tags teams
+// @ID updateTeam
+// @Accept json
+// @Produce json
+// @Param id path int true "Team ID"
+// @Param team body dto.UpdateTeamRequest true "Updated team data"
+// @Success 200 {object} dto.TeamResponse "Success"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Team not found"
+// @Failure 409 {object} helper.AppError "Conflict (e.g., team name exists)"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/teams/{id} [put]
+// @Security BearerAuth
 func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)
@@ -214,17 +211,16 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 }
 
 // DeleteTeam godoc
-// @Summary      Delete a team
-// @Description  Deletes a team by its ID
-// @Tags         teams
-// @ID           deleteTeam
-// @Param        id   path      int  true  "Team ID"
-// @Success      204 "No Content"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Team not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /admin/teams/{id} [delete]
-// @Security     ApiKeyAuth
+// @Summary Delete a team
+// @Tags teams
+// @ID deleteTeam
+// @Param id path int true "Team ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Team not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/teams/{id} [delete]
+// @Security BearerAuth
 func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	teamID := c.Param("id")
 	id, err := strconv.ParseUint(teamID, 10, 64)

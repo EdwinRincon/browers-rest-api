@@ -29,19 +29,18 @@ func NewPlayerTeamHandler(playerTeamDomainService *domainservice.PlayerTeamDomai
 }
 
 // CreatePlayerTeam godoc
-// @Summary      Create a new player-team relationship
-// @Description  Creates a new player-team relationship with the provided data
-// @Tags         playerTeams
-// @ID           createPlayerTeam
-// @Accept       json
-// @Produce      json
-// @Param        playerTeam  body      dto.CreatePlayerTeamRequest  true  "Player-Team relationship data"
-// @Success      201   {object}  dto.PlayerTeamResponse  "Player-Team relationship created successfully"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      409   {object}  helper.AppError "Conflict (e.g., date overlap)"
-// @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /admin/player-teams [post]
-// @Security     ApiKeyAuth
+// @Summary Create a new player-team relationship
+// @Tags playerTeams
+// @ID createPlayerTeam
+// @Accept json
+// @Produce json
+// @Param playerTeam body dto.CreatePlayerTeamRequest true "Player-Team relationship data"
+// @Success 201 {object} dto.PlayerTeamResponse "Player-Team relationship created successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 409 {object} helper.AppError "Conflict (e.g., date overlap)"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/player-teams [post]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 	var createRequest dto.CreatePlayerTeamRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -82,17 +81,16 @@ func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 }
 
 // GetPlayerTeamByID godoc
-// @Summary      Get player-team relationship by ID
-// @Description  Retrieves a player-team relationship by its ID
-// @Tags         playerTeams
-// @ID           getPlayerTeamByID
-// @Param        id  path      int  true  "PlayerTeam ID"
-// @Success      200  {object}  dto.PlayerTeamResponse  "Player-team relationship retrieved successfully"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /player-teams/{id} [get]
-// @Security     ApiKeyAuth
+// @Summary Get player-team relationship by ID
+// @Tags playerTeams
+// @ID getPlayerTeamByID
+// @Param id path int true "PlayerTeam ID"
+// @Success 200 {object} dto.PlayerTeamResponse "Player-team relationship retrieved successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /player-teams/{id} [get]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -120,18 +118,17 @@ func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 }
 
 // GetPlayerTeamsByPlayerID godoc
-// @Summary      Get player-team relationships by player ID
-// @Description  Retrieves all team relationships for a specific player
-// @Tags         playerTeams
-// @ID           get-player-teams-by-player-id
-// @Param        id  path      int  true  "Player ID"
-// @Produce      json
-// @Success      200  {array}   dto.PlayerTeamResponse  "Player-team relationships retrieved successfully"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Player not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /players/{id}/teams [get]
-// @Security     ApiKeyAuth
+// @Summary Get player-team relationships by player ID
+// @Tags playerTeams
+// @ID get-player-teams-by-player-id
+// @Param id path int true "Player ID"
+// @Produce json
+// @Success 200 {array} dto.PlayerTeamResponse "Player-team relationships retrieved successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Player not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /players/{id}/teams [get]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) GetPlayerTeamsByPlayerID(c *gin.Context) {
 	playerID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -163,18 +160,17 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByPlayerID(c *gin.Context) {
 }
 
 // GetPlayerTeamsByTeamID godoc
-// @Summary      Get player-team relationships by team ID
-// @Description  Retrieves all player relationships for a specific team
-// @Tags         playerTeams
-// @ID           getPlayerTeamsByTeamID
-// @Param        id  path      int  true  "Team ID"
-// @Produce      json
-// @Success      200  {array}   dto.PlayerTeamResponse  "Player-team relationships retrieved successfully"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Team not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /teams/{id}/players [get]
-// @Security     ApiKeyAuth
+// @Summary Get player-team relationships by team ID
+// @Tags playerTeams
+// @ID getPlayerTeamsByTeamID
+// @Param id path int true "Team ID"
+// @Produce json
+// @Success 200 {array} dto.PlayerTeamResponse "Player-team relationships retrieved successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Team not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /teams/{id}/players [get]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) GetPlayerTeamsByTeamID(c *gin.Context) {
 	teamID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -206,18 +202,17 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByTeamID(c *gin.Context) {
 }
 
 // GetPlayerTeamsBySeasonID godoc
-// @Summary      Get player-team relationships by season ID
-// @Description  Retrieves all player-team relationships for a specific season
-// @Tags         playerTeams
-// @ID           getPlayerTeamsBySeasonID
-// @Param        id  path      int  true  "Season ID"
-// @Produce      json
-// @Success      200  {array}   dto.PlayerTeamResponse  "Player-team relationships retrieved successfully"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Season not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /seasons/{id}/player-teams [get]
-// @Security     ApiKeyAuth
+// @Summary Get player-team relationships by season ID
+// @Tags playerTeams
+// @ID getPlayerTeamsBySeasonID
+// @Param id path int true "Season ID"
+// @Produce json
+// @Success 200 {array} dto.PlayerTeamResponse "Player-team relationships retrieved successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Season not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /seasons/{id}/player-teams [get]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) GetPlayerTeamsBySeasonID(c *gin.Context) {
 	seasonID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -249,19 +244,19 @@ func (h *PlayerTeamHandler) GetPlayerTeamsBySeasonID(c *gin.Context) {
 }
 
 // GetPaginatedPlayerTeams godoc
-// @Summary      Get paginated player-team relationships
-// @Description  Retrieves a paginated list of player-team relationships with sorting and ordering
-// @Tags         playerTeams
-// @ID           getPaginatedPlayerTeams
-// @Param        page      query     int     false  "Page number (0-based)"
-// @Param        pageSize  query     int     false  "Number of items per page (default 10)"
-// @Param        sort      query     string  false  "Sort field (e.g., created_at)"
-// @Param        order     query     string  false  "Sort order (asc/desc)"
-// @Success      200       {object}  map[string]interface{} "Player-team relationships retrieved successfully"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /player-teams [get]
-// @Security     ApiKeyAuth
+// @Summary Get paginated player-team relationships
+// @Tags playerTeams
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.PlayerTeamResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /player-teams [get]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "created_at")
 	order := c.DefaultQuery("order", "desc")
@@ -305,21 +300,20 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 }
 
 // UpdatePlayerTeam godoc
-// @Summary      Update a player-team relationship
-// @Description  Updates an existing player-team relationship by ID
-// @Tags         playerTeams
-// @ID           updatePlayerTeam
-// @Accept       json
-// @Produce      json
-// @Param        id  path      int  true  "PlayerTeam ID"
-// @Param        playerTeam  body      dto.UpdatePlayerTeamRequest  true  "Updated player-team data"
-// @Success      200  {object}  dto.PlayerTeamResponse  "Player-team relationship updated successfully"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Not found"
-// @Failure      409  {object}  helper.AppError "Conflict (e.g., date overlap)"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /admin/player-teams/{id} [put]
-// @Security     ApiKeyAuth
+// @Summary Update a player-team relationship
+// @Tags playerTeams
+// @ID updatePlayerTeam
+// @Accept json
+// @Produce json
+// @Param id path int true "PlayerTeam ID"
+// @Param playerTeam body dto.UpdatePlayerTeamRequest true "Updated player-team data"
+// @Success 200 {object} dto.PlayerTeamResponse "Player-team relationship updated successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Not found"
+// @Failure 409 {object} helper.AppError "Conflict (e.g., date overlap)"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/player-teams/{id} [put]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -377,17 +371,16 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 }
 
 // DeletePlayerTeam godoc
-// @Summary      Delete a player-team relationship
-// @Description  Deletes a player-team relationship by ID
-// @Tags         playerTeams
-// @ID           deletePlayerTeam
-// @Param        id  path      int  true  "PlayerTeam ID"
-// @Success      204 "No Content"
-// @Failure      400  {object}  helper.AppError "Invalid input"
-// @Failure      404  {object}  helper.AppError "Not found"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /admin/player-teams/{id} [delete]
-// @Security     ApiKeyAuth
+// @Summary Delete a player-team relationship
+// @Tags playerTeams
+// @ID deletePlayerTeam
+// @Param id path int true "PlayerTeam ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "Not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/player-teams/{id} [delete]
+// @Security BearerAuth
 func (h *PlayerTeamHandler) DeletePlayerTeam(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

@@ -42,7 +42,7 @@ func NewSeasonHandler(seasonDomainService *domainService.SeasonDomainService) *S
 // @Failure      409     {object}  helper.AppError "Conflict (e.g., season already exists)"
 // @Failure      500     {object}  helper.AppError "Internal server error"
 // @Router       /admin/seasons [post]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 	var createRequest dto.CreateSeasonRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -85,7 +85,7 @@ func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Season not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /seasons/{id} [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)
@@ -121,7 +121,7 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "No current season found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /seasons/current [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *SeasonHandler) GetCurrentSeason(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
@@ -142,19 +142,20 @@ func (h *SeasonHandler) GetCurrentSeason(c *gin.Context) {
 }
 
 // GetPaginatedSeasons godoc
-// @Summary      List seasons with pagination and sorting
-// @Description  Retrieves a paginated list of seasons with sorting options
-// @Tags         seasons
-// @ID           listSeasons
-// @Param        page      query     int     false  "Page number (0-based, default: 0)"
-// @Param        pageSize  query     int     false  "Items per page (default: 10)"
-// @Param        sort      query     string  false  "Sort field (e.g., year, created_at)"
-// @Param        order     query     string  false  "Sort order (asc/desc)"
-// @Success      200       {object}  helper.PaginatedResponse "Seasons listed successfully"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /seasons [get]
-// @Security     ApiKeyAuth
+// @Summary Get paginated seasons
+// @Description Retrieve seasons with pagination, optional sorting, and ordering.
+// @Tags seasons
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.SeasonResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /seasons [get]
+// @Security BearerAuth
 func (h *SeasonHandler) GetPaginatedSeasons(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "year")
 	order := c.DefaultQuery("order", "desc")
@@ -216,7 +217,7 @@ func (h *SeasonHandler) GetPaginatedSeasons(c *gin.Context) {
 // @Failure      409     {object}  helper.AppError "Conflict (e.g., year already exists)"
 // @Failure      500     {object}  helper.AppError "Internal server error"
 // @Router       /admin/seasons/{id} [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)
@@ -293,7 +294,7 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Season not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /admin/seasons/{id}/set-current [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *SeasonHandler) SetCurrentSeason(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)
@@ -336,7 +337,7 @@ func (h *SeasonHandler) SetCurrentSeason(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Season not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /admin/seasons/{id} [delete]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *SeasonHandler) DeleteSeason(c *gin.Context) {
 	seasonID := c.Param("id")
 	id, err := strconv.ParseUint(seasonID, 10, 64)

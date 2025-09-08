@@ -41,7 +41,7 @@ func NewMatchHandler(matchDomainService *service.MatchDomainService) *MatchHandl
 // @Failure      409    {object}  helper.AppError "Conflict"
 // @Failure      500    {object}  helper.AppError "Internal server error"
 // @Router       /admin/matches [post]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *MatchHandler) CreateMatch(c *gin.Context) {
 	var createRequest dto.CreateMatchRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -77,7 +77,7 @@ func (h *MatchHandler) CreateMatch(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Match not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /matches/{id} [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)
@@ -115,7 +115,7 @@ func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Match not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /matches/{id}/detail [get]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *MatchHandler) GetDetailedMatchByID(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)
@@ -145,16 +145,19 @@ func (h *MatchHandler) GetDetailedMatchByID(c *gin.Context) {
 // GetPaginatedMatches godoc
 // @Summary      Get paginated matches
 // @Description  Retrieves a paginated list of matches with sorting and ordering
-// @Tags         matches
-// @ID           getPaginatedMatches
-// @Param        page      query     int     false  "Page number (0-based)"
-// @Param        pageSize  query     int     false  "Number of items per page (default 10)"
-// @Param        sort      query     string  false  "Sort field (e.g., date, status)"
-// @Param        order     query     string  false  "Sort order (asc/desc)"
-// @Success      200       {object}  map[string]interface{} "Matches retrieved successfully"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /matches [get]
+// @Summary Get paginated matches
+// @Description Retrieve matches with pagination, optional sorting, and ordering.
+// @Tags matches
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.MatchResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /matches [get]
 func (h *MatchHandler) GetPaginatedMatches(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "date")
 	order := c.DefaultQuery("order", "desc")
@@ -356,7 +359,7 @@ func (h *MatchHandler) GetNextMatchByTeamID(c *gin.Context) {
 // @Failure      404    {object}  helper.AppError "Match not found"
 // @Failure      500    {object}  helper.AppError "Internal server error"
 // @Router       /admin/matches/{id} [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)
@@ -402,7 +405,7 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 // @Failure      400  {object}  helper.AppError "Invalid input"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /admin/matches/{id} [delete]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *MatchHandler) DeleteMatch(c *gin.Context) {
 	matchID := c.Param("id")
 	id, err := strconv.ParseUint(matchID, 10, 64)

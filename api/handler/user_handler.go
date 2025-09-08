@@ -187,15 +187,14 @@ func (h *UserHandler) performGoogleOAuth(c *gin.Context) (*GoogleUserInfo, error
 }
 
 // GoogleCallback godoc
-// @Summary      Google OAuth2 callback
-// @Description  Handles the OAuth2 callback from Google and logs in or registers the user
-// @Tags         users
-// @ID           googleCallback
-// @Produce      json
-// @Success      200  {object}  dto.UserResponse "Successful authentication and user data"
-// @Failure      401  {object}  helper.AppError "Authentication failed or invalid state"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /users/auth/google/callback [get]
+// @Summary Google OAuth2 callback
+// @Tags users
+// @ID googleCallback
+// @Produce json
+// @Success 200 {object} dto.UserResponse "Successful authentication and user data"
+// @Failure 401 {object} helper.AppError "Authentication failed or invalid state"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /users/auth/google/callback [get]
 func (h *UserHandler) GoogleCallback(c *gin.Context) {
 	googleUser, err := h.performGoogleOAuth(c)
 	if err != nil {
@@ -255,14 +254,13 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 }
 
 // LoginWithGoogle godoc
-// @Summary      Initiate Google OAuth2 login
-// @Description  Initiates the OAuth2 flow with Google and returns the authorization URL
-// @Tags         users
-// @ID           loginWithGoogle
-// @Produce      json
-// @Success      200  {object}  map[string]string "Authorization URL generated"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /users/auth/google [get]
+// @Summary Initiate Google OAuth2 login
+// @Tags users
+// @ID loginWithGoogle
+// @Produce json
+// @Success 200 {object} map[string]string "Authorization URL generated"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /users/auth/google [get]
 func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 	state, err := helper.GenerateRandomState()
 	if err != nil {
@@ -289,19 +287,18 @@ func (h *UserHandler) LoginWithGoogle(c *gin.Context) {
 }
 
 // CreateUser godoc
-// @Summary      Create a new user
-// @Description  Creates a new user with the provided data. If role_id is not provided, assigns the default user role.
-// @Tags         users
-// @ID           createUser
-// @Accept       json
-// @Produce      json
-// @Param        user  body      dto.CreateUserRequest  true  "User data"
-// @Success      201   {object}  dto.UserShort  "User created successfully"
-// @Failure      400   {object}  helper.AppError "Invalid input"
-// @Failure      409   {object}  helper.AppError "Conflict (e.g., username exists)"
-// @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /admin/users [post]
-// @Security     ApiKeyAuth
+// @Summary Create a new user
+// @Tags users
+// @ID createUser
+// @Accept json
+// @Produce json
+// @Param user body dto.CreateUserRequest true "User data"
+// @Success 201 {object} dto.UserShort "User created successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 409 {object} helper.AppError "Conflict (e.g., username exists)"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/users [post]
+// @Security BearerAuth
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var createRequest dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -353,17 +350,16 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 
 // GetUserByUsername godoc
-// @Summary      Get a user by username
-// @Description  Retrieves a user by their username
-// @Tags         users
-// @ID           getUserByUsername
-// @Param        username  path      string  true  "Username"
-// @Success      200      {object}  dto.UserResponse "User retrieved successfully"
-// @Failure      400      {object}  helper.AppError "Invalid input"
-// @Failure      404      {object}  helper.AppError "User not found"
-// @Failure      500      {object}  helper.AppError "Internal server error"
-// @Router       /users/{username} [get]
-// @Security     ApiKeyAuth
+// @Summary Get a user by username
+// @Tags users
+// @ID getUserByUsername
+// @Param username path string true "Username"
+// @Success 200 {object} dto.UserResponse "User retrieved successfully"
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 404 {object} helper.AppError "User not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /users/{username} [get]
+// @Security BearerAuth
 func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 	username := c.Param("username")
 
@@ -387,19 +383,19 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 }
 
 // GetPaginatedUsers godoc
-// @Summary      Get paginated users
-// @Description  Retrieves a paginated list of users with sorting and ordering
-// @Tags         users
-// @ID           getPaginatedUsers
-// @Param        page      query     int     false  "Page number (0-based)"
-// @Param        pageSize  query     int     false  "Number of items per page (default 10)"
-// @Param        sort      query     string  false  "Sort field (e.g., username, name)"
-// @Param        order     query     string  false  "Sort order (asc/desc)"
-// @Success      200       {object}  map[string]interface{} "Users retrieved successfully"
-// @Failure      400       {object}  helper.AppError "Invalid input"
-// @Failure      500       {object}  helper.AppError "Internal server error"
-// @Router       /users [get]
-// @Security     ApiKeyAuth
+// @Summary Get paginated users
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.UserResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /users [get]
+// @Security BearerAuth
 func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "created_at")
 	order := c.DefaultQuery("order", "desc")
@@ -441,20 +437,19 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 }
 
 // UpdateUser godoc
-// @Summary      Update an existing user
-// @Description  Updates an existing user's information by ID
-// @Tags         users
-// @ID           updateUser
-// @Accept       json
-// @Produce      json
-// @Param        id    path      string           true  "User ID (UUID)"
-// @Param        user  body      dto.UpdateUserRequest true  "Updated user data"
-// @Success      200   {object}  dto.UserShort  "User updated successfully"
-// @Failure      400   {object}  helper.AppError "Invalid input or UUID format"
-// @Failure      404   {object}  helper.AppError "User not found"
-// @Failure      500   {object}  helper.AppError "Internal server error"
-// @Router       /admin/users/{id} [put]
-// @Security     ApiKeyAuth
+// @Summary Update an existing user
+// @Tags users
+// @ID updateUser
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID (UUID)"
+// @Param user body dto.UpdateUserRequest true "Updated user data"
+// @Success 200 {object} dto.UserShort "User updated successfully"
+// @Failure 400 {object} helper.AppError "Invalid input or UUID format"
+// @Failure 404 {object} helper.AppError "User not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /admin/users/{id} [put]
+// @Security BearerAuth
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userIDStr := c.Param("id")
 	if _, err := uuid.Parse(userIDStr); err != nil {
@@ -495,15 +490,14 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 }
 
 // DeleteUser godoc
-// @Summary      Delete a user
-// @Description  Deletes a user by their ID
-// @Tags         users
-// @ID           deleteUser
-// @Param        id   path      string  true  "User ID (UUID)"
-// @Success      204 "No Content"
-// @Failure      400  {object}  helper.AppError "Invalid UUID format"
-// @Router       /admin/users/{id} [delete]
-// @Security     ApiKeyAuth
+// @Summary Delete a user
+// @Tags users
+// @ID deleteUser
+// @Param id path string true "User ID (UUID)"
+// @Success 204 "No Content"
+// @Failure 400 {object} helper.AppError "Invalid UUID format"
+// @Router /admin/users/{id} [delete]
+// @Security BearerAuth
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)

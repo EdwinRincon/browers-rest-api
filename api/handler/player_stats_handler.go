@@ -39,7 +39,7 @@ func NewPlayerStatsHandler(playerStatsService service.PlayerStatsService) *Playe
 // @Failure      404   {object}  helper.AppError "Related entity not found"
 // @Failure      500   {object}  helper.AppError "Internal server error"
 // @Router       /admin/player-stats [post]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerStatsHandler) CreatePlayerStat(c *gin.Context) {
 	var createRequest dto.CreatePlayerStatRequest
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
@@ -209,14 +209,19 @@ func (h *PlayerStatsHandler) GetPlayerStatsBySeasonID(c *gin.Context) {
 // @Description  Returns a paginated list of player statistics
 // @Tags         player-stats
 // @ID           getPaginatedPlayerStats
-// @Produce      json
-// @Param        page      query     int     false  "Page number (0-indexed)"
-// @Param        pageSize  query     int     false  "Page size"
-// @Param        sort      query     string  false  "Sort field"
-// @Param        order     query     string  false  "Sort order (asc/desc)"
-// @Success      200  {object}  helper.PaginatedResponse  "Player statistics retrieved successfully"
-// @Failure      500  {object}  helper.AppError "Internal server error"
-// @Router       /player-stats [get]
+// @Summary Get paginated player stats
+// @Description Retrieve player stats with pagination, optional sorting, and ordering.
+// @Tags player-stats
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sort query string false "Sort field"
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.PlayerStatsResponse, totalCount=int}}
+// @Failure 400 {object} helper.AppError "Invalid input"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /player-stats [get]
 func (h *PlayerStatsHandler) GetPaginatedPlayerStats(c *gin.Context) {
 	sort := c.DefaultQuery("sort", "id")
 	order := c.DefaultQuery("order", "desc")
@@ -271,7 +276,7 @@ func (h *PlayerStatsHandler) GetPaginatedPlayerStats(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Player statistic not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /admin/player-stats/{id} [put]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerStatsHandler) UpdatePlayerStat(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -314,7 +319,7 @@ func (h *PlayerStatsHandler) UpdatePlayerStat(c *gin.Context) {
 // @Failure      404  {object}  helper.AppError "Player statistic not found"
 // @Failure      500  {object}  helper.AppError "Internal server error"
 // @Router       /admin/player-stats/{id} [delete]
-// @Security     ApiKeyAuth
+// @Security     BearerAuth
 func (h *PlayerStatsHandler) DeletePlayerStat(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

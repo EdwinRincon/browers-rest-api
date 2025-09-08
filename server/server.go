@@ -40,9 +40,9 @@ type Repositories struct {
 	Player     domain.PlayerRepository
 	PlayerTeam domain.PlayerTeamRepository
 	Season     domain.SeasonRepository
-	Article    persistence.ArticleRepository
-	Lineup     persistence.LineupRepository
+	Lineup     domain.LineupRepository
 	Match      domain.MatchRepository
+	Article    persistence.ArticleRepository
 	TeamStat   persistence.TeamStatsRepository
 	PlayerStat persistence.PlayerStatsRepository
 }
@@ -66,6 +66,7 @@ type Services struct {
 	UserDomain       *domainservice.UserDomainService
 	TeamDomain       *domainservice.TeamDomainService
 	MatchDomain      *domainservice.MatchDomainService
+	LineupDomain     *domainservice.LineupDomainService
 }
 
 type Handlers struct {
@@ -75,9 +76,9 @@ type Handlers struct {
 	Player     *handler.PlayerHandler
 	PlayerTeam *handler.PlayerTeamHandler
 	Season     *handler.SeasonHandler
+	Lineup     *handler.LineupHandler
+	Match      *handler.MatchHandler
 	// Article    *handler.ArticleHandler
-	// Lineup     *handler.LineupHandler
-	Match *handler.MatchHandler
 	// TeamStat   *handler.TeamStatsHandler
 	// PlayerStat *handler.PlayerStatsHandler
 }
@@ -257,6 +258,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	teamDomainService := CreateTeamDomainService(repos.Team)
 	playerDomainService := CreatePlayerDomainService(repos.Player)
 	playerTeamDomainService := CreatePlayerTeamDomainService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season)
+	lineupDomainService := CreateLineupDomainService(repos.Lineup, repos.Match, repos.Player)
 	matchDomainService := CreateMatchDomainService(repos.Match)
 
 	return &Services{
@@ -277,6 +279,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		SeasonDomain:     seasonDomainService,
 		UserDomain:       userDomainService,
 		TeamDomain:       teamDomainService,
+		LineupDomain:     lineupDomainService,
 		MatchDomain:      matchDomainService,
 	}
 }
@@ -289,6 +292,7 @@ func initializeHandlers(services *Services) *Handlers {
 		Player:     handler.NewPlayerHandler(services.PlayerDomain),
 		PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeamDomain),
 		Season:     handler.NewSeasonHandler(services.SeasonDomain),
+		Lineup:     handler.NewLineupHandler(services.LineupDomain),
 		// Article:    handler.NewArticleHandler(services.Article),
 		// Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
 		Match: handler.NewMatchHandler(services.MatchDomain),
@@ -304,6 +308,7 @@ func initializeRoutes(r *gin.Engine, handlers *Handlers) {
 	router.InitializePlayerRoutes(r, handlers.Player)
 	router.InitializePlayerTeamRoutes(r, handlers.PlayerTeam)
 	router.InitializeSeasonRoutes(r, handlers.Season)
+	router.InitializeLineupRoutes(r, handlers.Lineup)
 	// router.InitializeArticleRoutes(r, handlers.Article)
 	// router.InitializeLineupRoutes(r, handlers.Lineup)
 	router.InitializeMatchRoutes(r, handlers.Match)
