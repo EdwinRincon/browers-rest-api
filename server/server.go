@@ -35,7 +35,7 @@ type Server struct {
 type Repositories struct {
 	User       *persistence.UserRepositoryImpl
 	Role       *persistence.RoleRepositoryImpl
-	Team       persistence.TeamRepository
+	Team       *persistence.TeamRepositoryImpl
 	Player     persistence.PlayerRepository
 	PlayerTeam persistence.PlayerTeamRepository
 	Season     *persistence.SeasonRepositoryImpl
@@ -49,7 +49,6 @@ type Repositories struct {
 type Services struct {
 	JWT  *jwt.JWTService
 	Auth service.AuthService
-	Team service.TeamService
 	// Note: Following services removed until their entities are migrated to hexagonal architecture:
 	// Player     service.PlayerService
 	// PlayerTeam service.PlayerTeamService
@@ -64,7 +63,7 @@ type Services struct {
 	RoleDomain   *domainservice.RoleDomainService
 	SeasonDomain *domainservice.SeasonDomainService
 	UserDomain   *domainservice.UserDomainService
-	// TODO: Add TeamDomain service.TeamDomainService when complete
+	TeamDomain   *domainservice.TeamDomainService
 }
 
 type Handlers struct {
@@ -256,11 +255,11 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	roleDomainService := CreateRoleDomainService(repos.Role)
 	seasonDomainService := CreateSeasonDomainService(repos.Season)
 	userDomainService := CreateUserDomainService(repos.User)
+	teamDomainService := CreateTeamDomainService(repos.Team)
 
 	return &Services{
 		JWT:  jwtService,
 		Auth: service.NewAuthService(jwtService),
-		Team: service.NewTeamService(repos.Team),
 		// Note: Following services will fail compilation until their entities are migrated:
 		// Player:     service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
 		// PlayerTeam: service.NewPlayerTeamService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season),
@@ -275,6 +274,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		RoleDomain:   roleDomainService,
 		SeasonDomain: seasonDomainService,
 		UserDomain:   userDomainService,
+		TeamDomain:   teamDomainService,
 	}
 }
 
@@ -282,7 +282,7 @@ func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
 		User: handler.NewUserHandler(services.Auth, services.UserDomain, services.RoleDomain),
 		Role: handler.NewRoleHandler(services.RoleDomain),
-		Team: handler.NewTeamHandler(services.Team),
+		Team: handler.NewTeamHandler(services.TeamDomain),
 		// Note: Following handlers commented out until their entities are migrated:
 		// Player:     handler.NewPlayerHandler(services.Player),
 		// PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeam),

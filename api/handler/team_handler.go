@@ -7,22 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type TeamHandler struct {
-	TeamService service.TeamService
+	TeamDomainService *domainservice.TeamDomainService
+	TeamMapper        *mapper.TeamMapper
 }
 
-func NewTeamHandler(teamService service.TeamService) *TeamHandler {
+func NewTeamHandler(teamDomainService *domainservice.TeamDomainService) *TeamHandler {
 	return &TeamHandler{
-		TeamService: teamService,
+		TeamDomainService: teamDomainService,
+		TeamMapper:        mapper.NewTeamMapper(),
 	}
 }
 
@@ -51,10 +53,10 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Map DTO to model
-	team := mapper.ToTeam(&createRequest)
+	// Map DTO to domain
+	team := h.TeamMapper.DTOToDomain(&createRequest)
 
-	createdTeam, err := h.TeamService.CreateTeam(ctx, team)
+	createdTeam, err := h.TeamDomainService.CreateTeam(ctx, team)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
@@ -66,7 +68,8 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 		}
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusCreated, createdTeam, "Team created successfully")
+	teamShort := h.TeamMapper.DomainToShortDTO(createdTeam)
+	helper.WriteSuccessResponse(c, http.StatusCreated, teamShort, "Team created successfully")
 }
 
 // GetTeamByID godoc
@@ -92,7 +95,7 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	team, err := h.TeamService.GetTeamByID(ctx, id)
+	team, err := h.TeamDomainService.GetTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
@@ -102,7 +105,8 @@ func (h *TeamHandler) GetTeamByID(c *gin.Context) {
 		return
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusOK, team, "Team found successfully")
+	teamResponse := h.TeamMapper.DomainToDTO(team)
+	helper.WriteSuccessResponse(c, http.StatusOK, teamResponse, "Team found successfully")
 }
 
 // GetPaginatedTeams godoc
@@ -133,7 +137,7 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 	}
 
 	// Validate sort field
-	if err := helper.ValidateSort(model.Team{}, sort); err != nil {
+	if err := helper.ValidateSort(domain.Team{}, sort); err != nil {
 		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
@@ -142,14 +146,14 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	teams, total, err := h.TeamService.GetPaginatedTeams(ctx, sort, order, page, pageSize)
+	teams, total, err := h.TeamDomainService.GetPaginatedTeams(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToTeamResponseList(teams),
+		Items:      h.TeamMapper.DomainListToDTO(teams),
 		TotalCount: total,
 	}
 
@@ -190,7 +194,10 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	updatedTeam, err := h.TeamService.UpdateTeam(ctx, &updateTeamRequest, id)
+	// Map DTO to domain
+	updates := h.TeamMapper.UpdateDTOToDomain(&updateTeamRequest)
+
+	updatedTeam, err := h.TeamDomainService.UpdateTeam(ctx, id, updates)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
@@ -202,7 +209,7 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 		return
 	}
 
-	teamResponse := mapper.ToTeamResponse(updatedTeam)
+	teamResponse := h.TeamMapper.DomainToDTO(updatedTeam)
 	helper.WriteSuccessResponse(c, http.StatusOK, teamResponse, "Team updated successfully")
 }
 
@@ -229,7 +236,7 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err = h.TeamService.DeleteTeam(ctx, id)
+	err = h.TeamDomainService.DeleteTeam(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))

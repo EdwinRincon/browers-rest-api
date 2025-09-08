@@ -39,7 +39,8 @@ func UpdateTeamStatsFromDTO(teamStats *model.TeamStat, dto *dto.UpdateTeamStatsR
 func ToTeamStatsResponse(teamStats *model.TeamStat) *dto.TeamStatsResponse {
 	var team *dto.TeamShort
 	if teamStats.Team != nil {
-		team = ToTeamShort(teamStats.Team)
+		teamMapper := mapper.NewTeamMapper()
+		team = teamMapper.ModelToShortDTO(teamStats.Team)
 	}
 
 	var season *dto.SeasonShort

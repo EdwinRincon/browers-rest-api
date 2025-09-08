@@ -5,32 +5,37 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
-type TeamRepository interface {
-	CreateTeam(ctx context.Context, team *model.Team) error
-	GetTeamByID(ctx context.Context, id uint64) (*model.Team, error)
-	GetTeamByName(ctx context.Context, fullName string) (*model.Team, error)
-	GetPaginatedTeams(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Team, int64, error)
-	UpdateTeam(ctx context.Context, team *model.Team) error
-	DeleteTeam(ctx context.Context, id uint64) error
-}
-
+// TeamRepositoryImpl implements domain.TeamRepository interface.
 type TeamRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.TeamMapper
 }
 
-func NewTeamRepository(db *gorm.DB) TeamRepository {
-	return &TeamRepositoryImpl{db: db}
+func NewTeamRepository(db *gorm.DB) *TeamRepositoryImpl {
+	return &TeamRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewTeamMapper(),
+	}
 }
 
-func (tr *TeamRepositoryImpl) CreateTeam(ctx context.Context, team *model.Team) error {
-	return tr.db.WithContext(ctx).Create(team).Error
+func (tr *TeamRepositoryImpl) CreateTeam(ctx context.Context, team *domain.Team) error {
+	modelTeam := tr.mapper.DomainToModel(team)
+	if err := tr.db.WithContext(ctx).Create(modelTeam).Error; err != nil {
+		return fmt.Errorf("failed to create team: %w", err)
+	}
+
+	// Update domain entity with generated ID and timestamps
+	*team = *tr.mapper.ModelToDomain(modelTeam)
+	return nil
 }
 
-func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*model.Team, error) {
+func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*domain.Team, error) {
 	var team model.Team
 	result := tr.db.WithContext(ctx).First(&team, id)
 
@@ -40,10 +45,11 @@ func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*mode
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting team by ID: %w", result.Error)
 	}
-	return &team, nil
+
+	return tr.mapper.ModelToDomain(&team), nil
 }
 
-func (tr *TeamRepositoryImpl) GetTeamByName(ctx context.Context, fullName string) (*model.Team, error) {
+func (tr *TeamRepositoryImpl) GetTeamByName(ctx context.Context, fullName string) (*domain.Team, error) {
 	var team model.Team
 	result := tr.db.WithContext(ctx).
 		Where("short_name = ?", fullName).
@@ -55,11 +61,12 @@ func (tr *TeamRepositoryImpl) GetTeamByName(ctx context.Context, fullName string
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting team by name: %w", result.Error)
 	}
-	return &team, nil
+
+	return tr.mapper.ModelToDomain(&team), nil
 }
 
 // GetPaginatedTeams retrieves a paginated list of teams with total count.
-func (tr *TeamRepositoryImpl) GetPaginatedTeams(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Team, int64, error) {
+func (tr *TeamRepositoryImpl) GetPaginatedTeams(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Team, int64, error) {
 	var teams []model.Team
 	var total int64
 
@@ -86,15 +93,25 @@ func (tr *TeamRepositoryImpl) GetPaginatedTeams(ctx context.Context, sort string
 		return nil, 0, fmt.Errorf("error fetching teams: %w", err)
 	}
 
-	return teams, total, nil
+	return tr.mapper.ModelListToDomain(teams), total, nil
 }
 
-func (tr *TeamRepositoryImpl) UpdateTeam(ctx context.Context, team *model.Team) error {
-	result := tr.db.WithContext(ctx).Save(team)
-	return result.Error
+func (tr *TeamRepositoryImpl) UpdateTeam(ctx context.Context, team *domain.Team) error {
+	modelTeam := tr.mapper.DomainToModel(team)
+	result := tr.db.WithContext(ctx).Save(modelTeam)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update team: %w", result.Error)
+	}
+
+	// Update domain entity with new timestamps
+	*team = *tr.mapper.ModelToDomain(modelTeam)
+	return nil
 }
 
 func (tr *TeamRepositoryImpl) DeleteTeam(ctx context.Context, id uint64) error {
 	result := tr.db.WithContext(ctx).Delete(&model.Team{}, id)
-	return result.Error
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete team: %w", result.Error)
+	}
+	return nil
 }

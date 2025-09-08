@@ -78,12 +78,14 @@ func ToMatchResponse(match *model.Match) *dto.MatchResponse {
 
 	// Map related entities if available
 	if match.HomeTeam != nil {
-		homeTeam := ToTeamShort(match.HomeTeam)
+		teamMapper := mapper.NewTeamMapper()
+		homeTeam := teamMapper.ModelToShortDTO(match.HomeTeam)
 		resp.HomeTeam = *homeTeam
 	}
 
 	if match.AwayTeam != nil {
-		awayTeam := ToTeamShort(match.AwayTeam)
+		teamMapper := mapper.NewTeamMapper()
+		awayTeam := teamMapper.ModelToShortDTO(match.AwayTeam)
 		resp.AwayTeam = *awayTeam
 	}
 
@@ -141,13 +143,15 @@ func ToMatchDetailResponse(match *model.Match) *dto.MatchDetailResponse {
 
 	// Map related entities if available
 	if match.HomeTeam != nil {
-		if homeTeam := ToTeamShort(match.HomeTeam); homeTeam != nil {
+		teamMapper := mapper.NewTeamMapper()
+		if homeTeam := teamMapper.ModelToShortDTO(match.HomeTeam); homeTeam != nil {
 			detail.HomeTeam = *homeTeam
 		}
 	}
 
 	if match.AwayTeam != nil {
-		if awayTeam := ToTeamShort(match.AwayTeam); awayTeam != nil {
+		teamMapper := mapper.NewTeamMapper()
+		if awayTeam := teamMapper.ModelToShortDTO(match.AwayTeam); awayTeam != nil {
 			detail.AwayTeam = *awayTeam
 		}
 	}

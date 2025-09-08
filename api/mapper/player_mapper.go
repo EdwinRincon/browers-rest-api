@@ -60,7 +60,8 @@ func ToPlayerResponse(player *model.Player) *dto.PlayerResponse {
 
 		for _, playerTeam := range player.PlayerTeams {
 			if playerTeam.Team != nil {
-				validTeams = append(validTeams, *ToTeamShort(playerTeam.Team))
+				teamMapper := mapper.NewTeamMapper()
+				validTeams = append(validTeams, *teamMapper.ModelToShortDTO(playerTeam.Team))
 			}
 		}
 

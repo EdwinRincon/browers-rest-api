@@ -26,3 +26,10 @@ func CreateUserDomainService(userRepo *persistence.UserRepositoryImpl) *domainse
 	var userRepository domain.UserRepository = userRepo
 	return domainservice.NewUserDomainService(userRepository)
 }
+
+// CreateTeamDomainService creates a team domain service with repository implementing domain interface
+func CreateTeamDomainService(teamRepo *persistence.TeamRepositoryImpl) *domainservice.TeamDomainService {
+	// Repository implements domain.TeamRepository interface directly
+	var teamRepository domain.TeamRepository = teamRepo
+	return domainservice.NewTeamDomainService(teamRepository)
+}

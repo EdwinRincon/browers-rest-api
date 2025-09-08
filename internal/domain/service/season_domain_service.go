@@ -25,7 +25,7 @@ func NewSeasonDomainService(seasonRepository domain.SeasonRepository) *SeasonDom
 func (s *SeasonDomainService) CreateSeason(ctx context.Context, season *domain.Season) error {
 	// Validate domain rules
 	if !season.IsValid() {
-		return fmt.Errorf("season fails domain validation")
+		return constants.ErrInvalidData
 	}
 
 	// Business rule: Check if season with same year already exists
@@ -72,7 +72,7 @@ func (s *SeasonDomainService) GetSeasonByID(ctx context.Context, id uint64) (*do
 // GetSeasonByYear retrieves a season by year.
 func (s *SeasonDomainService) GetSeasonByYear(ctx context.Context, year uint16) (*domain.Season, error) {
 	if year == 0 {
-		return nil, fmt.Errorf("invalid season year")
+		return nil, constants.ErrInvalidData
 	}
 
 	season, err := s.seasonRepository.GetSeasonByYear(ctx, year)
@@ -81,7 +81,7 @@ func (s *SeasonDomainService) GetSeasonByYear(ctx context.Context, year uint16) 
 	}
 
 	if season == nil {
-		return nil, fmt.Errorf("season for year %d not found", year)
+		return nil, constants.ErrRecordNotFound
 	}
 
 	return season, nil

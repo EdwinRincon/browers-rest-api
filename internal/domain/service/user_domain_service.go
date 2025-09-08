@@ -2,15 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/domain"
-)
-
-var (
-	ErrInvalidUserData = errors.New("invalid user data")
 )
 
 // UserDomainService encapsulates business logic for user operations.
@@ -29,7 +24,7 @@ func NewUserDomainService(userRepository domain.UserRepository) *UserDomainServi
 func (s *UserDomainService) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
 	// Validate domain entity
 	if !user.IsValid() {
-		return nil, ErrInvalidUserData
+		return nil, constants.ErrInvalidData
 	}
 
 	// Check if a user with this username already exists
@@ -123,7 +118,7 @@ func (s *UserDomainService) UpdateUser(ctx context.Context, id string, updates *
 
 	// Validate updated user
 	if !existingUser.IsValid() {
-		return nil, ErrInvalidUserData
+		return nil, constants.ErrInvalidData
 	}
 
 	// Update the user

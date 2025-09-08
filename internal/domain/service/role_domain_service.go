@@ -2,16 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/domain"
-)
-
-var (
-	ErrInvalidRole            = errors.New("invalid role data")
-	ErrCannotDeleteSystemRole = errors.New("cannot delete system role")
 )
 
 type RoleDomainService struct {
@@ -28,7 +22,7 @@ func NewRoleDomainService(roleRepository domain.RoleRepository) *RoleDomainServi
 func (s *RoleDomainService) CreateRole(ctx context.Context, role *domain.Role) (*domain.Role, error) {
 	// Domain validation
 	if !role.IsValid() {
-		return nil, ErrInvalidRole
+		return nil, constants.ErrInvalidData
 	}
 
 	// Check if role already exists
@@ -53,7 +47,7 @@ func (s *RoleDomainService) CreateRole(ctx context.Context, role *domain.Role) (
 // GetRoleByID retrieves a role by its ID with domain logic.
 func (s *RoleDomainService) GetRoleByID(ctx context.Context, id uint64) (*domain.Role, error) {
 	if id == 0 {
-		return nil, ErrInvalidRole
+		return nil, constants.ErrInvalidData
 	}
 
 	domainRole, err := s.roleRepository.GetRoleByID(ctx, id)
@@ -70,7 +64,7 @@ func (s *RoleDomainService) GetRoleByID(ctx context.Context, id uint64) (*domain
 // GetRoleByName retrieves a role by its name with domain logic.
 func (s *RoleDomainService) GetRoleByName(ctx context.Context, name string) (*domain.Role, error) {
 	if name == "" {
-		return nil, ErrInvalidRole
+		return nil, constants.ErrInvalidData
 	}
 
 	domainRole, err := s.roleRepository.GetRoleByName(ctx, name)
@@ -88,7 +82,7 @@ func (s *RoleDomainService) GetRoleByName(ctx context.Context, name string) (*do
 func (s *RoleDomainService) UpdateRole(ctx context.Context, role *domain.Role) (*domain.Role, error) {
 	// Domain validation
 	if !role.IsValid() {
-		return nil, ErrInvalidRole
+		return nil, constants.ErrInvalidData
 	}
 
 	// Check if role exists
@@ -131,7 +125,7 @@ func (s *RoleDomainService) UpdateRole(ctx context.Context, role *domain.Role) (
 // DeleteRole deletes a role with domain business rules.
 func (s *RoleDomainService) DeleteRole(ctx context.Context, id uint64) error {
 	if id == 0 {
-		return ErrInvalidRole
+		return constants.ErrInvalidData
 	}
 
 	// Get role to check business rules
@@ -145,7 +139,7 @@ func (s *RoleDomainService) DeleteRole(ctx context.Context, id uint64) error {
 
 	// Apply domain business rules
 	if !domainRole.CanBeDeleted() {
-		return ErrCannotDeleteSystemRole
+		return constants.ErrCannotDeleteSystemRole
 	}
 
 	// Proceed with deletion
@@ -192,12 +186,12 @@ func (s *RoleDomainService) GetPaginatedRoles(ctx context.Context, sort string, 
 // ValidateRole performs comprehensive domain validation on a role.
 func (s *RoleDomainService) ValidateRole(role *domain.Role) error {
 	if role == nil {
-		return ErrInvalidRole
+		return constants.ErrInvalidData
 	}
 
 	// Use domain entity validation
 	if !role.IsValid() {
-		return ErrInvalidRole
+		return constants.ErrInvalidData
 	}
 
 	return nil
