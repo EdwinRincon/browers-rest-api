@@ -28,19 +28,6 @@ type TeamPort interface {
 	DeleteTeam(ctx context.Context, id uint64) error
 }
 
-// SeasonPort defines the interface for season operations.
-// This port works with pure domain entities instead of persistence models.
-type SeasonPort interface {
-	CreateSeason(ctx context.Context, season *domain.Season) error
-	GetSeasonByID(ctx context.Context, id uint64) (*domain.Season, error)
-	GetSeasonByYear(ctx context.Context, year uint16) (*domain.Season, error)
-	GetCurrentSeason(ctx context.Context) (*domain.Season, error)
-	GetPaginatedSeasons(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Season, int64, error)
-	UpdateSeason(ctx context.Context, id uint64, season *domain.Season) error
-	DeleteSeason(ctx context.Context, id uint64) error
-	SetCurrentSeason(ctx context.Context, id uint64) error
-}
-
 // UserPort defines the interface for user operations.
 // This port works with pure domain entities and serves both:
 // - Domain services (inbound port for handlers)

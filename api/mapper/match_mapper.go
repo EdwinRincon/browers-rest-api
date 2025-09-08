@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 )
@@ -56,15 +57,10 @@ func UpdateMatchFromDTO(match *model.Match, dto *dto.UpdateMatchRequest) {
 	}
 }
 
-// ToSeasonShort converts a Season model to a SeasonShort DTO
+// ToSeasonShort converts a Season model to a SeasonShort DTO using unified mapper
 func ToSeasonShort(season *model.Season) *dto.SeasonShort {
-	if season == nil {
-		return nil
-	}
-	return &dto.SeasonShort{
-		ID:   season.ID,
-		Year: season.Year,
-	}
+	seasonMapper := mapper.NewSeasonMapper()
+	return seasonMapper.ModelToShortDTO(season)
 }
 
 // ToMatchResponse converts a Match model to a MatchResponse DTO

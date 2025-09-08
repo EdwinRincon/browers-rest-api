@@ -6,19 +6,18 @@ import (
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/domain"
-	"github.com/EdwinRincon/browersfc-api/internal/ports"
 )
 
 // SeasonDomainService implements business logic for Season operations.
 // It contains domain rules and validation while being infrastructure-agnostic.
 type SeasonDomainService struct {
-	seasonPort ports.SeasonPort
+	seasonRepository domain.SeasonRepository
 }
 
 // NewSeasonDomainService creates a new SeasonDomainService instance.
-func NewSeasonDomainService(seasonPort ports.SeasonPort) *SeasonDomainService {
+func NewSeasonDomainService(seasonRepository domain.SeasonRepository) *SeasonDomainService {
 	return &SeasonDomainService{
-		seasonPort: seasonPort,
+		seasonRepository: seasonRepository,
 	}
 }
 
@@ -30,7 +29,7 @@ func (s *SeasonDomainService) CreateSeason(ctx context.Context, season *domain.S
 	}
 
 	// Business rule: Check if season with same year already exists
-	existingSeason, err := s.seasonPort.GetSeasonByYear(ctx, season.Year)
+	existingSeason, err := s.seasonRepository.GetSeasonByYear(ctx, season.Year)
 	if err != nil {
 		return fmt.Errorf("failed to check existing season: %w", err)
 	}
@@ -40,7 +39,7 @@ func (s *SeasonDomainService) CreateSeason(ctx context.Context, season *domain.S
 
 	// Business rule: If this season is set as current, ensure no overlapping current seasons
 	if season.IsCurrent {
-		currentSeason, err := s.seasonPort.GetCurrentSeason(ctx)
+		currentSeason, err := s.seasonRepository.GetCurrentSeason(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to check current season: %w", err)
 		}
@@ -49,7 +48,7 @@ func (s *SeasonDomainService) CreateSeason(ctx context.Context, season *domain.S
 		}
 	}
 
-	return s.seasonPort.CreateSeason(ctx, season)
+	return s.seasonRepository.CreateSeason(ctx, season)
 }
 
 // GetSeasonByID retrieves a season by ID.
@@ -58,7 +57,7 @@ func (s *SeasonDomainService) GetSeasonByID(ctx context.Context, id uint64) (*do
 		return nil, fmt.Errorf("invalid season ID")
 	}
 
-	season, err := s.seasonPort.GetSeasonByID(ctx, id)
+	season, err := s.seasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get season by ID: %w", err)
 	}
@@ -76,7 +75,7 @@ func (s *SeasonDomainService) GetSeasonByYear(ctx context.Context, year uint16) 
 		return nil, fmt.Errorf("invalid season year")
 	}
 
-	season, err := s.seasonPort.GetSeasonByYear(ctx, year)
+	season, err := s.seasonRepository.GetSeasonByYear(ctx, year)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get season by year: %w", err)
 	}
@@ -90,7 +89,7 @@ func (s *SeasonDomainService) GetSeasonByYear(ctx context.Context, year uint16) 
 
 // GetCurrentSeason retrieves the current active season.
 func (s *SeasonDomainService) GetCurrentSeason(ctx context.Context) (*domain.Season, error) {
-	season, err := s.seasonPort.GetCurrentSeason(ctx)
+	season, err := s.seasonRepository.GetCurrentSeason(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current season: %w", err)
 	}
@@ -112,7 +111,7 @@ func (s *SeasonDomainService) GetPaginatedSeasons(ctx context.Context, sort stri
 		return nil, 0, fmt.Errorf("page size must be between 1 and 100")
 	}
 
-	return s.seasonPort.GetPaginatedSeasons(ctx, sort, order, page, pageSize)
+	return s.seasonRepository.GetPaginatedSeasons(ctx, sort, order, page, pageSize)
 }
 
 // UpdateSeason updates an existing season with business rule validation.
@@ -127,7 +126,7 @@ func (s *SeasonDomainService) UpdateSeason(ctx context.Context, id uint64, seaso
 	}
 
 	// Check if season exists
-	existingSeason, err := s.seasonPort.GetSeasonByID(ctx, id)
+	existingSeason, err := s.seasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get existing season: %w", err)
 	}
@@ -137,7 +136,7 @@ func (s *SeasonDomainService) UpdateSeason(ctx context.Context, id uint64, seaso
 
 	// Business rule: If updating year, check for uniqueness
 	if season.Year != existingSeason.Year {
-		conflictingSeason, err := s.seasonPort.GetSeasonByYear(ctx, season.Year)
+		conflictingSeason, err := s.seasonRepository.GetSeasonByYear(ctx, season.Year)
 		if err != nil {
 			return fmt.Errorf("failed to check year uniqueness: %w", err)
 		}
@@ -148,7 +147,7 @@ func (s *SeasonDomainService) UpdateSeason(ctx context.Context, id uint64, seaso
 
 	// Business rule: If setting as current, ensure no other season is current
 	if season.IsCurrent && !existingSeason.IsCurrent {
-		currentSeason, err := s.seasonPort.GetCurrentSeason(ctx)
+		currentSeason, err := s.seasonRepository.GetCurrentSeason(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to check current season: %w", err)
 		}
@@ -157,7 +156,7 @@ func (s *SeasonDomainService) UpdateSeason(ctx context.Context, id uint64, seaso
 		}
 	}
 
-	return s.seasonPort.UpdateSeason(ctx, id, season)
+	return s.seasonRepository.UpdateSeason(ctx, id, season)
 }
 
 // DeleteSeason deletes a season with business rule validation.
@@ -167,7 +166,7 @@ func (s *SeasonDomainService) DeleteSeason(ctx context.Context, id uint64) error
 	}
 
 	// Check if season exists
-	season, err := s.seasonPort.GetSeasonByID(ctx, id)
+	season, err := s.seasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get season: %w", err)
 	}
@@ -180,7 +179,7 @@ func (s *SeasonDomainService) DeleteSeason(ctx context.Context, id uint64) error
 		return fmt.Errorf("cannot delete current season")
 	}
 
-	return s.seasonPort.DeleteSeason(ctx, id)
+	return s.seasonRepository.DeleteSeason(ctx, id)
 }
 
 // SetCurrentSeason sets a season as the current one.
@@ -190,7 +189,7 @@ func (s *SeasonDomainService) SetCurrentSeason(ctx context.Context, id uint64) e
 	}
 
 	// Check if season exists
-	season, err := s.seasonPort.GetSeasonByID(ctx, id)
+	season, err := s.seasonRepository.GetSeasonByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get season: %w", err)
 	}
@@ -203,5 +202,5 @@ func (s *SeasonDomainService) SetCurrentSeason(ctx context.Context, id uint64) e
 		return fmt.Errorf("cannot set invalid season as current")
 	}
 
-	return s.seasonPort.SetCurrentSeason(ctx, id)
+	return s.seasonRepository.SetCurrentSeason(ctx, id)
 }

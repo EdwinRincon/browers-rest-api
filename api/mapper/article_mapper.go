@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 )
@@ -26,7 +27,8 @@ func UpdateArticleFromDTO(article *model.Article, dto *dto.UpdateArticleRequest)
 func ToArticleResponse(article *model.Article) *dto.ArticleResponse {
 	var season dto.SeasonShort
 	if article.Season != nil {
-		seasonShort := ToSeasonShort(article.Season)
+		seasonMapper := mapper.NewSeasonMapper()
+		seasonShort := seasonMapper.ModelToShortDTO(article.Season)
 		if seasonShort != nil {
 			season = *seasonShort
 		}

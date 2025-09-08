@@ -129,11 +129,11 @@ func (m *RoleMapper) ModelToDomain(modelRole *model.Role) *domain.Role {
 }
 
 // ========================================================================================
-// Legacy Support Functions (For backward compatibility with other entities)
+// Additional Helper Functions
 // ========================================================================================
 
 // ModelToShortDTO converts a persistence model.Role to a RoleShort DTO
-// This is kept for backward compatibility with user mapper and other entities
+// Used by other entities that need Role information in short format
 func (m *RoleMapper) ModelToShortDTO(role *model.Role) *dto.RoleShort {
 	if role == nil {
 		return nil

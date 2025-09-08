@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 )
@@ -43,7 +44,8 @@ func ToTeamStatsResponse(teamStats *model.TeamStat) *dto.TeamStatsResponse {
 
 	var season *dto.SeasonShort
 	if teamStats.Season != nil {
-		season = ToSeasonShort(teamStats.Season)
+		seasonMapper := mapper.NewSeasonMapper()
+		season = seasonMapper.ModelToShortDTO(teamStats.Season)
 	}
 
 	return &dto.TeamStatsResponse{

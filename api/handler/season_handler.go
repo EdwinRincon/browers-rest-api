@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainService "github.com/EdwinRincon/browersfc-api/internal/domain/service"
@@ -19,11 +19,13 @@ const errInvalidSeasonID = "Invalid season ID"
 
 type SeasonHandler struct {
 	SeasonDomainService *domainService.SeasonDomainService
+	SeasonMapper        *mapper.SeasonMapper
 }
 
 func NewSeasonHandler(seasonDomainService *domainService.SeasonDomainService) *SeasonHandler {
 	return &SeasonHandler{
 		SeasonDomainService: seasonDomainService,
+		SeasonMapper:        mapper.NewSeasonMapper(),
 	}
 }
 
@@ -58,7 +60,7 @@ func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 	defer cancel()
 
 	// Use domain service (hexagonal architecture)
-	domainSeason := mapper.CreateRequestToDomain(&createRequest)
+	domainSeason := h.SeasonMapper.DTOToDomain(&createRequest)
 	if err := h.SeasonDomainService.CreateSeason(ctx, domainSeason); err != nil {
 		if err == constants.ErrRecordAlreadyExists {
 			helper.WriteErrorResponse(c, helper.NewConflictError("season", "A season with this year already exists"))
@@ -68,7 +70,7 @@ func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 		return
 	}
 
-	seasonResponse := mapper.DomainSeasonToResponse(domainSeason)
+	seasonResponse := h.SeasonMapper.DomainToDTO(domainSeason)
 	helper.WriteSuccessResponse(c, http.StatusCreated, seasonResponse, "Season created successfully")
 }
 
@@ -106,7 +108,7 @@ func (h *SeasonHandler) GetSeasonByID(c *gin.Context) {
 		return
 	}
 
-	seasonResponse := mapper.DomainSeasonToResponse(domainSeason)
+	seasonResponse := h.SeasonMapper.DomainToDTO(domainSeason)
 	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Season found successfully")
 }
 
@@ -135,7 +137,7 @@ func (h *SeasonHandler) GetCurrentSeason(c *gin.Context) {
 		return
 	}
 
-	seasonResponse := mapper.DomainSeasonToResponse(domainSeason)
+	seasonResponse := h.SeasonMapper.DomainToDTO(domainSeason)
 	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Current season retrieved successfully")
 }
 
@@ -189,7 +191,7 @@ func (h *SeasonHandler) GetPaginatedSeasons(c *gin.Context) {
 		return
 	}
 
-	seasonResponses := mapper.DomainSeasonListToResponse(domainSeasons)
+	seasonResponses := h.SeasonMapper.DomainListToDTO(domainSeasons)
 
 	response := helper.PaginatedResponse{
 		Items:      seasonResponses,
@@ -254,7 +256,7 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 	}
 
 	// Convert update request to domain season
-	updatedSeason := mapper.UpdateRequestToDomain(&updateRequest, existingSeason)
+	updatedSeason := h.SeasonMapper.UpdateDTOToDomain(&updateRequest, existingSeason)
 
 	// Update season
 	err = h.SeasonDomainService.UpdateSeason(ctx, id, updatedSeason)
@@ -276,7 +278,7 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 		return
 	}
 
-	seasonResponse := mapper.DomainSeasonToResponse(updatedSeasonResponse)
+	seasonResponse := h.SeasonMapper.DomainToDTO(updatedSeasonResponse)
 	helper.WriteSuccessResponse(c, http.StatusOK, seasonResponse, "Season updated successfully")
 }
 

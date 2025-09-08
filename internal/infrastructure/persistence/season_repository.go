@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
@@ -15,34 +17,30 @@ const (
 	whereSeasonID             = "season_id = ?"
 )
 
-type SeasonRepository interface {
-	CreateSeason(ctx context.Context, season *model.Season) error
-	GetSeasonByID(ctx context.Context, id uint64) (*model.Season, error)
-	GetSeasonByYear(ctx context.Context, year uint16) (*model.Season, error)
-	GetCurrentSeason(ctx context.Context) (*model.Season, error)
-	GetPaginatedSeasons(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Season, int64, error)
-	UpdateSeason(ctx context.Context, id uint64, season *model.Season) error
-	DeleteSeason(ctx context.Context, id uint64) error
-	SetCurrentSeason(ctx context.Context, id uint64) error
-}
-
 type SeasonRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.SeasonMapper
 }
 
-func NewSeasonRepository(db *gorm.DB) SeasonRepository {
-	return &SeasonRepositoryImpl{db: db}
+func NewSeasonRepository(db *gorm.DB) *SeasonRepositoryImpl {
+	return &SeasonRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewSeasonMapper(),
+	}
 }
 
-func (sr *SeasonRepositoryImpl) CreateSeason(ctx context.Context, season *model.Season) error {
+func (sr *SeasonRepositoryImpl) CreateSeason(ctx context.Context, season *domain.Season) error {
+	// Convert domain to model for persistence
+	modelSeason := sr.mapper.DomainToModel(season)
+
 	// If this season is set as current, make sure no other season is current
-	if season.IsCurrent {
+	if modelSeason.IsCurrent {
 		if err := sr.clearCurrentSeasons(ctx); err != nil {
 			return fmt.Errorf(errClearCurrentSeasonFlag, err)
 		}
 	}
 
-	return sr.db.WithContext(ctx).Create(season).Error
+	return sr.db.WithContext(ctx).Create(modelSeason).Error
 }
 
 // clearCurrentSeasons sets IsCurrent=false for all seasons
@@ -50,7 +48,7 @@ func (sr *SeasonRepositoryImpl) clearCurrentSeasons(ctx context.Context) error {
 	return sr.db.WithContext(ctx).Model(&model.Season{}).Where("is_current = ?", true).Update("is_current", false).Error
 }
 
-func (sr *SeasonRepositoryImpl) GetSeasonByID(ctx context.Context, id uint64) (*model.Season, error) {
+func (sr *SeasonRepositoryImpl) GetSeasonByID(ctx context.Context, id uint64) (*domain.Season, error) {
 	var season model.Season
 	result := sr.db.WithContext(ctx).
 		Preload("Matches").
@@ -69,10 +67,11 @@ func (sr *SeasonRepositoryImpl) GetSeasonByID(ctx context.Context, id uint64) (*
 		return nil, fmt.Errorf("error getting season by ID: %w", result.Error)
 	}
 
-	return &season, nil
+	// Convert model to domain
+	return sr.mapper.ModelToDomain(&season), nil
 }
 
-func (sr *SeasonRepositoryImpl) GetSeasonByYear(ctx context.Context, year uint16) (*model.Season, error) {
+func (sr *SeasonRepositoryImpl) GetSeasonByYear(ctx context.Context, year uint16) (*domain.Season, error) {
 	var season model.Season
 	result := sr.db.WithContext(ctx).
 		Where("year = ?", year).
@@ -86,10 +85,11 @@ func (sr *SeasonRepositoryImpl) GetSeasonByYear(ctx context.Context, year uint16
 		return nil, fmt.Errorf("error getting season by year: %w", result.Error)
 	}
 
-	return &season, nil
+	// Convert model to domain
+	return sr.mapper.ModelToDomain(&season), nil
 }
 
-func (sr *SeasonRepositoryImpl) GetCurrentSeason(ctx context.Context) (*model.Season, error) {
+func (sr *SeasonRepositoryImpl) GetCurrentSeason(ctx context.Context) (*domain.Season, error) {
 	var season model.Season
 	result := sr.db.WithContext(ctx).
 		Where("is_current = ?", true).
@@ -103,10 +103,11 @@ func (sr *SeasonRepositoryImpl) GetCurrentSeason(ctx context.Context) (*model.Se
 		return nil, fmt.Errorf("error getting current season: %w", result.Error)
 	}
 
-	return &season, nil
+	// Convert model to domain
+	return sr.mapper.ModelToDomain(&season), nil
 }
 
-func (sr *SeasonRepositoryImpl) GetPaginatedSeasons(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Season, int64, error) {
+func (sr *SeasonRepositoryImpl) GetPaginatedSeasons(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Season, int64, error) {
 	var seasons []model.Season
 	var total int64
 
@@ -136,12 +137,17 @@ func (sr *SeasonRepositoryImpl) GetPaginatedSeasons(ctx context.Context, sort st
 		return nil, 0, fmt.Errorf("error fetching seasons: %w", err)
 	}
 
-	return seasons, total, nil
+	// Convert models to domain entities
+	domainSeasons := sr.mapper.ModelListToDomain(seasons)
+	return domainSeasons, total, nil
 }
 
-func (sr *SeasonRepositoryImpl) UpdateSeason(ctx context.Context, id uint64, season *model.Season) error {
+func (sr *SeasonRepositoryImpl) UpdateSeason(ctx context.Context, id uint64, season *domain.Season) error {
+	// Convert domain to model for persistence
+	modelSeason := sr.mapper.DomainToModel(season)
+
 	// If this season is being set as current, clear current flag from other seasons
-	if season.IsCurrent {
+	if modelSeason.IsCurrent {
 		if err := sr.clearCurrentSeasons(ctx); err != nil {
 			return fmt.Errorf(errClearCurrentSeasonFlag, err)
 		}
@@ -151,7 +157,7 @@ func (sr *SeasonRepositoryImpl) UpdateSeason(ctx context.Context, id uint64, sea
 		Model(&model.Season{}).
 		Where(whereID, id).
 		Select("*").
-		Updates(season).Error
+		Updates(modelSeason).Error
 }
 
 func (sr *SeasonRepositoryImpl) DeleteSeason(ctx context.Context, id uint64) error {
