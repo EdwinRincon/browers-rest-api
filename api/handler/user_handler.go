@@ -11,14 +11,16 @@ import (
 
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
+	"github.com/EdwinRincon/browersfc-api/internal/ports"
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
 	"github.com/EdwinRincon/browersfc-api/pkg/security"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
+	legacyService "github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -26,10 +28,11 @@ import (
 
 // UserHandler handles user-related HTTP requests.
 type UserHandler struct {
-	AuthService  service.AuthService
-	UserService  service.UserService
-	RoleService  service.RoleService
-	googleClient *http.Client // Pre-initialized Google API client for OAuth.
+	AuthService       legacyService.AuthService
+	UserService       legacyService.UserService // Legacy service for backward compatibility
+	UserDomainService ports.UserPort            // Domain service port interface
+	RoleDomainService *domainservice.RoleDomainService
+	googleClient      *http.Client // Pre-initialized Google API client for OAuth.
 }
 
 // GoogleUserInfo represents the user information returned by the Google API.
@@ -41,7 +44,7 @@ type GoogleUserInfo struct {
 }
 
 // NewUserHandler creates a new UserHandler with a pre-configured HTTP client.
-func NewUserHandler(authService service.AuthService, userService service.UserService, roleService service.RoleService) *UserHandler {
+func NewUserHandler(authService legacyService.AuthService, userService legacyService.UserService, userDomainService ports.UserPort, roleDomainService *domainservice.RoleDomainService) *UserHandler {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
@@ -54,10 +57,11 @@ func NewUserHandler(authService service.AuthService, userService service.UserSer
 	}
 
 	return &UserHandler{
-		AuthService:  authService,
-		UserService:  userService,
-		RoleService:  roleService,
-		googleClient: client,
+		AuthService:       authService,
+		UserService:       userService,
+		UserDomainService: userDomainService,
+		RoleDomainService: roleDomainService,
+		googleClient:      client,
 	}
 }
 
@@ -214,7 +218,7 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 		// Note: Rate limiting for new accounts is now handled by middleware.RateLimitNewAccounts
 
 		// Get the default role for new Google users
-		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
+		defaultRole, err := h.RoleDomainService.GetRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
@@ -308,7 +312,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	var roleID uint64
 	if createRequest.RoleID > 0 {
 		// If role_id is provided, verify it exists
-		role, err := h.RoleService.GetRoleByID(ctx, createRequest.RoleID)
+		role, err := h.RoleDomainService.GetRoleByID(ctx, createRequest.RoleID)
 		if err != nil {
 			helper.WriteErrorResponse(c, helper.NewBadRequestError("role_id", "Role not found"))
 			return
@@ -316,7 +320,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		roleID = role.ID
 	} else {
 		// Get the default role if no role_id provided
-		defaultRole, err := h.RoleService.GetRoleByName(ctx, constants.RoleDefault)
+		defaultRole, err := h.RoleDomainService.GetRoleByName(ctx, constants.RoleDefault)
 		if err != nil {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 			return
@@ -324,10 +328,10 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		roleID = defaultRole.ID
 	}
 
-	// Map the request to a User model
-	user := mapper.ToUser(&createRequest, roleID)
+	// Map the request to a domain User
+	domainUser := mapper.CreateUserRequestToDomain(&createRequest, roleID)
 
-	createdUser, err := h.UserService.CreateUser(ctx, user)
+	createdUser, err := h.UserDomainService.CreateUser(ctx, domainUser)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
@@ -339,7 +343,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		}
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusCreated, createdUser, "User created successfully")
+	// Map domain user to DTO response
+	response := mapper.DomainUserToUserShort(createdUser)
+	helper.WriteSuccessResponse(c, http.StatusCreated, response, "User created successfully")
 }
 
 // GetUserByUsername godoc
@@ -361,7 +367,7 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	user, err := h.UserService.GetUserByUsername(ctx, username)
+	user, err := h.UserDomainService.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("user"))
@@ -370,13 +376,9 @@ func (h *UserHandler) GetUserByUsername(c *gin.Context) {
 		}
 		return
 	}
-	if user == nil {
-		helper.WriteErrorResponse(c, helper.NewNotFoundError("user"))
-		return
-	}
 
-	userResponse := mapper.ToUserResponse(user)
-
+	// Map domain user to DTO response
+	userResponse := mapper.DomainUserToUserResponse(user, nil)
 	helper.WriteSuccessResponse(c, http.StatusOK, userResponse, "User retrieved successfully")
 }
 
@@ -420,14 +422,14 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	users, total, err := h.UserService.GetPaginatedUsers(ctx, sort, order, page, pageSize)
+	users, total, err := h.UserDomainService.GetPaginatedUsers(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToUserResponseList(users),
+		Items:      mapper.DomainUserListToUserResponseList(users),
 		TotalCount: total,
 	}
 
@@ -466,7 +468,10 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	updatedUser, err := h.UserService.UpdateUser(ctx, &userUpdateDTO, userIDStr)
+	// Map DTO to domain entity
+	domainUpdates := mapper.UpdateUserRequestToDomain(&userUpdateDTO)
+
+	updatedUser, err := h.UserDomainService.UpdateUser(ctx, userIDStr, domainUpdates)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("user"))
@@ -480,7 +485,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToUserShort(updatedUser)
+	// Map domain user to DTO response
+	response := mapper.DomainUserToUserShort(updatedUser)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "User updated successfully")
 }
 
@@ -505,7 +511,8 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
-	err = h.UserService.DeleteUser(ctx, id.String())
+	
+	err = h.UserDomainService.DeleteUser(ctx, id.String())
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return

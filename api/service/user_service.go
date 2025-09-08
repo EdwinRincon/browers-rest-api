@@ -8,7 +8,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/internal/ports"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type UserService interface {
@@ -20,10 +20,10 @@ type UserService interface {
 }
 
 type userService struct {
-	UserRepository ports.UserPort
+	UserRepository persistence.UserRepository
 }
 
-func NewUserService(userRepo ports.UserPort) UserService {
+func NewUserService(userRepo persistence.UserRepository) UserService {
 	return &userService{
 		UserRepository: userRepo,
 	}

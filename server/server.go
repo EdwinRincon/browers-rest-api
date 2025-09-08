@@ -18,6 +18,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/internal/adapters"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/ports"
 	"github.com/EdwinRincon/browersfc-api/pkg/jwt"
 	"github.com/EdwinRincon/browersfc-api/pkg/orm"
 	"github.com/gin-gonic/gin"
@@ -35,7 +36,7 @@ type Server struct {
 // Dependency containers for type-safe injection
 type Repositories struct {
 	User       persistence.UserRepository
-	Role       persistence.RoleRepository
+	Role       *persistence.RoleRepositoryImpl
 	Team       persistence.TeamRepository
 	Player     persistence.PlayerRepository
 	PlayerTeam persistence.PlayerTeamRepository
@@ -51,7 +52,6 @@ type Services struct {
 	JWT        *jwt.JWTService
 	Auth       service.AuthService
 	User       service.UserService
-	Role       service.RoleService
 	Team       service.TeamService
 	Player     service.PlayerService
 	PlayerTeam service.PlayerTeamService
@@ -66,6 +66,7 @@ type Services struct {
 	PlayerDomain service.PlayerDomainService
 	RoleDomain   *domainservice.RoleDomainService
 	SeasonDomain *domainservice.SeasonDomainService
+	UserDomain   ports.UserPort
 	// TODO: Add TeamDomain service.TeamDomainService when complete
 }
 
@@ -257,16 +258,17 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	// Create domain adapters
 	playerDomainAdapter := adapters.NewPlayerDomainAdapter(repos.Player)
 	seasonDomainAdapter := adapters.NewSeasonDomainAdapter(repos.Season)
+	userDomainAdapter := adapters.NewUserDomainAdapter(repos.User)
 
 	// Create domain services
 	roleDomainService := CreateRoleDomainService(repos.Role)
 	seasonDomainService := domainservice.NewSeasonDomainService(seasonDomainAdapter)
+	userDomainService := domainservice.NewUserDomainService(userDomainAdapter)
 
 	return &Services{
 		JWT:        jwtService,
 		Auth:       service.NewAuthService(repos.User, jwtService),
 		User:       service.NewUserService(repos.User),
-		Role:       service.NewRoleService(repos.Role),
 		Team:       service.NewTeamService(repos.Team),
 		Player:     service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
 		PlayerTeam: service.NewPlayerTeamService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season),
@@ -281,12 +283,13 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		PlayerDomain: service.NewPlayerDomainService(playerDomainAdapter, seasonDomainAdapter, repos.PlayerTeam),
 		RoleDomain:   roleDomainService,
 		SeasonDomain: seasonDomainService,
+		UserDomain:   userDomainService,
 	}
 }
 
 func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
-		User:       handler.NewUserHandler(services.Auth, services.User, services.Role),
+		User:       handler.NewUserHandler(services.Auth, services.User, services.UserDomain, services.RoleDomain),
 		Role:       handler.NewRoleHandler(services.RoleDomain),
 		Team:       handler.NewTeamHandler(services.Team),
 		Player:     handler.NewPlayerHandler(services.Player),

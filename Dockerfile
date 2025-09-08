@@ -17,6 +17,7 @@ RUN apk add --no-cache git && go mod download && apk del git
 # to ensure that the build context is clean and only contains necessary files
 COPY cmd/      ./cmd/
 COPY api/      ./api/
+COPY adapter/  ./adapter/
 COPY config/   ./config/
 COPY docs/     ./docs/
 COPY helper/   ./helper/

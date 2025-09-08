@@ -9,7 +9,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/internal/ports"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
 type PlayerService interface {
@@ -22,12 +22,12 @@ type PlayerService interface {
 }
 
 type playerService struct {
-	PlayerRepository     ports.PlayerPort
-	PlayerTeamRepository ports.PlayerTeamPort
-	SeasonRepository     ports.SeasonPort
+	PlayerRepository     persistence.PlayerRepository
+	PlayerTeamRepository persistence.PlayerTeamRepository
+	SeasonRepository     persistence.SeasonRepository
 }
 
-func NewPlayerService(playerRepo ports.PlayerPort, playerTeamRepo ports.PlayerTeamPort, seasonRepo ports.SeasonPort) PlayerService {
+func NewPlayerService(playerRepo persistence.PlayerRepository, playerTeamRepo persistence.PlayerTeamRepository, seasonRepo persistence.SeasonRepository) PlayerService {
 	return &playerService{
 		PlayerRepository:     playerRepo,
 		PlayerTeamRepository: playerTeamRepo,

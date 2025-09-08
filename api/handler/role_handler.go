@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
@@ -22,10 +22,14 @@ const (
 
 type RoleHandler struct {
 	RoleDomainService *domainservice.RoleDomainService
+	RoleMapper        *mapper.RoleMapper
 }
 
 func NewRoleHandler(roleDomainService *domainservice.RoleDomainService) *RoleHandler {
-	return &RoleHandler{RoleDomainService: roleDomainService}
+	return &RoleHandler{
+		RoleDomainService: roleDomainService,
+		RoleMapper:        mapper.NewRoleMapper(),
+	}
 }
 
 // GetRoleByID godoc
@@ -58,7 +62,7 @@ func (h *RoleHandler) GetRoleByID(c *gin.Context) {
 	}
 
 	// Convert domain role directly to response DTO
-	response := mapper.DomainToRoleResponse(domainRole)
+	response := h.RoleMapper.DomainToDTO(domainRole)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Role retrieved successfully")
 }
 
@@ -87,9 +91,7 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 	defer cancel()
 
 	// Convert DTO to domain role
-	roleMapper := mapper.NewRoleDomainMapper()
-	modelRole := mapper.ToRole(&roleDTO)
-	domainRole := roleMapper.ToDomain(modelRole)
+	domainRole := h.RoleMapper.DTOToDomain(&roleDTO)
 
 	createdRole, err := h.RoleDomainService.CreateRole(ctx, domainRole)
 	if err != nil {
@@ -102,7 +104,7 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 	}
 
 	// Convert domain role directly to response DTO
-	response := mapper.DomainToRoleResponse(createdRole)
+	response := h.RoleMapper.DomainToDTO(createdRole)
 	helper.WriteSuccessResponse(c, http.StatusCreated, response, "Role created successfully")
 }
 
@@ -140,9 +142,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	defer cancel()
 
 	// Convert DTO to domain model
-	roleMapper := mapper.NewRoleDomainMapper()
-	updateModel := mapper.ToRoleFromUpdate(&updateRoleDTO)
-	updateDomain := roleMapper.ToDomain(updateModel)
+	updateDomain := h.RoleMapper.UpdateDTOToDomain(&updateRoleDTO)
 	updateDomain.ID = id // Set the ID from URL parameter
 
 	updatedRole, err := h.RoleDomainService.UpdateRole(ctx, updateDomain)
@@ -158,7 +158,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	}
 
 	// Convert domain role directly to response DTO
-	response := mapper.DomainToRoleResponse(updatedRole)
+	response := h.RoleMapper.DomainToDTO(updatedRole)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Role updated successfully")
 }
 
@@ -249,7 +249,7 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 
 	// Convert domain roles directly to response DTOs
 	response := helper.PaginatedResponse{
-		Items:      mapper.DomainToRoleResponseList(domainRoles),
+		Items:      h.RoleMapper.DomainListToDTO(domainRoles),
 		TotalCount: total,
 	}
 

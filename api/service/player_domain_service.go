@@ -28,15 +28,15 @@ type PlayerDomainService interface {
 }
 
 type playerDomainService struct {
-	playerPort     ports.PlayerDomainPort
-	seasonPort     ports.SeasonDomainPort
+	playerPort     ports.PlayerPort
+	seasonPort     ports.SeasonPort
 	playerTeamPort ports.PlayerTeamPort // Still using persistence model for now
 }
 
 // NewPlayerDomainService creates a new domain-focused player service.
 func NewPlayerDomainService(
-	playerPort ports.PlayerDomainPort,
-	seasonPort ports.SeasonDomainPort,
+	playerPort ports.PlayerPort,
+	seasonPort ports.SeasonPort,
 	playerTeamPort ports.PlayerTeamPort,
 ) PlayerDomainService {
 	return &playerDomainService{

@@ -6,9 +6,7 @@ import (
 	"fmt"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/domain"
-	"github.com/EdwinRincon/browersfc-api/internal/ports"
 )
 
 var (
@@ -17,17 +15,12 @@ var (
 )
 
 type RoleDomainService struct {
-	rolePort   ports.RolePort
-	roleMapper *mapper.RoleDomainMapper
+	roleRepository domain.RoleRepository
 }
 
-func NewRoleDomainService(
-	rolePort ports.RolePort,
-	roleMapper *mapper.RoleDomainMapper,
-) *RoleDomainService {
+func NewRoleDomainService(roleRepository domain.RoleRepository) *RoleDomainService {
 	return &RoleDomainService{
-		rolePort:   rolePort,
-		roleMapper: roleMapper,
+		roleRepository: roleRepository,
 	}
 }
 
@@ -39,7 +32,7 @@ func (s *RoleDomainService) CreateRole(ctx context.Context, role *domain.Role) (
 	}
 
 	// Check if role already exists
-	existingRole, err := s.rolePort.GetRoleByName(ctx, role.Name)
+	existingRole, err := s.roleRepository.GetRoleByName(ctx, role.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing role: %w", err)
 	}
@@ -47,15 +40,14 @@ func (s *RoleDomainService) CreateRole(ctx context.Context, role *domain.Role) (
 		return nil, constants.ErrRecordAlreadyExists
 	}
 
-	// Convert to model and create
-	modelRole := s.roleMapper.ToModel(role)
-	err = s.rolePort.CreateRole(ctx, modelRole)
+	// Create through repository (adapter handles conversion)
+	err = s.roleRepository.CreateRole(ctx, role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create role: %w", err)
 	}
 
 	// Return the created role as domain entity
-	return s.roleMapper.ToDomain(modelRole), nil
+	return role, nil
 }
 
 // GetRoleByID retrieves a role by its ID with domain logic.
@@ -64,15 +56,15 @@ func (s *RoleDomainService) GetRoleByID(ctx context.Context, id uint64) (*domain
 		return nil, ErrInvalidRole
 	}
 
-	modelRole, err := s.rolePort.GetRoleByID(ctx, id)
+	domainRole, err := s.roleRepository.GetRoleByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
-	if modelRole == nil {
+	if domainRole == nil {
 		return nil, constants.ErrRecordNotFound
 	}
 
-	return s.roleMapper.ToDomain(modelRole), nil
+	return domainRole, nil
 }
 
 // GetRoleByName retrieves a role by its name with domain logic.
@@ -81,15 +73,15 @@ func (s *RoleDomainService) GetRoleByName(ctx context.Context, name string) (*do
 		return nil, ErrInvalidRole
 	}
 
-	modelRole, err := s.rolePort.GetRoleByName(ctx, name)
+	domainRole, err := s.roleRepository.GetRoleByName(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role by name: %w", err)
 	}
-	if modelRole == nil {
+	if domainRole == nil {
 		return nil, constants.ErrRecordNotFound
 	}
 
-	return s.roleMapper.ToDomain(modelRole), nil
+	return domainRole, nil
 }
 
 // UpdateRole updates an existing role with domain validation.
@@ -100,7 +92,7 @@ func (s *RoleDomainService) UpdateRole(ctx context.Context, role *domain.Role) (
 	}
 
 	// Check if role exists
-	existingRole, err := s.rolePort.GetRoleByID(ctx, role.ID)
+	existingRole, err := s.roleRepository.GetRoleByID(ctx, role.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing role: %w", err)
 	}
@@ -110,7 +102,7 @@ func (s *RoleDomainService) UpdateRole(ctx context.Context, role *domain.Role) (
 
 	// Check if name is being changed to an existing name
 	if existingRole.Name != role.Name {
-		conflictingRole, err := s.rolePort.GetRoleByName(ctx, role.Name)
+		conflictingRole, err := s.roleRepository.GetRoleByName(ctx, role.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check name conflict: %w", err)
 		}
@@ -119,15 +111,21 @@ func (s *RoleDomainService) UpdateRole(ctx context.Context, role *domain.Role) (
 		}
 	}
 
-	// Convert to model and update
-	modelRole := s.roleMapper.ToModel(role)
-	err = s.rolePort.UpdateRole(ctx, modelRole)
+	// Update through repository
+	err = s.roleRepository.UpdateRole(ctx, role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
 	}
 
-	// Return the updated role as domain entity
-	return s.roleMapper.ToDomain(modelRole), nil
+	updatedRole, err := s.roleRepository.GetRoleByID(ctx, role.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated role: %w", err)
+	}
+	if updatedRole == nil {
+		return nil, constants.ErrRecordNotFound
+	}
+
+	return updatedRole, nil
 }
 
 // DeleteRole deletes a role with domain business rules.
@@ -136,23 +134,22 @@ func (s *RoleDomainService) DeleteRole(ctx context.Context, id uint64) error {
 		return ErrInvalidRole
 	}
 
-	// Get the role to check if it can be deleted
-	modelRole, err := s.rolePort.GetRoleByID(ctx, id)
+	// Get role to check business rules
+	domainRole, err := s.roleRepository.GetRoleByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get role for deletion: %w", err)
 	}
-	if modelRole == nil {
+	if domainRole == nil {
 		return constants.ErrRecordNotFound
 	}
 
 	// Apply domain business rules
-	domainRole := s.roleMapper.ToDomain(modelRole)
 	if !domainRole.CanBeDeleted() {
 		return ErrCannotDeleteSystemRole
 	}
 
 	// Proceed with deletion
-	err = s.rolePort.DeleteRole(ctx, id)
+	err = s.roleRepository.DeleteRole(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete role: %w", err)
 	}
@@ -178,15 +175,18 @@ func (s *RoleDomainService) GetPaginatedRoles(ctx context.Context, sort string, 
 		order = "asc"
 	}
 
-	modelRoles, total, err := s.rolePort.GetPaginatedRoles(ctx, sort, order, page, pageSize)
+	domainRoles, total, err := s.roleRepository.GetPaginatedRoles(ctx, sort, order, page, pageSize)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get paginated roles: %w", err)
 	}
 
-	// Convert to domain entities
-	domainRoles := s.roleMapper.ToDomainSlice(modelRoles)
+	// Convert slice to slice of pointers
+	domainRolePointers := make([]*domain.Role, len(domainRoles))
+	for i := range domainRoles {
+		domainRolePointers[i] = &domainRoles[i]
+	}
 
-	return domainRoles, total, nil
+	return domainRolePointers, total, nil
 }
 
 // ValidateRole performs comprehensive domain validation on a role.
@@ -195,6 +195,7 @@ func (s *RoleDomainService) ValidateRole(role *domain.Role) error {
 		return ErrInvalidRole
 	}
 
+	// Use domain entity validation
 	if !role.IsValid() {
 		return ErrInvalidRole
 	}
@@ -202,36 +203,22 @@ func (s *RoleDomainService) ValidateRole(role *domain.Role) error {
 	return nil
 }
 
-// GetSystemRoles returns all system-defined roles.
-func (s *RoleDomainService) GetSystemRoles(ctx context.Context) ([]*domain.Role, error) {
-	allRoles, _, err := s.GetPaginatedRoles(ctx, "name", "asc", 1, 100)
-	if err != nil {
-		return nil, err
+// GetSystemRoles returns the default system roles.
+func (s *RoleDomainService) GetSystemRoles() []*domain.Role {
+	return []*domain.Role{
+		{Name: domain.RoleAdmin, Description: "Administrator with full access"},
+		{Name: domain.RolePlayer, Description: "Player with limited access"},
+		{Name: domain.RoleCoach, Description: "Coach with team management access"},
 	}
-
-	var systemRoles []*domain.Role
-	for _, role := range allRoles {
-		if role.IsSystemRole() {
-			systemRoles = append(systemRoles, role)
-		}
-	}
-
-	return systemRoles, nil
 }
 
-// GetUserDefinedRoles returns all user-defined (non-system) roles.
-func (s *RoleDomainService) GetUserDefinedRoles(ctx context.Context) ([]*domain.Role, error) {
-	allRoles, _, err := s.GetPaginatedRoles(ctx, "name", "asc", 1, 100)
-	if err != nil {
-		return nil, err
-	}
-
-	var userRoles []*domain.Role
-	for _, role := range allRoles {
-		if !role.IsSystemRole() {
-			userRoles = append(userRoles, role)
+// IsSystemRole checks if a role is a system role.
+func (s *RoleDomainService) IsSystemRole(roleName string) bool {
+	systemRoles := s.GetSystemRoles()
+	for _, role := range systemRoles {
+		if role.Name == roleName {
+			return true
 		}
 	}
-
-	return userRoles, nil
+	return false
 }

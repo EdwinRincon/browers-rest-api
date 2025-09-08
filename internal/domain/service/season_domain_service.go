@@ -12,11 +12,11 @@ import (
 // SeasonDomainService implements business logic for Season operations.
 // It contains domain rules and validation while being infrastructure-agnostic.
 type SeasonDomainService struct {
-	seasonPort ports.SeasonDomainPort
+	seasonPort ports.SeasonPort
 }
 
 // NewSeasonDomainService creates a new SeasonDomainService instance.
-func NewSeasonDomainService(seasonPort ports.SeasonDomainPort) *SeasonDomainService {
+func NewSeasonDomainService(seasonPort ports.SeasonPort) *SeasonDomainService {
 	return &SeasonDomainService{
 		seasonPort: seasonPort,
 	}
