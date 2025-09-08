@@ -54,7 +54,10 @@ func ToLineupResponse(lineup *model.Lineup) *dto.LineupResponse {
 
 	// Add match information if available
 	if lineup.Match != nil {
-		matchShort := ToMatchShort(lineup.Match)
+		matchMapper := mapper.NewMatchMapper()
+		// Convert model to domain first, then to short DTO
+		domainMatch := matchMapper.ModelToDomain(lineup.Match)
+		matchShort := matchMapper.DomainToShortDTO(domainMatch)
 		if matchShort != nil {
 			response.Match = *matchShort
 		}

@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
+	apimapper "github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
@@ -23,14 +25,14 @@ type LineupService interface {
 }
 
 type lineupService struct {
-	LineupRepository persistence.LineupRepository
-	MatchService     MatchService
+	LineupRepository   persistence.LineupRepository
+	MatchDomainService *domainservice.MatchDomainService
 }
 
-func NewLineupService(lineupRepo persistence.LineupRepository, matchService MatchService) LineupService {
+func NewLineupService(lineupRepo persistence.LineupRepository, matchDomainService *domainservice.MatchDomainService) LineupService {
 	return &lineupService{
-		LineupRepository: lineupRepo,
-		MatchService:     matchService,
+		LineupRepository:   lineupRepo,
+		MatchDomainService: matchDomainService,
 	}
 }
 
@@ -62,7 +64,7 @@ func (s *lineupService) GetLineupsByMatchID(ctx context.Context, matchID uint64)
 
 func (s *lineupService) GetMatchLineups(ctx context.Context, matchID uint64) (*dto.MatchLineupResponse, error) {
 	// Get the match details
-	match, err := s.MatchService.GetMatchByID(ctx, matchID)
+	match, err := s.MatchDomainService.GetMatchByID(ctx, matchID)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +79,10 @@ func (s *lineupService) GetMatchLineups(ctx context.Context, matchID uint64) (*d
 	}
 
 	// Organize lineups into starting XI and substitutes
-	return mapper.OrganizeLineupsByMatchID(match, lineups), nil
+	// Convert domain match to model match for compatibility with lineup mapper
+	matchMapper := mapper.NewMatchMapper()
+	modelMatch := matchMapper.DomainToModel(match)
+	return apimapper.OrganizeLineupsByMatchID(modelMatch, lineups), nil
 }
 
 func (s *lineupService) GetLineupsByPlayerID(ctx context.Context, playerID uint64) ([]model.Lineup, error) {
@@ -103,7 +108,7 @@ func (s *lineupService) UpdateLineup(ctx context.Context, id uint64, lineupUpdat
 	}
 
 	// Update the lineup with the provided DTO
-	mapper.UpdateLineupFromDTO(lineup, lineupUpdate)
+	apimapper.UpdateLineupFromDTO(lineup, lineupUpdate)
 
 	// Save the updated lineup
 	if err := s.LineupRepository.UpdateLineup(ctx, id, lineup); err != nil {

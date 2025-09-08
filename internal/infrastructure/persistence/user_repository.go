@@ -18,7 +18,7 @@ type UserRepositoryImpl struct {
 }
 
 // NewUserRepository creates a new UserRepository instance.
-func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
+func NewUserRepository(db *gorm.DB) domain.UserRepository {
 	return &UserRepositoryImpl{
 		db:     db,
 		mapper: mapper.NewUserMapper(),

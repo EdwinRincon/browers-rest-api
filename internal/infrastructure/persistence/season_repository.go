@@ -22,7 +22,7 @@ type SeasonRepositoryImpl struct {
 	mapper *mapper.SeasonMapper
 }
 
-func NewSeasonRepository(db *gorm.DB) *SeasonRepositoryImpl {
+func NewSeasonRepository(db *gorm.DB) domain.SeasonRepository {
 	return &SeasonRepositoryImpl{
 		db:     db,
 		mapper: mapper.NewSeasonMapper(),

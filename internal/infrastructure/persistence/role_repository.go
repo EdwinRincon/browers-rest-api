@@ -16,7 +16,7 @@ type RoleRepositoryImpl struct {
 	mapper *mapper.RoleMapper
 }
 
-func NewRoleRepository(db *gorm.DB) *RoleRepositoryImpl {
+func NewRoleRepository(db *gorm.DB) domain.RoleRepository {
 	return &RoleRepositoryImpl{
 		db:     db,
 		mapper: mapper.NewRoleMapper(),

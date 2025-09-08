@@ -3,55 +3,45 @@ package server
 import (
 	"github.com/EdwinRincon/browersfc-api/domain"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 )
 
+// CreateMatchDomainService creates a match domain service with repository implementing domain interface
+func CreateMatchDomainService(matchRepo domain.MatchRepository) *domainservice.MatchDomainService {
+	// Repository already implements domain.MatchRepository interface
+	return domainservice.NewMatchDomainService(matchRepo)
+}
+
 // CreateRoleDomainService creates a role domain service with repository implementing domain interface
-func CreateRoleDomainService(roleRepo *persistence.RoleRepositoryImpl) *domainservice.RoleDomainService {
-	// Repository implements domain.RoleRepository interface directly
-	var roleRepository domain.RoleRepository = roleRepo
-	return domainservice.NewRoleDomainService(roleRepository)
+func CreateRoleDomainService(roleRepo domain.RoleRepository) *domainservice.RoleDomainService {
+	return domainservice.NewRoleDomainService(roleRepo)
 }
 
 // CreateSeasonDomainService creates a season domain service with repository implementing domain interface
-func CreateSeasonDomainService(seasonRepo *persistence.SeasonRepositoryImpl) *domainservice.SeasonDomainService {
-	// Repository implements domain.SeasonRepository interface directly
-	var seasonRepository domain.SeasonRepository = seasonRepo
-	return domainservice.NewSeasonDomainService(seasonRepository)
+func CreateSeasonDomainService(seasonRepo domain.SeasonRepository) *domainservice.SeasonDomainService {
+	return domainservice.NewSeasonDomainService(seasonRepo)
 }
 
 // CreateUserDomainService creates a user domain service with repository implementing domain interface
-func CreateUserDomainService(userRepo *persistence.UserRepositoryImpl) *domainservice.UserDomainService {
-	// Repository implements domain.UserRepository interface directly
-	var userRepository domain.UserRepository = userRepo
-	return domainservice.NewUserDomainService(userRepository)
+func CreateUserDomainService(userRepo domain.UserRepository) *domainservice.UserDomainService {
+	return domainservice.NewUserDomainService(userRepo)
 }
 
 // CreateTeamDomainService creates a team domain service with repository implementing domain interface
-func CreateTeamDomainService(teamRepo *persistence.TeamRepositoryImpl) *domainservice.TeamDomainService {
-	// Repository implements domain.TeamRepository interface directly
-	var teamRepository domain.TeamRepository = teamRepo
-	return domainservice.NewTeamDomainService(teamRepository)
+func CreateTeamDomainService(teamRepo domain.TeamRepository) *domainservice.TeamDomainService {
+	return domainservice.NewTeamDomainService(teamRepo)
 }
 
 // CreatePlayerDomainService creates a player domain service with repository implementing domain interface
-func CreatePlayerDomainService(playerRepo *persistence.PlayerRepositoryImpl) *domainservice.PlayerDomainService {
-	// Repository implements domain.PlayerRepository interface directly
-	var playerRepository domain.PlayerRepository = playerRepo
-	return domainservice.NewPlayerDomainService(playerRepository)
+func CreatePlayerDomainService(playerRepo domain.PlayerRepository) *domainservice.PlayerDomainService {
+	return domainservice.NewPlayerDomainService(playerRepo)
 }
 
 // CreatePlayerTeamDomainService creates a player team domain service with repository implementing domain interface
 func CreatePlayerTeamDomainService(
-	playerTeamRepo *persistence.PlayerTeamRepositoryImpl,
-	playerRepo *persistence.PlayerRepositoryImpl,
-	teamRepo *persistence.TeamRepositoryImpl,
-	seasonRepo *persistence.SeasonRepositoryImpl,
+	playerTeamRepo domain.PlayerTeamRepository,
+	playerRepo domain.PlayerRepository,
+	teamRepo domain.TeamRepository,
+	seasonRepo domain.SeasonRepository,
 ) *domainservice.PlayerTeamDomainService {
-	// Repositories implement domain interfaces directly
-	var playerTeamRepository domain.PlayerTeamRepository = playerTeamRepo
-	var playerRepository domain.PlayerRepository = playerRepo
-	var teamRepository domain.TeamRepository = teamRepo
-	var seasonRepository domain.SeasonRepository = seasonRepo
-	return domainservice.NewPlayerTeamDomainService(playerTeamRepository, playerRepository, teamRepository, seasonRepository)
+	return domainservice.NewPlayerTeamDomainService(playerTeamRepo, playerRepo, teamRepo, seasonRepo)
 }

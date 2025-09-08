@@ -21,7 +21,7 @@ type PlayerTeamRepositoryImpl struct {
 }
 
 // NewPlayerTeamRepository creates a new PlayerTeamRepository implementation.
-func NewPlayerTeamRepository(db *gorm.DB) *PlayerTeamRepositoryImpl {
+func NewPlayerTeamRepository(db *gorm.DB) domain.PlayerTeamRepository {
 	return &PlayerTeamRepositoryImpl{
 		db:     db,
 		mapper: mapper.NewPlayerTeamMapper(),

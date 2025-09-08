@@ -18,16 +18,16 @@ import (
 )
 
 type LineupHandler struct {
-	LineupService service.LineupService
-	PlayerService domainservice.PlayerDomainService
-	MatchService  service.MatchService
+	LineupService      service.LineupService
+	PlayerService      domainservice.PlayerDomainService
+	MatchDomainService *domainservice.MatchDomainService
 }
 
-func NewLineupHandler(lineupService service.LineupService, playerService domainservice.PlayerDomainService, matchService service.MatchService) *LineupHandler {
+func NewLineupHandler(lineupService service.LineupService, playerService domainservice.PlayerDomainService, matchDomainService *domainservice.MatchDomainService) *LineupHandler {
 	return &LineupHandler{
-		LineupService: lineupService,
-		PlayerService: playerService,
-		MatchService:  matchService,
+		LineupService:      lineupService,
+		PlayerService:      playerService,
+		MatchDomainService: matchDomainService,
 	}
 }
 
@@ -63,7 +63,7 @@ func (h *LineupHandler) validateReferences(ctx context.Context, dto *dto.UpdateL
 
 	// Validate match ID if provided
 	if dto.MatchID != nil {
-		_, err := h.MatchService.GetMatchByID(ctx, *dto.MatchID)
+		_, err := h.MatchDomainService.GetMatchByID(ctx, *dto.MatchID)
 		if err != nil {
 			if errors.Is(err, constants.ErrRecordNotFound) {
 				return helper.NewNotFoundError("match")
@@ -112,7 +112,7 @@ func (h *LineupHandler) CreateLineup(c *gin.Context) {
 	}
 
 	// Verify that the match exists
-	_, err = h.MatchService.GetMatchByID(ctx, createRequest.MatchID)
+	_, err = h.MatchDomainService.GetMatchByID(ctx, createRequest.MatchID)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("match"))

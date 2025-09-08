@@ -34,7 +34,7 @@ type PlayerRepositoryImpl struct {
 	mapper *mapper.PlayerMapper
 }
 
-func NewPlayerRepository(db *gorm.DB) *PlayerRepositoryImpl {
+func NewPlayerRepository(db *gorm.DB) domain.PlayerRepository {
 	return &PlayerRepositoryImpl{
 		db:     db,
 		mapper: mapper.NewPlayerMapper(),

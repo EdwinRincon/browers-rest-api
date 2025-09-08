@@ -5,36 +5,31 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
-type MatchRepository interface {
-	CreateMatch(ctx context.Context, match *model.Match) error
-	GetMatchByID(ctx context.Context, id uint64) (*model.Match, error)
-	GetPaginatedMatches(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Match, int64, error)
-	GetMatchesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]model.Match, int64, error)
-	GetMatchesByTeamID(ctx context.Context, teamID uint64, sort string, order string, page int, pageSize int) ([]model.Match, int64, error)
-	GetNextMatchByTeamID(ctx context.Context, teamID uint64) (*model.Match, error)
-	GetDetailedMatchByID(ctx context.Context, id uint64) (*model.Match, error)
-	UpdateMatch(ctx context.Context, id uint64, match *model.Match) error
-	DeleteMatch(ctx context.Context, id uint64) error
-}
-
 type MatchRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.MatchMapper
 }
 
-func NewMatchRepository(db *gorm.DB) MatchRepository {
-	return &MatchRepositoryImpl{db: db}
+func NewMatchRepository(db *gorm.DB) domain.MatchRepository {
+	return &MatchRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewMatchMapper(),
+	}
 }
 
-func (mr *MatchRepositoryImpl) CreateMatch(ctx context.Context, match *model.Match) error {
-	return mr.db.WithContext(ctx).Create(match).Error
+func (mr *MatchRepositoryImpl) CreateMatch(ctx context.Context, match *domain.Match) error {
+	model := mr.mapper.DomainToModel(match)
+	return mr.db.WithContext(ctx).Create(model).Error
 }
 
 // GetMatchByID retrieves a match by its ID with basic preloads
-func (mr *MatchRepositoryImpl) GetMatchByID(ctx context.Context, id uint64) (*model.Match, error) {
+func (mr *MatchRepositoryImpl) GetMatchByID(ctx context.Context, id uint64) (*domain.Match, error) {
 	var match model.Match
 	result := mr.db.WithContext(ctx).
 		Preload("Season").
@@ -50,11 +45,11 @@ func (mr *MatchRepositoryImpl) GetMatchByID(ctx context.Context, id uint64) (*mo
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting match by ID: %w", result.Error)
 	}
-	return &match, nil
+	return mr.mapper.ModelToDomain(&match), nil
 }
 
 // GetDetailedMatchByID retrieves a match with all relationships loaded
-func (mr *MatchRepositoryImpl) GetDetailedMatchByID(ctx context.Context, id uint64) (*model.Match, error) {
+func (mr *MatchRepositoryImpl) GetDetailedMatchByID(ctx context.Context, id uint64) (*domain.Match, error) {
 	var match model.Match
 	result := mr.db.WithContext(ctx).
 		Preload("Season").
@@ -74,11 +69,11 @@ func (mr *MatchRepositoryImpl) GetDetailedMatchByID(ctx context.Context, id uint
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting detailed match by ID: %w", result.Error)
 	}
-	return &match, nil
+	return mr.mapper.ModelToDomain(&match), nil
 }
 
 // GetPaginatedMatches retrieves paginated matches with sorting and ordering
-func (mr *MatchRepositoryImpl) GetPaginatedMatches(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Match, int64, error) {
+func (mr *MatchRepositoryImpl) GetPaginatedMatches(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Match, int64, error) {
 	var matches []model.Match
 	var total int64
 
@@ -110,11 +105,11 @@ func (mr *MatchRepositoryImpl) GetPaginatedMatches(ctx context.Context, sort str
 		return nil, 0, fmt.Errorf("error fetching matches: %w", err)
 	}
 
-	return matches, total, nil
+	return mr.mapper.ModelListToDomain(matches), total, nil
 }
 
 // GetMatchesBySeasonID retrieves matches for a specific season with pagination
-func (mr *MatchRepositoryImpl) GetMatchesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]model.Match, int64, error) {
+func (mr *MatchRepositoryImpl) GetMatchesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]domain.Match, int64, error) {
 	var matches []model.Match
 	var total int64
 
@@ -149,11 +144,11 @@ func (mr *MatchRepositoryImpl) GetMatchesBySeasonID(ctx context.Context, seasonI
 		return nil, 0, fmt.Errorf("error fetching matches by season: %w", err)
 	}
 
-	return matches, total, nil
+	return mr.mapper.ModelListToDomain(matches), total, nil
 }
 
 // GetMatchesByTeamID retrieves matches where a specific team is home or away
-func (mr *MatchRepositoryImpl) GetMatchesByTeamID(ctx context.Context, teamID uint64, sort string, order string, page int, pageSize int) ([]model.Match, int64, error) {
+func (mr *MatchRepositoryImpl) GetMatchesByTeamID(ctx context.Context, teamID uint64, sort string, order string, page int, pageSize int) ([]domain.Match, int64, error) {
 	var matches []model.Match
 	var total int64
 
@@ -190,11 +185,11 @@ func (mr *MatchRepositoryImpl) GetMatchesByTeamID(ctx context.Context, teamID ui
 		return nil, 0, fmt.Errorf("error fetching matches by team: %w", err)
 	}
 
-	return matches, total, nil
+	return mr.mapper.ModelListToDomain(matches), total, nil
 }
 
 // GetNextMatchByTeamID retrieves the next scheduled match for a team
-func (mr *MatchRepositoryImpl) GetNextMatchByTeamID(ctx context.Context, teamID uint64) (*model.Match, error) {
+func (mr *MatchRepositoryImpl) GetNextMatchByTeamID(ctx context.Context, teamID uint64) (*domain.Match, error) {
 	var match model.Match
 	result := mr.db.WithContext(ctx).
 		Preload("HomeTeam").
@@ -212,15 +207,16 @@ func (mr *MatchRepositoryImpl) GetNextMatchByTeamID(ctx context.Context, teamID 
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting next match for team: %w", result.Error)
 	}
-	return &match, nil
+	return mr.mapper.ModelToDomain(&match), nil
 }
 
 // UpdateMatch updates an existing match
-func (mr *MatchRepositoryImpl) UpdateMatch(ctx context.Context, id uint64, match *model.Match) error {
+func (mr *MatchRepositoryImpl) UpdateMatch(ctx context.Context, id uint64, match *domain.Match) error {
+	modelMatch := mr.mapper.DomainToModel(match)
 	return mr.db.WithContext(ctx).
 		Model(&model.Match{}).
 		Where("id = ?", id).
-		Updates(match).Error
+		Updates(modelMatch).Error
 }
 
 func (mr *MatchRepositoryImpl) DeleteMatch(ctx context.Context, id uint64) error {

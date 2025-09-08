@@ -17,7 +17,7 @@ type TeamRepositoryImpl struct {
 	mapper *mapper.TeamMapper
 }
 
-func NewTeamRepository(db *gorm.DB) *TeamRepositoryImpl {
+func NewTeamRepository(db *gorm.DB) domain.TeamRepository {
 	return &TeamRepositoryImpl{
 		db:     db,
 		mapper: mapper.NewTeamMapper(),

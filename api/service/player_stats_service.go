@@ -26,7 +26,7 @@ type PlayerStatsService interface {
 type playerStatsService struct {
 	PlayerStatsRepository persistence.PlayerStatsRepository
 	PlayerRepository      domain.PlayerRepository
-	MatchRepository       persistence.MatchRepository
+	MatchRepository       domain.MatchRepository
 	SeasonRepository      domain.SeasonRepository
 	TeamRepository        domain.TeamRepository
 }
@@ -34,7 +34,7 @@ type playerStatsService struct {
 func NewPlayerStatsService(
 	playerStatsRepo persistence.PlayerStatsRepository,
 	playerRepo domain.PlayerRepository,
-	matchRepo persistence.MatchRepository,
+	matchRepo domain.MatchRepository,
 	seasonRepo domain.SeasonRepository,
 	teamRepo domain.TeamRepository,
 ) PlayerStatsService {

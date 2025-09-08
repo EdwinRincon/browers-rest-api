@@ -7,22 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type MatchHandler struct {
-	MatchService service.MatchService
+	MatchDomainService *service.MatchDomainService
+	MatchMapper        *mapper.MatchMapper
 }
 
-func NewMatchHandler(matchService service.MatchService) *MatchHandler {
+func NewMatchHandler(matchDomainService *service.MatchDomainService) *MatchHandler {
 	return &MatchHandler{
-		MatchService: matchService,
+		MatchDomainService: matchDomainService,
+		MatchMapper:        mapper.NewMatchMapper(),
 	}
 }
 
@@ -51,13 +53,16 @@ func (h *MatchHandler) CreateMatch(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	createdMatch, err := h.MatchService.CreateMatch(ctx, &createRequest)
+	// Convert DTO to domain entity
+	domainMatch := h.MatchMapper.DTOToDomain(&createRequest)
+
+	createdMatch, err := h.MatchDomainService.CreateMatch(ctx, domainMatch)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	matchResponse := mapper.ToMatchShort(createdMatch)
+	matchResponse := h.MatchMapper.DomainToShortDTO(createdMatch)
 	helper.WriteSuccessResponse(c, http.StatusCreated, matchResponse, "Match created successfully")
 }
 
@@ -85,7 +90,7 @@ func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	match, err := h.MatchService.GetMatchByID(ctx, id)
+	match, err := h.MatchDomainService.GetMatchByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("match"))
@@ -95,7 +100,7 @@ func (h *MatchHandler) GetMatchByID(c *gin.Context) {
 		return
 	}
 
-	matchResponse := mapper.ToMatchResponse(match)
+	matchResponse := h.MatchMapper.DomainToDTO(match)
 	helper.WriteSuccessResponse(c, http.StatusOK, matchResponse, "Match found successfully")
 }
 
@@ -123,7 +128,7 @@ func (h *MatchHandler) GetDetailedMatchByID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	match, err := h.MatchService.GetDetailedMatchByID(ctx, id)
+	match, err := h.MatchDomainService.GetDetailedMatchByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("match"))
@@ -133,7 +138,7 @@ func (h *MatchHandler) GetDetailedMatchByID(c *gin.Context) {
 		return
 	}
 
-	detailedResponse := mapper.ToMatchDetailResponse(match)
+	detailedResponse := h.MatchMapper.DomainToDetailDTO(match)
 	helper.WriteSuccessResponse(c, http.StatusOK, detailedResponse, "Match details found successfully")
 }
 
@@ -176,14 +181,14 @@ func (h *MatchHandler) GetPaginatedMatches(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	matches, total, err := h.MatchService.GetPaginatedMatches(ctx, sort, order, page, pageSize)
+	matches, total, err := h.MatchDomainService.GetPaginatedMatches(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToMatchResponseList(matches),
+		Items:      h.MatchMapper.DomainListToDTO(matches),
 		TotalCount: total,
 	}
 
@@ -231,14 +236,14 @@ func (h *MatchHandler) GetMatchesBySeasonID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	matches, total, err := h.MatchService.GetMatchesBySeasonID(ctx, seasonID, sort, order, page, pageSize)
+	matches, total, err := h.MatchDomainService.GetMatchesBySeasonID(ctx, seasonID, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToMatchResponseList(matches),
+		Items:      h.MatchMapper.DomainListToDTO(matches),
 		TotalCount: total,
 	}
 
@@ -286,14 +291,14 @@ func (h *MatchHandler) GetMatchesByTeamID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	matches, total, err := h.MatchService.GetMatchesByTeamID(ctx, teamID, sort, order, page, pageSize)
+	matches, total, err := h.MatchDomainService.GetMatchesByTeamID(ctx, teamID, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToMatchResponseList(matches),
+		Items:      h.MatchMapper.DomainListToDTO(matches),
 		TotalCount: total,
 	}
 
@@ -323,7 +328,7 @@ func (h *MatchHandler) GetNextMatchByTeamID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	match, err := h.MatchService.GetNextMatchByTeamID(ctx, teamID)
+	match, err := h.MatchDomainService.GetNextMatchByTeamID(ctx, teamID)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
@@ -333,7 +338,7 @@ func (h *MatchHandler) GetNextMatchByTeamID(c *gin.Context) {
 		return
 	}
 
-	matchResponse := mapper.ToMatchResponse(match)
+	matchResponse := h.MatchMapper.DomainToDTO(match)
 	helper.WriteSuccessResponse(c, http.StatusOK, matchResponse, "Next match found successfully")
 }
 
@@ -370,7 +375,10 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	updatedMatch, err := h.MatchService.UpdateMatch(ctx, id, &updateRequest)
+	// Convert DTO to domain entity
+	domainMatch := h.MatchMapper.UpdateDTOToDomain(&updateRequest)
+
+	updatedMatch, err := h.MatchDomainService.UpdateMatch(ctx, id, domainMatch)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("match"))
@@ -380,7 +388,7 @@ func (h *MatchHandler) UpdateMatch(c *gin.Context) {
 		return
 	}
 
-	matchResponse := mapper.ToMatchResponse(updatedMatch)
+	matchResponse := h.MatchMapper.DomainToDTO(updatedMatch)
 	helper.WriteSuccessResponse(c, http.StatusOK, matchResponse, "Match updated successfully")
 }
 
@@ -407,7 +415,7 @@ func (h *MatchHandler) DeleteMatch(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	err = h.MatchService.DeleteMatch(ctx, id)
+	err = h.MatchDomainService.DeleteMatch(ctx, id)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return

@@ -15,6 +15,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/config"
 	docs "github.com/EdwinRincon/browersfc-api/docs"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence"
 	"github.com/EdwinRincon/browersfc-api/pkg/jwt"
@@ -33,15 +34,15 @@ type Server struct {
 
 // Dependency containers for type-safe injection
 type Repositories struct {
-	User       *persistence.UserRepositoryImpl
-	Role       *persistence.RoleRepositoryImpl
-	Team       *persistence.TeamRepositoryImpl
-	Player     *persistence.PlayerRepositoryImpl
-	PlayerTeam *persistence.PlayerTeamRepositoryImpl
-	Season     *persistence.SeasonRepositoryImpl
+	User       domain.UserRepository
+	Role       domain.RoleRepository
+	Team       domain.TeamRepository
+	Player     domain.PlayerRepository
+	PlayerTeam domain.PlayerTeamRepository
+	Season     domain.SeasonRepository
 	Article    persistence.ArticleRepository
 	Lineup     persistence.LineupRepository
-	Match      persistence.MatchRepository
+	Match      domain.MatchRepository
 	TeamStat   persistence.TeamStatsRepository
 	PlayerStat persistence.PlayerStatsRepository
 }
@@ -56,7 +57,6 @@ type Services struct {
 	// TeamStat   service.TeamStatsService
 	// PlayerStat service.PlayerStatsService
 	// Lineup     service.LineupService
-	Match service.MatchService
 
 	// Domain-based services (hexagonal architecture)
 	PlayerDomain     *domainservice.PlayerDomainService
@@ -65,6 +65,7 @@ type Services struct {
 	SeasonDomain     *domainservice.SeasonDomainService
 	UserDomain       *domainservice.UserDomainService
 	TeamDomain       *domainservice.TeamDomainService
+	MatchDomain      *domainservice.MatchDomainService
 }
 
 type Handlers struct {
@@ -249,8 +250,6 @@ func initializeRepositories(db *gorm.DB) *Repositories {
 func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	jwtService := jwt.NewJWTService(string(jwtSecret))
 
-	matchService := service.NewMatchService(repos.Match)
-
 	// Create domain services using domain factory
 	roleDomainService := CreateRoleDomainService(repos.Role)
 	seasonDomainService := CreateSeasonDomainService(repos.Season)
@@ -258,6 +257,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	teamDomainService := CreateTeamDomainService(repos.Team)
 	playerDomainService := CreatePlayerDomainService(repos.Player)
 	playerTeamDomainService := CreatePlayerTeamDomainService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season)
+	matchDomainService := CreateMatchDomainService(repos.Match)
 
 	return &Services{
 		JWT:  jwtService,
@@ -266,7 +266,6 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		// Player:     service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
 		// PlayerTeam: service.NewPlayerTeamService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season),
 		// Article:    service.NewArticleService(repos.Article, seasonService),
-		Match: matchService,
 		// TeamStat:   service.NewTeamStatsService(repos.TeamStat, repos.Team, repos.Season),
 		// Lineup:     service.NewLineupService(repos.Lineup, matchService),
 		// PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
@@ -278,6 +277,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		SeasonDomain:     seasonDomainService,
 		UserDomain:       userDomainService,
 		TeamDomain:       teamDomainService,
+		MatchDomain:      matchDomainService,
 	}
 }
 
@@ -291,7 +291,7 @@ func initializeHandlers(services *Services) *Handlers {
 		Season:     handler.NewSeasonHandler(services.SeasonDomain),
 		// Article:    handler.NewArticleHandler(services.Article),
 		// Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
-		Match: handler.NewMatchHandler(services.Match),
+		Match: handler.NewMatchHandler(services.MatchDomain),
 		// TeamStat:   handler.NewTeamStatsHandler(services.TeamStat),
 		// PlayerStat: handler.NewPlayerStatsHandler(services.PlayerStat),
 	}
