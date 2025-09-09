@@ -5,21 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
 type RoleRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.RoleMapper
+	mapper *persistence.RolePersistenceMapper
 }
 
 func NewRoleRepository(db *gorm.DB) domain.RoleRepository {
 	return &RoleRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewRoleMapper(),
+		mapper: persistence.NewRolePersistenceMapper(),
 	}
 }
 

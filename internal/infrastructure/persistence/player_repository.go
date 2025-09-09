@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
 	"github.com/EdwinRincon/browersfc-api/domain"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"gorm.io/gorm"
 )
 
@@ -31,13 +31,13 @@ type PlayerRepository interface {
 
 type PlayerRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.PlayerMapper
+	mapper *persistence.PlayerPersistenceMapper
 }
 
 func NewPlayerRepository(db *gorm.DB) domain.PlayerRepository {
 	return &PlayerRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewPlayerMapper(),
+		mapper: persistence.NewPlayerPersistenceMapper(),
 	}
 }
 

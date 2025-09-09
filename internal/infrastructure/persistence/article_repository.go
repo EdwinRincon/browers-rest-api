@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
@@ -18,14 +18,14 @@ const (
 // ArticleRepositoryImpl implements domain.ArticleRepository interface.
 type ArticleRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.ArticleMapper
+	mapper *persistence.ArticlePersistenceMapper
 }
 
 // NewArticleRepository creates a new ArticleRepositoryImpl.
 func NewArticleRepository(db *gorm.DB) *ArticleRepositoryImpl {
 	return &ArticleRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewArticleMapper(),
+		mapper: persistence.NewArticlePersistenceMapper(),
 	}
 }
 

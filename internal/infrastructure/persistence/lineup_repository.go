@@ -5,21 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
 type LineupRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.LineupMapper
+	mapper *persistence.LineupPersistenceMapper
 }
 
 func NewLineupRepository(db *gorm.DB) domain.LineupRepository {
 	return &LineupRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewLineupMapper(),
+		mapper: persistence.NewLineupPersistenceMapper(),
 	}
 }
 

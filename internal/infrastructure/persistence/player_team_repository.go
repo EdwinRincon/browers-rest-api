@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
@@ -17,14 +17,14 @@ const wherePlayerTeamIDs = "player_id = ? AND team_id = ? AND season_id = ?"
 // PlayerTeamRepositoryImpl implements domain.PlayerTeamRepository interface.
 type PlayerTeamRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.PlayerTeamMapper
+	mapper *persistence.PlayerTeamPersistenceMapper
 }
 
 // NewPlayerTeamRepository creates a new PlayerTeamRepository implementation.
 func NewPlayerTeamRepository(db *gorm.DB) domain.PlayerTeamRepository {
 	return &PlayerTeamRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewPlayerTeamMapper(),
+		mapper: persistence.NewPlayerTeamPersistenceMapper(),
 	}
 }
 

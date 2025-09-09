@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/pkg/orm"
 	"github.com/brianvoe/gofakeit/v7"
 	"gorm.io/gorm"

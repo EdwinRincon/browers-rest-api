@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
@@ -19,13 +19,13 @@ const (
 
 type SeasonRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.SeasonMapper
+	mapper *persistence.SeasonPersistenceMapper
 }
 
 func NewSeasonRepository(db *gorm.DB) domain.SeasonRepository {
 	return &SeasonRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewSeasonMapper(),
+		mapper: persistence.NewSeasonPersistenceMapper(),
 	}
 }
 

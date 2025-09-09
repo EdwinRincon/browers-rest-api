@@ -5,21 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
 type MatchRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.MatchMapper
+	mapper *persistence.MatchPersistenceMapper
 }
 
 func NewMatchRepository(db *gorm.DB) domain.MatchRepository {
 	return &MatchRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewMatchMapper(),
+		mapper: persistence.NewMatchPersistenceMapper(),
 	}
 }
 

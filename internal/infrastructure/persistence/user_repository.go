@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	persistenceMapper "github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
@@ -14,14 +14,14 @@ import (
 // UserRepositoryImpl implements the UserRepository interface using GORM.
 type UserRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.UserMapper
+	mapper *persistenceMapper.UserPersistenceMapper
 }
 
 // NewUserRepository creates a new UserRepository instance.
 func NewUserRepository(db *gorm.DB) domain.UserRepository {
 	return &UserRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewUserMapper(),
+		mapper: persistenceMapper.NewUserPersistenceMapper(),
 	}
 }
 

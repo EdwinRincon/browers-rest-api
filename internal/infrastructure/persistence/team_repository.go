@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
@@ -14,13 +14,13 @@ import (
 // TeamRepositoryImpl implements domain.TeamRepository interface.
 type TeamRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.TeamMapper
+	mapper *persistence.TeamPersistenceMapper
 }
 
 func NewTeamRepository(db *gorm.DB) domain.TeamRepository {
 	return &TeamRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewTeamMapper(),
+		mapper: persistence.NewTeamPersistenceMapper(),
 	}
 }
 

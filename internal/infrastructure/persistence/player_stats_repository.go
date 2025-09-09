@@ -5,21 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
 type PlayerStatsRepositoryImpl struct {
 	db     *gorm.DB
-	mapper *mapper.PlayerStatsMapper
+	mapper *persistence.PlayerStatsPersistenceMapper
 }
 
 func NewPlayerStatsRepository(db *gorm.DB) *PlayerStatsRepositoryImpl {
 	return &PlayerStatsRepositoryImpl{
 		db:     db,
-		mapper: mapper.NewPlayerStatsMapper(),
+		mapper: persistence.NewPlayerStatsPersistenceMapper(),
 	}
 }
 

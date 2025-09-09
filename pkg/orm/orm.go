@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
