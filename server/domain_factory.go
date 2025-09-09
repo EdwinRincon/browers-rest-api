@@ -63,3 +63,14 @@ func CreateTeamStatsDomainService(
 ) *domainservice.TeamStatsDomainService {
 	return domainservice.NewTeamStatsDomainService(teamStatsRepo, teamRepo, seasonRepo)
 }
+
+// CreatePlayerStatsDomainService creates a player stats domain service with repository implementing domain interface
+func CreatePlayerStatsDomainService(
+	playerStatsRepo domain.PlayerStatsRepository,
+	playerRepo domain.PlayerRepository,
+	matchRepo domain.MatchRepository,
+	seasonRepo domain.SeasonRepository,
+	teamRepo domain.TeamRepository,
+) *domainservice.PlayerStatsDomainService {
+	return domainservice.NewPlayerStatsDomainService(playerStatsRepo, playerRepo, matchRepo, seasonRepo, teamRepo)
+}

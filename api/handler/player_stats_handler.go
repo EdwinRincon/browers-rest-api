@@ -7,22 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type PlayerStatsHandler struct {
-	PlayerStatsService service.PlayerStatsService
+	PlayerStatsDomainService *domainservice.PlayerStatsDomainService
+	PlayerStatsMapper        *mapper.PlayerStatsMapper
 }
 
-func NewPlayerStatsHandler(playerStatsService service.PlayerStatsService) *PlayerStatsHandler {
+func NewPlayerStatsHandler(playerStatsDomainService *domainservice.PlayerStatsDomainService) *PlayerStatsHandler {
 	return &PlayerStatsHandler{
-		PlayerStatsService: playerStatsService,
+		PlayerStatsDomainService: playerStatsDomainService,
+		PlayerStatsMapper:        mapper.NewPlayerStatsMapper(),
 	}
 }
 
@@ -47,7 +49,9 @@ func (h *PlayerStatsHandler) CreatePlayerStat(c *gin.Context) {
 		return
 	}
 
-	playerStat, err := h.PlayerStatsService.CreatePlayerStat(c.Request.Context(), &createRequest)
+	domainPlayerStat := h.PlayerStatsMapper.DTOToDomain(&createRequest)
+
+	err := h.PlayerStatsDomainService.CreatePlayerStat(c.Request.Context(), domainPlayerStat)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrPlayerNotFound):
@@ -68,7 +72,7 @@ func (h *PlayerStatsHandler) CreatePlayerStat(c *gin.Context) {
 		}
 	}
 
-	response := mapper.ToPlayerStatResponse(playerStat)
+	response := h.PlayerStatsMapper.DomainToDTO(domainPlayerStat)
 	helper.WriteSuccessResponse(c, http.StatusCreated, response, "Player statistic created successfully")
 }
 
@@ -91,7 +95,7 @@ func (h *PlayerStatsHandler) GetPlayerStatByID(c *gin.Context) {
 		return
 	}
 
-	playerStat, err := h.PlayerStatsService.GetPlayerStatByID(c.Request.Context(), id)
+	playerStat, err := h.PlayerStatsDomainService.GetPlayerStatByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError(constants.MsgNotFound))
@@ -101,7 +105,7 @@ func (h *PlayerStatsHandler) GetPlayerStatByID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToPlayerStatResponse(playerStat)
+	response := h.PlayerStatsMapper.DomainToDTO(playerStat)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player statistic retrieved successfully")
 }
 
@@ -124,7 +128,7 @@ func (h *PlayerStatsHandler) GetPlayerStatsByPlayerID(c *gin.Context) {
 		return
 	}
 
-	playerStats, err := h.PlayerStatsService.GetPlayerStatsByPlayerID(c.Request.Context(), playerID)
+	playerStats, err := h.PlayerStatsDomainService.GetPlayerStatsByPlayerID(c.Request.Context(), playerID)
 	if err != nil {
 		if errors.Is(err, constants.ErrPlayerNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError(constants.MsgInvalidPlayerID))
@@ -134,7 +138,7 @@ func (h *PlayerStatsHandler) GetPlayerStatsByPlayerID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToPlayerStatResponseList(playerStats)
+	response := h.PlayerStatsMapper.DomainListToDTO(playerStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player statistics retrieved successfully")
 }
 
@@ -157,7 +161,7 @@ func (h *PlayerStatsHandler) GetPlayerStatsByMatchID(c *gin.Context) {
 		return
 	}
 
-	playerStats, err := h.PlayerStatsService.GetPlayerStatsByMatchID(c.Request.Context(), matchID)
+	playerStats, err := h.PlayerStatsDomainService.GetPlayerStatsByMatchID(c.Request.Context(), matchID)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError(constants.MsgInvalidMatchID))
@@ -167,7 +171,7 @@ func (h *PlayerStatsHandler) GetPlayerStatsByMatchID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToPlayerStatResponseList(playerStats)
+	response := h.PlayerStatsMapper.DomainListToDTO(playerStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player statistics retrieved successfully")
 }
 
@@ -190,7 +194,7 @@ func (h *PlayerStatsHandler) GetPlayerStatsBySeasonID(c *gin.Context) {
 		return
 	}
 
-	playerStats, err := h.PlayerStatsService.GetPlayerStatsBySeasonID(c.Request.Context(), seasonID)
+	playerStats, err := h.PlayerStatsDomainService.GetPlayerStatsBySeasonID(c.Request.Context(), seasonID)
 	if err != nil {
 		if errors.Is(err, constants.ErrSeasonNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError(constants.MsgInvalidSeasonData))
@@ -200,7 +204,7 @@ func (h *PlayerStatsHandler) GetPlayerStatsBySeasonID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToPlayerStatResponseList(playerStats)
+	response := h.PlayerStatsMapper.DomainListToDTO(playerStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player statistics retrieved successfully")
 }
 
@@ -248,14 +252,14 @@ func (h *PlayerStatsHandler) GetPaginatedPlayerStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	playerStats, total, err := h.PlayerStatsService.GetPaginatedPlayerStats(ctx, sort, order, page, pageSize)
+	playerStats, total, err := h.PlayerStatsDomainService.GetPaginatedPlayerStats(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToPlayerStatResponseList(playerStats),
+		Items:      h.PlayerStatsMapper.DomainListToDTO(playerStats),
 		TotalCount: total,
 	}
 
@@ -290,7 +294,9 @@ func (h *PlayerStatsHandler) UpdatePlayerStat(c *gin.Context) {
 		return
 	}
 
-	playerStat, err := h.PlayerStatsService.UpdatePlayerStat(c.Request.Context(), id, &updateRequest)
+	domainUpdate := h.PlayerStatsMapper.UpdateDTOToDomain(&updateRequest)
+
+	playerStat, err := h.PlayerStatsDomainService.UpdatePlayerStat(c.Request.Context(), id, domainUpdate)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
@@ -303,7 +309,7 @@ func (h *PlayerStatsHandler) UpdatePlayerStat(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToPlayerStatResponse(playerStat)
+	response := h.PlayerStatsMapper.DomainToDTO(playerStat)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player statistic updated successfully")
 }
 
@@ -327,7 +333,7 @@ func (h *PlayerStatsHandler) DeletePlayerStat(c *gin.Context) {
 		return
 	}
 
-	err = h.PlayerStatsService.DeletePlayerStat(c.Request.Context(), id)
+	err = h.PlayerStatsDomainService.DeletePlayerStat(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError(constants.MsgNotFound))

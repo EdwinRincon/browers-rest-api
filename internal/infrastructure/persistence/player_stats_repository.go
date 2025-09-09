@@ -5,34 +5,30 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
-type PlayerStatsRepository interface {
-	CreatePlayerStat(ctx context.Context, playerStat *model.PlayerStat) error
-	GetPlayerStatByID(ctx context.Context, id uint64) (*model.PlayerStat, error)
-	GetPlayerStatsByPlayerID(ctx context.Context, playerID uint64) ([]model.PlayerStat, error)
-	GetPlayerStatsByMatchID(ctx context.Context, matchID uint64) ([]model.PlayerStat, error)
-	GetPlayerStatsBySeasonID(ctx context.Context, seasonID uint64) ([]model.PlayerStat, error)
-	GetPaginatedPlayerStats(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.PlayerStat, int64, error)
-	UpdatePlayerStat(ctx context.Context, id uint64, playerStat *model.PlayerStat) error
-	DeletePlayerStat(ctx context.Context, id uint64) error
-}
-
 type PlayerStatsRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.PlayerStatsMapper
 }
 
-func NewPlayerStatsRepository(db *gorm.DB) PlayerStatsRepository {
-	return &PlayerStatsRepositoryImpl{db: db}
+func NewPlayerStatsRepository(db *gorm.DB) *PlayerStatsRepositoryImpl {
+	return &PlayerStatsRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewPlayerStatsMapper(),
+	}
 }
 
-func (psr *PlayerStatsRepositoryImpl) CreatePlayerStat(ctx context.Context, playerStat *model.PlayerStat) error {
-	return psr.db.WithContext(ctx).Create(playerStat).Error
+func (psr *PlayerStatsRepositoryImpl) CreatePlayerStat(ctx context.Context, playerStat *domain.PlayerStat) error {
+	modelPlayerStat := psr.mapper.DomainToModel(playerStat)
+	return psr.db.WithContext(ctx).Create(modelPlayerStat).Error
 }
 
-func (psr *PlayerStatsRepositoryImpl) GetPlayerStatByID(ctx context.Context, id uint64) (*model.PlayerStat, error) {
+func (psr *PlayerStatsRepositoryImpl) GetPlayerStatByID(ctx context.Context, id uint64) (*domain.PlayerStat, error) {
 	var playerStat model.PlayerStat
 	result := psr.db.WithContext(ctx).
 		Preload("Player").
@@ -48,11 +44,12 @@ func (psr *PlayerStatsRepositoryImpl) GetPlayerStatByID(ctx context.Context, id 
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting player stat by ID: %w", result.Error)
 	}
-	return &playerStat, nil
+
+	return psr.mapper.ModelToDomain(&playerStat), nil
 }
 
 // GetPlayerStatsByPlayerID retrieves player stats for a specific player.
-func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsByPlayerID(ctx context.Context, playerID uint64) ([]model.PlayerStat, error) {
+func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsByPlayerID(ctx context.Context, playerID uint64) ([]domain.PlayerStat, error) {
 	var playerStats []model.PlayerStat
 	result := psr.db.WithContext(ctx).
 		Preload("Player").
@@ -65,11 +62,11 @@ func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsByPlayerID(ctx context.Conte
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting player stats by player ID: %w", result.Error)
 	}
-	return playerStats, nil
+	return psr.mapper.ModelListToDomain(playerStats), nil
 }
 
 // GetPlayerStatsByMatchID retrieves player stats for a specific match.
-func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsByMatchID(ctx context.Context, matchID uint64) ([]model.PlayerStat, error) {
+func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsByMatchID(ctx context.Context, matchID uint64) ([]domain.PlayerStat, error) {
 	var playerStats []model.PlayerStat
 	result := psr.db.WithContext(ctx).
 		Preload("Player").
@@ -82,11 +79,11 @@ func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsByMatchID(ctx context.Contex
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting player stats by match ID: %w", result.Error)
 	}
-	return playerStats, nil
+	return psr.mapper.ModelListToDomain(playerStats), nil
 }
 
 // GetPlayerStatsBySeasonID retrieves player stats for a specific season.
-func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsBySeasonID(ctx context.Context, seasonID uint64) ([]model.PlayerStat, error) {
+func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsBySeasonID(ctx context.Context, seasonID uint64) ([]domain.PlayerStat, error) {
 	var playerStats []model.PlayerStat
 	result := psr.db.WithContext(ctx).
 		Preload("Player").
@@ -99,11 +96,11 @@ func (psr *PlayerStatsRepositoryImpl) GetPlayerStatsBySeasonID(ctx context.Conte
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting player stats by season ID: %w", result.Error)
 	}
-	return playerStats, nil
+	return psr.mapper.ModelListToDomain(playerStats), nil
 }
 
 // GetPaginatedPlayerStats retrieves a paginated list of player stats.
-func (psr *PlayerStatsRepositoryImpl) GetPaginatedPlayerStats(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.PlayerStat, int64, error) {
+func (psr *PlayerStatsRepositoryImpl) GetPaginatedPlayerStats(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.PlayerStat, int64, error) {
 	var playerStats []model.PlayerStat
 	var total int64
 
@@ -135,15 +132,16 @@ func (psr *PlayerStatsRepositoryImpl) GetPaginatedPlayerStats(ctx context.Contex
 		return nil, 0, fmt.Errorf("error fetching player stats: %w", err)
 	}
 
-	return playerStats, total, nil
+	return psr.mapper.ModelListToDomain(playerStats), total, nil
 }
 
-func (psr *PlayerStatsRepositoryImpl) UpdatePlayerStat(ctx context.Context, id uint64, playerStat *model.PlayerStat) error {
+func (psr *PlayerStatsRepositoryImpl) UpdatePlayerStat(ctx context.Context, id uint64, playerStat *domain.PlayerStat) error {
+	modelPlayerStat := psr.mapper.DomainToModel(playerStat)
 	return psr.db.WithContext(ctx).
 		Model(&model.PlayerStat{}).
 		Where("id = ?", id).
 		Select("*").
-		Updates(playerStat).Error
+		Updates(modelPlayerStat).Error
 }
 
 func (psr *PlayerStatsRepositoryImpl) DeletePlayerStat(ctx context.Context, id uint64) error {

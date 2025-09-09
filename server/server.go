@@ -44,7 +44,7 @@ type Repositories struct {
 	Match      domain.MatchRepository
 	Article    persistence.ArticleRepository
 	TeamStat   domain.TeamStatsRepository
-	PlayerStat persistence.PlayerStatsRepository
+	PlayerStat domain.PlayerStatsRepository
 }
 
 type Services struct {
@@ -68,6 +68,7 @@ type Services struct {
 	MatchDomain      *domainservice.MatchDomainService
 	LineupDomain     *domainservice.LineupDomainService
 	TeamStatDomain   *domainservice.TeamStatsDomainService
+	PlayerStatDomain *domainservice.PlayerStatsDomainService
 }
 
 type Handlers struct {
@@ -80,8 +81,7 @@ type Handlers struct {
 	Lineup     *handler.LineupHandler
 	Match      *handler.MatchHandler
 	TeamStat   *handler.TeamStatsHandler
-	// Article    *handler.ArticleHandler
-	// PlayerStat *handler.PlayerStatsHandler
+	PlayerStat *handler.PlayerStatsHandler
 }
 
 // NewServer creates and configures a new server instance with middleware and security settings.
@@ -262,6 +262,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	lineupDomainService := CreateLineupDomainService(repos.Lineup, repos.Match, repos.Player)
 	matchDomainService := CreateMatchDomainService(repos.Match)
 	teamStatsDomainService := CreateTeamStatsDomainService(repos.TeamStat, repos.Team, repos.Season)
+	playerStatsDomainService := CreatePlayerStatsDomainService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team)
 
 	return &Services{
 		JWT:  jwtService,
@@ -284,6 +285,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		LineupDomain:     lineupDomainService,
 		MatchDomain:      matchDomainService,
 		TeamStatDomain:   teamStatsDomainService,
+		PlayerStatDomain: playerStatsDomainService,
 	}
 }
 
@@ -298,9 +300,9 @@ func initializeHandlers(services *Services) *Handlers {
 		Lineup:     handler.NewLineupHandler(services.LineupDomain),
 		// Article:    handler.NewArticleHandler(services.Article),
 		// Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
-		Match:    handler.NewMatchHandler(services.MatchDomain),
-		TeamStat: handler.NewTeamStatsHandler(services.TeamStatDomain),
-		// PlayerStat: handler.NewPlayerStatsHandler(services.PlayerStat),
+		Match:      handler.NewMatchHandler(services.MatchDomain),
+		TeamStat:   handler.NewTeamStatsHandler(services.TeamStatDomain),
+		PlayerStat: handler.NewPlayerStatsHandler(services.PlayerStatDomain),
 	}
 }
 
@@ -316,5 +318,5 @@ func initializeRoutes(r *gin.Engine, handlers *Handlers) {
 	// router.InitializeLineupRoutes(r, handlers.Lineup)
 	router.InitializeMatchRoutes(r, handlers.Match)
 	router.InitializeTeamStatsRoutes(r, handlers.TeamStat)
-	// router.InitializePlayerStatsRoutes(r, handlers.PlayerStat)
+	router.InitializePlayerStatsRoutes(r, handlers.PlayerStat)
 }
