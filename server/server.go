@@ -17,7 +17,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
 	router "github.com/EdwinRincon/browersfc-api/api/router"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/config"
 	docs "github.com/EdwinRincon/browersfc-api/docs"
 	"github.com/EdwinRincon/browersfc-api/domain"
@@ -54,8 +53,7 @@ type Repositories struct {
 // Domain services implement core business logic, while application services handle cross-cutting concerns.
 type Services struct {
 	// Application services (cross-cutting concerns)
-	JWT  *jwt.JWTService
-	Auth service.AuthService
+	JWT *jwt.JWTService
 	// Domain services (core - business rules)
 	AuthenticationDomain *domainservice.AuthenticationDomainService
 	PlayerDomain         *domainservice.PlayerDomainService
@@ -200,8 +198,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 
 	return &Services{
 		// Application services (cross-cutting concerns)
-		JWT:  jwtService,
-		Auth: service.NewAuthService(jwtService),
+		JWT: jwtService,
 		// Domain services (core - business rules)
 		AuthenticationDomain: authenticationDomainService,
 		PlayerDomain:         playerDomainService,
@@ -222,7 +219,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 // This represents the driving adapters (HTTP layer)
 func initializeHandlers(services *Services) *Handlers {
 	return &Handlers{
-		User:       handler.NewUserHandler(services.Auth, services.UserDomain, services.RoleDomain),
+		User:       handler.NewUserHandler(services.AuthenticationDomain, services.UserDomain, services.RoleDomain),
 		Role:       handler.NewRoleHandler(services.RoleDomain),
 		Team:       handler.NewTeamHandler(services.TeamDomain),
 		Player:     handler.NewPlayerHandler(services.PlayerDomain),

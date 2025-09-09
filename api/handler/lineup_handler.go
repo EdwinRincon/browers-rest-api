@@ -158,7 +158,7 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Lineup ID"
-// @Success 200 {object} helper.MessageResponse
+// @Success 200 {object} helper.AppSuccess
 // @Failure 400 {object} helper.AppError "Invalid lineup ID"
 // @Failure 404 {object} helper.AppError "Lineup not found"
 // @Failure 500 {object} helper.AppError "Internal server error"

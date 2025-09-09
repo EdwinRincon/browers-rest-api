@@ -148,19 +148,8 @@ func (m *TeamMapper) ModelListToDomain(models []model.Team) []domain.Team {
 	return domains
 }
 
-// Legacy Support (For backward compatibility)
-func (m *TeamMapper) ModelToShortDTO(model *model.Team) *dto.TeamShort {
-	if model == nil {
-		return nil
-	}
-
-	return &dto.TeamShort{
-		ID:        model.ID,
-		FullName:  model.FullName,
-		ShortName: model.ShortName,
-	}
-}
-
+// DomainToShortDTO converts a domain.Team to TeamShort DTO
+// Used for operations that need basic team information
 func (m *TeamMapper) DomainToShortDTO(entity *domain.Team) *dto.TeamShort {
 	if entity == nil {
 		return nil

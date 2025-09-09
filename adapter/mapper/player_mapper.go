@@ -202,19 +202,8 @@ func (m *PlayerMapper) ModelListToDomain(models []model.Player) []domain.Player 
 	return result
 }
 
-// Legacy Support (For backward compatibility)
-func (m *PlayerMapper) ModelToShortDTO(model *model.Player) *dto.PlayerShort {
-	if model == nil {
-		return nil
-	}
-
-	return &dto.PlayerShort{
-		ID:       model.ID,
-		NickName: model.NickName,
-		Position: model.Position,
-	}
-}
-
+// DomainToShortDTO converts a domain.Player to PlayerShort DTO
+// Used for operations that need basic player information
 func (m *PlayerMapper) DomainToShortDTO(entity *domain.Player) *dto.PlayerShort {
 	if entity == nil {
 		return nil
@@ -225,83 +214,4 @@ func (m *PlayerMapper) DomainToShortDTO(entity *domain.Player) *dto.PlayerShort 
 		NickName: entity.NickName,
 		Position: entity.Position,
 	}
-}
-
-func (m *PlayerMapper) ModelToStatsDTO(model *model.Player) *dto.PlayerStats {
-	if model == nil {
-		return nil
-	}
-
-	return &dto.PlayerStats{
-		ID:       model.ID,
-		NickName: model.NickName,
-		Matches:  model.Matches,
-		Goals:    model.Goals,
-		Assists:  model.Assists,
-		YCards:   model.YCards,
-		RCards:   model.RCards,
-		Saves:    model.Saves,
-		Position: model.Position,
-		MVPCount: model.MVPCount,
-	}
-}
-
-// Global legacy functions for backward compatibility
-// These maintain the same signatures as the old api/mapper functions
-
-var globalPlayerMapper = NewPlayerMapper()
-
-func ToPlayerShort(model *model.Player) *dto.PlayerShort {
-	return globalPlayerMapper.ModelToShortDTO(model)
-}
-
-func CreatePlayerRequestToDomain(dto *dto.CreatePlayerRequest) *domain.Player {
-	return globalPlayerMapper.DTOToDomain(dto)
-}
-
-func UpdatePlayerRequestToDomain(target *domain.Player, dto *dto.UpdatePlayerRequest) {
-	if dto == nil || target == nil {
-		return
-	}
-
-	if dto.NickName != nil {
-		target.NickName = *dto.NickName
-	}
-	if dto.Height != nil {
-		target.Height = *dto.Height
-	}
-	if dto.Country != nil {
-		target.Country = *dto.Country
-	}
-	if dto.Country2 != nil {
-		target.Country2 = *dto.Country2
-	}
-	if dto.Foot != nil {
-		target.Foot = *dto.Foot
-	}
-	if dto.Age != nil {
-		target.Age = *dto.Age
-	}
-	if dto.SquadNumber != nil {
-		target.SquadNumber = *dto.SquadNumber
-	}
-	if dto.Rating != nil {
-		target.Rating = *dto.Rating
-	}
-	if dto.Position != nil {
-		target.Position = *dto.Position
-	}
-	if dto.Injured != nil {
-		target.Injured = *dto.Injured
-	}
-	if dto.CareerSummary != nil {
-		target.CareerSummary = *dto.CareerSummary
-	}
-	if dto.UserID != nil {
-		target.UserID = dto.UserID
-	}
-}
-
-func PlayerDomainToShort(entity *domain.Player) *dto.PlayerShort {
-	return globalPlayerMapper.DomainToShortDTO(entity)
 }

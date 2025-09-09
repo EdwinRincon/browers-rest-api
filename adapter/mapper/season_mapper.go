@@ -126,18 +126,6 @@ func (m *SeasonMapper) ModelListToDomain(models []model.Season) []domain.Season 
 	return entities
 }
 
-// ModelToShortDTO converts Season model to SeasonShort DTO for cross-entity relationships
-func (m *SeasonMapper) ModelToShortDTO(model *model.Season) *dto.SeasonShort {
-	if model == nil {
-		return nil
-	}
-
-	return &dto.SeasonShort{
-		ID:   model.ID,
-		Year: model.Year,
-	}
-}
-
 // DomainToShortDTO converts Season domain entity to SeasonShort DTO for cross-entity relationships
 func (m *SeasonMapper) DomainToShortDTO(entity *domain.Season) *dto.SeasonShort {
 	if entity == nil {

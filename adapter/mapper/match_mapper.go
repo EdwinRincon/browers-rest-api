@@ -104,9 +104,7 @@ func (m *MatchMapper) DomainToDTO(entity *domain.Match) *dto.MatchResponse {
 
 	if entity.Season != nil {
 		seasonMapper := NewSeasonMapper()
-		// Convert domain to model first, then to short DTO
-		seasonModel := seasonMapper.DomainToModel(entity.Season)
-		season := seasonMapper.ModelToShortDTO(seasonModel)
+		season := seasonMapper.DomainToShortDTO(entity.Season)
 		if season != nil {
 			resp.Season = *season
 		}
@@ -184,9 +182,7 @@ func (m *MatchMapper) DomainToDetailDTO(entity *domain.Match) *dto.MatchDetailRe
 
 	if entity.Season != nil {
 		seasonMapper := NewSeasonMapper()
-		// Convert domain to model first, then to short DTO
-		seasonModel := seasonMapper.DomainToModel(entity.Season)
-		if season := seasonMapper.ModelToShortDTO(seasonModel); season != nil {
+		if season := seasonMapper.DomainToShortDTO(entity.Season); season != nil {
 			detail.Season = *season
 		}
 	}

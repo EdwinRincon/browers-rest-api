@@ -17,7 +17,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/pkg/security"
 
 	"github.com/EdwinRincon/browersfc-api/api/constants"
-	legacyService "github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
@@ -28,11 +27,11 @@ import (
 
 // UserHandler handles user-related HTTP requests.
 type UserHandler struct {
-	AuthService       legacyService.AuthService
-	UserDomainService *domainservice.UserDomainService
-	RoleDomainService *domainservice.RoleDomainService
-	UserMapper        *mapper.UserMapper
-	googleClient      *http.Client // Pre-initialized Google API client for OAuth.
+	AuthenticationDomainService *domainservice.AuthenticationDomainService
+	UserDomainService           *domainservice.UserDomainService
+	RoleDomainService           *domainservice.RoleDomainService
+	UserMapper                  *mapper.UserMapper
+	googleClient                *http.Client // Pre-initialized Google API client for OAuth.
 }
 
 // GoogleUserInfo represents the user information returned by the Google API.
@@ -44,7 +43,7 @@ type GoogleUserInfo struct {
 }
 
 // NewUserHandler creates a new UserHandler with a pre-configured HTTP client.
-func NewUserHandler(authService legacyService.AuthService, userDomainService *domainservice.UserDomainService, roleDomainService *domainservice.RoleDomainService) *UserHandler {
+func NewUserHandler(authService *domainservice.AuthenticationDomainService, userDomainService *domainservice.UserDomainService, roleDomainService *domainservice.RoleDomainService) *UserHandler {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
@@ -57,11 +56,11 @@ func NewUserHandler(authService legacyService.AuthService, userDomainService *do
 	}
 
 	return &UserHandler{
-		AuthService:       authService,
-		UserDomainService: userDomainService,
-		RoleDomainService: roleDomainService,
-		UserMapper:        mapper.NewUserMapper(),
-		googleClient:      client,
+		AuthenticationDomainService: authService,
+		UserDomainService:           userDomainService,
+		RoleDomainService:           roleDomainService,
+		UserMapper:                  mapper.NewUserMapper(),
+		googleClient:                client,
 	}
 }
 
@@ -76,7 +75,7 @@ func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *domain.Use
 		}
 	}
 
-	jwtToken, err := h.AuthService.GenerateToken(user.Username, roleName)
+	jwtToken, err := h.AuthenticationDomainService.GenerateToken(c.Request.Context(), user)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return

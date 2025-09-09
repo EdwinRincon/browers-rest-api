@@ -222,7 +222,7 @@ func (h *PlayerStatsHandler) GetPlayerStatsBySeasonID(c *gin.Context) {
 // @Param pageSize query int false "Page size" default(10)
 // @Param sort query string false "Sort field"
 // @Param order query string false "Sort order" Enums(asc, desc) default(desc)
-// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.PlayerStatsResponse, totalCount=int}}
+// @Success 200 {object} helper.AppSuccess{data=helper.PaginatedResponse{items=[]dto.PlayerStatResponse, totalCount=int}}
 // @Failure 400 {object} helper.AppError "Invalid input"
 // @Failure 500 {object} helper.AppError "Internal server error"
 // @Router /player-stats [get]

@@ -128,18 +128,17 @@ func (m *RoleMapper) ModelToDomain(modelRole *model.Role) *domain.Role {
 	}
 }
 
-// ========================================================================================
-// Additional Helper Functions
-// ========================================================================================
-
-// ModelToShortDTO converts a persistence model.Role to a RoleShort DTO
-// Used by other entities that need Role information in short format
-func (m *RoleMapper) ModelToShortDTO(role *model.Role) *dto.RoleShort {
-	if role == nil {
+// ModelListToDomain converts a slice of model.Role to domain.Role for business logic
+func (m *RoleMapper) ModelListToDomain(modelRoles []model.Role) []domain.Role {
+	if modelRoles == nil {
 		return nil
 	}
-	return &dto.RoleShort{
-		ID:   role.ID,
-		Name: role.Name,
+
+	entities := make([]domain.Role, len(modelRoles))
+	for i, modelRole := range modelRoles {
+		if domainRole := m.ModelToDomain(&modelRole); domainRole != nil {
+			entities[i] = *domainRole
+		}
 	}
+	return entities
 }
