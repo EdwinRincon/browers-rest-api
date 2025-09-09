@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
@@ -18,13 +18,13 @@ import (
 
 type PlayerHandler struct {
 	PlayerDomainService *domainservice.PlayerDomainService
-	PlayerMapper        *mapper.PlayerMapper
+	PlayerMapper        *httpMapper.PlayerHTTPMapper
 }
 
 func NewPlayerHandler(playerDomainService *domainservice.PlayerDomainService) *PlayerHandler {
 	return &PlayerHandler{
 		PlayerDomainService: playerDomainService,
-		PlayerMapper:        mapper.NewPlayerMapper(),
+		PlayerMapper:        httpMapper.NewPlayerHTTPMapper(),
 	}
 }
 

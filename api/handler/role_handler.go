@@ -7,12 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,13 +23,13 @@ const (
 
 type RoleHandler struct {
 	RoleDomainService *domainservice.RoleDomainService
-	RoleMapper        *mapper.RoleMapper
+	RoleMapper        *httpMapper.RoleHTTPMapper
 }
 
 func NewRoleHandler(roleDomainService *domainservice.RoleDomainService) *RoleHandler {
 	return &RoleHandler{
 		RoleDomainService: roleDomainService,
-		RoleMapper:        mapper.NewRoleMapper(),
+		RoleMapper:        httpMapper.NewRoleHTTPMapper(),
 	}
 }
 
@@ -247,8 +248,14 @@ func (h *RoleHandler) GetPaginatedRoles(c *gin.Context) {
 	}
 
 	// Convert domain roles directly to response DTOs
+	// Convert pointer slice to value slice for the new mapper
+	roleValues := make([]domain.Role, len(domainRoles))
+	for i, rolePtr := range domainRoles {
+		roleValues[i] = *rolePtr
+	}
+
 	response := helper.PaginatedResponse{
-		Items:      h.RoleMapper.DomainListToDTO(domainRoles),
+		Items:      h.RoleMapper.DomainListToDTO(roleValues),
 		TotalCount: total,
 	}
 

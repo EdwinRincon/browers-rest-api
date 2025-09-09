@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
 	"github.com/EdwinRincon/browersfc-api/pkg/security"
 
@@ -30,7 +30,7 @@ type UserHandler struct {
 	AuthenticationDomainService *domainservice.AuthenticationDomainService
 	UserDomainService           *domainservice.UserDomainService
 	RoleDomainService           *domainservice.RoleDomainService
-	UserMapper                  *mapper.UserMapper
+	UserMapper                  *httpMapper.UserHTTPMapper
 	googleClient                *http.Client // Pre-initialized Google API client for OAuth.
 }
 
@@ -59,7 +59,7 @@ func NewUserHandler(authService *domainservice.AuthenticationDomainService, user
 		AuthenticationDomainService: authService,
 		UserDomainService:           userDomainService,
 		RoleDomainService:           roleDomainService,
-		UserMapper:                  mapper.NewUserMapper(),
+		UserMapper:                  httpMapper.NewUserHTTPMapper(),
 		googleClient:                client,
 	}
 }

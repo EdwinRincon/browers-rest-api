@@ -119,3 +119,53 @@ func (m *MatchHTTPMapper) DomainToShortDTO(entity *domain.Match) *dto.MatchShort
 		AwayGoals: entity.AwayGoals,
 	}
 }
+
+func (m *MatchHTTPMapper) DomainToDetailDTO(entity *domain.Match) *dto.MatchDetailResponse {
+	if entity == nil {
+		return nil
+	}
+
+	// Start with the basic match data
+	detail := &dto.MatchDetailResponse{
+		ID:        entity.ID,
+		Status:    entity.Status,
+		Kickoff:   entity.Kickoff,
+		Location:  entity.Location,
+		HomeGoals: entity.HomeGoals,
+		AwayGoals: entity.AwayGoals,
+		CreatedAt: entity.CreatedAt,
+		UpdatedAt: entity.UpdatedAt,
+	}
+
+	// Map related entities if available
+	if entity.HomeTeam != nil {
+		teamMapper := NewTeamHTTPMapper()
+		if homeTeam := teamMapper.DomainToShortDTO(entity.HomeTeam); homeTeam != nil {
+			detail.HomeTeam = *homeTeam
+		}
+	}
+
+	if entity.AwayTeam != nil {
+		teamMapper := NewTeamHTTPMapper()
+		if awayTeam := teamMapper.DomainToShortDTO(entity.AwayTeam); awayTeam != nil {
+			detail.AwayTeam = *awayTeam
+		}
+	}
+
+	if entity.Season != nil {
+		seasonMapper := NewSeasonHTTPMapper()
+		if season := seasonMapper.DomainToDTO(entity.Season); season != nil {
+			detail.Season = dto.SeasonShort{
+				ID:   season.ID,
+				Year: season.Year,
+			}
+		}
+	}
+
+	if entity.MVPPlayer != nil {
+		playerMapper := NewPlayerHTTPMapper()
+		detail.MVPPlayer = playerMapper.DomainToShortDTO(entity.MVPPlayer)
+	}
+
+	return detail
+}

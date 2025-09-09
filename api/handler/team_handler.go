@@ -7,24 +7,24 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
 type TeamHandler struct {
 	TeamDomainService *domainservice.TeamDomainService
-	TeamMapper        *mapper.TeamMapper
+	TeamMapper        *httpMapper.TeamHTTPMapper
 }
 
 func NewTeamHandler(teamDomainService *domainservice.TeamDomainService) *TeamHandler {
 	return &TeamHandler{
 		TeamDomainService: teamDomainService,
-		TeamMapper:        mapper.NewTeamMapper(),
+		TeamMapper:        httpMapper.NewTeamHTTPMapper(),
 	}
 }
 

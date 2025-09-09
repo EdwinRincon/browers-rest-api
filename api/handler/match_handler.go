@@ -7,24 +7,24 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
 type MatchHandler struct {
 	MatchDomainService *service.MatchDomainService
-	MatchMapper        *mapper.MatchMapper
+	MatchMapper        *httpMapper.MatchHTTPMapper
 }
 
 func NewMatchHandler(matchDomainService *service.MatchDomainService) *MatchHandler {
 	return &MatchHandler{
 		MatchDomainService: matchDomainService,
-		MatchMapper:        mapper.NewMatchMapper(),
+		MatchMapper:        httpMapper.NewMatchHTTPMapper(),
 	}
 }
 

@@ -7,24 +7,24 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
 type TeamStatsHandler struct {
 	TeamStatsDomainService *domainservice.TeamStatsDomainService
-	TeamStatsMapper        *mapper.TeamStatsMapper
+	TeamStatsMapper        *httpMapper.TeamStatsHTTPMapper
 }
 
 func NewTeamStatsHandler(teamStatsDomainService *domainservice.TeamStatsDomainService) *TeamStatsHandler {
 	return &TeamStatsHandler{
 		TeamStatsDomainService: teamStatsDomainService,
-		TeamStatsMapper:        mapper.NewTeamStatsMapper(),
+		TeamStatsMapper:        httpMapper.NewTeamStatsHTTPMapper(),
 	}
 }
 
@@ -55,7 +55,7 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 	defer cancel()
 
 	// Map DTO to domain entity
-	teamStats := h.TeamStatsMapper.CreateRequestToDomain(&createRequest)
+	teamStats := h.TeamStatsMapper.CreateRequestToDomain(createRequest)
 
 	err := h.TeamStatsDomainService.CreateTeamStats(ctx, teamStats)
 	if err != nil {
@@ -114,7 +114,7 @@ func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 		return
 	}
 
-	response := h.TeamStatsMapper.DomainToResponse(teamStats)
+	response := h.TeamStatsMapper.DomainToDTO(teamStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats retrieved successfully")
 }
 
@@ -152,7 +152,7 @@ func (h *TeamStatsHandler) GetTeamStatsBySeasonID(c *gin.Context) {
 		return
 	}
 
-	response := h.TeamStatsMapper.DomainListToResponse(teamStats)
+	response := h.TeamStatsMapper.DomainListToDTO(teamStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats for season retrieved successfully")
 }
 
@@ -190,7 +190,7 @@ func (h *TeamStatsHandler) GetTeamStatsByTeamID(c *gin.Context) {
 		return
 	}
 
-	response := h.TeamStatsMapper.DomainListToResponse(teamStats)
+	response := h.TeamStatsMapper.DomainListToDTO(teamStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats for team retrieved successfully")
 }
 
@@ -242,7 +242,7 @@ func (h *TeamStatsHandler) GetPaginatedTeamStats(c *gin.Context) {
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      h.TeamStatsMapper.DomainListToResponse(teamStats),
+		Items:      h.TeamStatsMapper.DomainListToDTO(teamStats),
 		TotalCount: total,
 	}
 
@@ -295,7 +295,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	}
 
 	// Apply the updates to the domain entity
-	updatedTeamStats := h.TeamStatsMapper.UpdateRequestToDomain(currentTeamStats, &updateRequest)
+	updatedTeamStats := h.TeamStatsMapper.UpdateRequestToDomain(updateRequest, currentTeamStats)
 
 	updatedResult, err := h.TeamStatsDomainService.UpdateTeamStats(ctx, id, updatedTeamStats)
 	if err != nil {
@@ -318,7 +318,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 		}
 	}
 
-	response := h.TeamStatsMapper.DomainToResponse(updatedResult)
+	response := h.TeamStatsMapper.DomainToDTO(updatedResult)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats updated successfully")
 }
 

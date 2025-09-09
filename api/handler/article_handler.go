@@ -7,24 +7,24 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
 type ArticleHandler struct {
 	ArticleDomainService *domainservice.ArticleDomainService
-	ArticleMapper        *mapper.ArticleMapper
+	ArticleMapper        *httpMapper.ArticleHTTPMapper
 }
 
 func NewArticleHandler(articleDomainService *domainservice.ArticleDomainService) *ArticleHandler {
 	return &ArticleHandler{
 		ArticleDomainService: articleDomainService,
-		ArticleMapper:        mapper.NewArticleMapper(),
+		ArticleMapper:        httpMapper.NewArticleHTTPMapper(),
 	}
 }
 

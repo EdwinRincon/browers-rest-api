@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/helper"
@@ -14,13 +14,13 @@ import (
 
 type LineupHandler struct {
 	LineupDomainService *domainservice.LineupDomainService
-	LineupMapper        *mapper.LineupMapper
+	LineupMapper        *httpMapper.LineupHTTPMapper
 }
 
 func NewLineupHandler(lineupDomainService *domainservice.LineupDomainService) *LineupHandler {
 	return &LineupHandler{
 		LineupDomainService: lineupDomainService,
-		LineupMapper:        mapper.NewLineupMapper(),
+		LineupMapper:        httpMapper.NewLineupHTTPMapper(),
 	}
 }
 
@@ -42,7 +42,7 @@ func (h *LineupHandler) CreateLineup(c *gin.Context) {
 		return
 	}
 
-	lineupEntity := h.LineupMapper.DTOToDomain(&createRequest)
+	lineupEntity := h.LineupMapper.CreateRequestToDomain(createRequest)
 
 	if err := h.LineupDomainService.CreateLineup(c.Request.Context(), lineupEntity); err != nil {
 		if err == constants.ErrInvalidData {
@@ -61,7 +61,7 @@ func (h *LineupHandler) CreateLineup(c *gin.Context) {
 		return
 	}
 
-	response := h.LineupMapper.DomainToDTO(lineupEntity)
+	response := h.LineupMapper.DomainToResponse(lineupEntity)
 	helper.WriteSuccessResponse(c, http.StatusCreated, response, "Lineup created successfully")
 }
 
@@ -95,7 +95,7 @@ func (h *LineupHandler) GetLineupByID(c *gin.Context) {
 		return
 	}
 
-	response := h.LineupMapper.DomainToDTO(lineup)
+	response := h.LineupMapper.DomainToResponse(lineup)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Lineup retrieved successfully")
 }
 
@@ -126,7 +126,18 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 		return
 	}
 
-	lineupEntity := h.LineupMapper.UpdateDTOToDomain(&updateRequest)
+	// Get existing lineup to apply updates
+	existingLineup, err := h.LineupDomainService.GetLineupByID(c.Request.Context(), id)
+	if err != nil {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+	if existingLineup == nil {
+		helper.WriteErrorResponse(c, helper.NewNotFoundError("lineup"))
+		return
+	}
+
+	lineupEntity := h.LineupMapper.UpdateRequestToDomain(updateRequest, existingLineup)
 
 	if err := h.LineupDomainService.UpdateLineup(c.Request.Context(), id, lineupEntity); err != nil {
 		if err == constants.ErrLineupNotFound {
@@ -148,7 +159,7 @@ func (h *LineupHandler) UpdateLineup(c *gin.Context) {
 		return
 	}
 
-	response := h.LineupMapper.DomainToDTO(updatedLineup)
+	response := h.LineupMapper.DomainToResponse(updatedLineup)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Lineup updated successfully")
 }
 
@@ -215,7 +226,7 @@ func (h *LineupHandler) GetPaginatedLineups(c *gin.Context) {
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      h.LineupMapper.DomainListToDTO(lineups),
+		Items:      h.LineupMapper.DomainListToResponse(lineups),
 		TotalCount: total,
 	}
 
@@ -252,7 +263,7 @@ func (h *LineupHandler) GetLineupsByMatchID(c *gin.Context) {
 		return
 	}
 
-	response := h.LineupMapper.DomainListToDTO(lineups)
+	response := h.LineupMapper.DomainListToResponse(lineups)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Lineups retrieved successfully")
 }
 
@@ -286,7 +297,7 @@ func (h *LineupHandler) GetStartingLineupsByMatchID(c *gin.Context) {
 		return
 	}
 
-	response := h.LineupMapper.DomainListToDTO(lineups)
+	response := h.LineupMapper.DomainListToResponse(lineups)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Starting lineups retrieved successfully")
 }
 
@@ -320,7 +331,7 @@ func (h *LineupHandler) GetSubstitutesLineupsByMatchID(c *gin.Context) {
 		return
 	}
 
-	response := h.LineupMapper.DomainListToDTO(lineups)
+	response := h.LineupMapper.DomainListToResponse(lineups)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Substitute lineups retrieved successfully")
 }
 
@@ -354,6 +365,6 @@ func (h *LineupHandler) GetLineupsByPlayerID(c *gin.Context) {
 		return
 	}
 
-	response := h.LineupMapper.DomainListToDTO(lineups)
+	response := h.LineupMapper.DomainListToResponse(lineups)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Lineups retrieved successfully")
 }

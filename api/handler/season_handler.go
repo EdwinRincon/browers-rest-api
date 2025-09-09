@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
+	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainService "github.com/EdwinRincon/browersfc-api/internal/domain/service"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,13 +19,13 @@ const errInvalidSeasonID = "Invalid season ID"
 
 type SeasonHandler struct {
 	SeasonDomainService *domainService.SeasonDomainService
-	SeasonMapper        *mapper.SeasonMapper
+	SeasonMapper        *httpMapper.SeasonHTTPMapper
 }
 
 func NewSeasonHandler(seasonDomainService *domainService.SeasonDomainService) *SeasonHandler {
 	return &SeasonHandler{
 		SeasonDomainService: seasonDomainService,
-		SeasonMapper:        mapper.NewSeasonMapper(),
+		SeasonMapper:        httpMapper.NewSeasonHTTPMapper(),
 	}
 }
 
