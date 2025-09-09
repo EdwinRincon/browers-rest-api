@@ -5,6 +5,11 @@ import (
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 )
 
+// CreateAuthenticationDomainService creates an authentication domain service with repository implementing domain interface
+func CreateAuthenticationDomainService(authRepo domain.AuthenticationRepository) *domainservice.AuthenticationDomainService {
+	return domainservice.NewAuthenticationDomainService(authRepo)
+}
+
 // CreateArticleDomainService creates an article domain service with repository implementing domain interface
 func CreateArticleDomainService(articleRepo domain.ArticleRepository, seasonRepo domain.SeasonRepository) *domainservice.ArticleDomainService {
 	return domainservice.NewArticleDomainService(articleRepo, seasonRepo)

@@ -1,16 +1,17 @@
 package api
 
 import (
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func InitializeLineupRoutes(r *gin.Engine, lineupHandler *handler.LineupHandler) {
+func InitializeLineupRoutes(r *gin.Engine, lineupHandler *handler.LineupHandler, authService *service.AuthenticationDomainService) {
 	api := r.Group(constants.APIBasePath)
 
-	authRequired := middleware.JwtAuthMiddleware()
+	authRequired := middleware.JwtAuthMiddleware(authService)
 
 	lineups := api.Group("/lineups", authRequired)
 	{

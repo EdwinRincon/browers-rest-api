@@ -1,13 +1,14 @@
 package api
 
 import (
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func InitializeMatchRoutes(r *gin.Engine, matchHandler *handler.MatchHandler) {
+func InitializeMatchRoutes(r *gin.Engine, matchHandler *handler.MatchHandler, authService *service.AuthenticationDomainService) {
 	api := r.Group(constants.APIBasePath)
 	{
 		// Public match routes
@@ -33,7 +34,7 @@ func InitializeMatchRoutes(r *gin.Engine, matchHandler *handler.MatchHandler) {
 
 		// Admin-only match routes
 		admin := api.Group("/admin")
-		admin.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+		admin.Use(middleware.JwtAuthMiddleware(authService), middleware.RBACMiddleware(constants.RoleAdmin))
 		{
 			adminMatches := admin.Group("/matches")
 			{

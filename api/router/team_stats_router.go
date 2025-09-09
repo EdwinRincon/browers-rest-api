@@ -1,16 +1,17 @@
 package api
 
 import (
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func InitializeTeamStatsRoutes(r *gin.Engine, teamStatsHandler *handler.TeamStatsHandler) {
+func InitializeTeamStatsRoutes(r *gin.Engine, teamStatsHandler *handler.TeamStatsHandler, authService *service.AuthenticationDomainService) {
 	api := r.Group(constants.APIBasePath)
 	auth := api.Group("")
-	auth.Use(middleware.JwtAuthMiddleware())
+	auth.Use(middleware.JwtAuthMiddleware(authService))
 
 	// Team Stats routes for authenticated users
 	teamStats := auth.Group("/team-stats")
@@ -27,7 +28,7 @@ func InitializeTeamStatsRoutes(r *gin.Engine, teamStatsHandler *handler.TeamStat
 
 	// Admin-only routes
 	admin := api.Group("/admin/team-stats")
-	admin.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+	admin.Use(middleware.JwtAuthMiddleware(authService), middleware.RBACMiddleware(constants.RoleAdmin))
 	{
 		admin.POST("", teamStatsHandler.CreateTeamStats)
 		admin.PUT("/:id", teamStatsHandler.UpdateTeamStats)

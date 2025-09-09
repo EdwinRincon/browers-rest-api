@@ -9,7 +9,7 @@ import (
 
 	"github.com/EdwinRincon/browersfc-api/config"
 	"github.com/EdwinRincon/browersfc-api/helper"
-	"github.com/EdwinRincon/browersfc-api/pkg/jwt"
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -17,14 +17,13 @@ import (
 
 // Context keys for storing user information in Gin context
 const (
-	usernameKey = "username"
-	roleKey     = "role"
+	usernameKey  = "username"
+	roleKey      = "role"
+	bearerPrefix = "Bearer "
 )
 
-// JwtAuthMiddleware authenticates requests using JWT tokens.
-// It extracts the token from the Authorization header, validates it,
-// and sets the authenticated user's information in the context.
-func JwtAuthMiddleware() gin.HandlerFunc {
+// JwtAuthMiddleware authenticates requests using JWT tokens through the domain service.
+func JwtAuthMiddleware(authService *service.AuthenticationDomainService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -33,44 +32,36 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if !strings.HasPrefix(authHeader, "Bearer ") {
+		if !strings.HasPrefix(authHeader, bearerPrefix) {
 			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid authorization header format"))
 			c.Abort()
 			return
 		}
 
 		// Extract token without the "Bearer " prefix
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		tokenString := strings.TrimPrefix(authHeader, bearerPrefix)
 
-		// Get JWT secret and create validator
-		jwtSecret, err := config.GetJWTSecret()
-		if err != nil {
-			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
-			c.Abort()
-			return
-		}
-
-		validator := jwt.NewTokenValidator(jwtSecret)
-		claims, err := validator.ValidateToken(tokenString)
+		// Validate token using domain service
+		authClaims, err := authService.ValidateAuthentication(c.Request.Context(), tokenString)
 		if err != nil {
 			// Log detailed error for debugging but return generic message to client
 			logger.Debug(c, "JWT token validation failed",
 				"error", err.Error(),
 				"ip", c.ClientIP(),
 				"user_agent", c.Request.UserAgent())
-			
+
 			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid or expired token"))
 			c.Abort()
 			return
 		}
 
 		// Store claims in context using string keys
-		c.Set(usernameKey, claims.Username)
-		c.Set(roleKey, claims.Role)
+		c.Set(usernameKey, authClaims.Username)
+		c.Set(roleKey, authClaims.Role)
 
 		logger.Debug(c, "Successfully authenticated request",
-			"username", claims.Username,
-			"role", claims.Role)
+			"username", authClaims.Username,
+			"role", authClaims.Role)
 
 		c.Next()
 	}

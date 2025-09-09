@@ -4,10 +4,11 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
-func InitializeArticleRoutes(r *gin.Engine, articleHandler *handler.ArticleHandler) {
+func InitializeArticleRoutes(r *gin.Engine, articleHandler *handler.ArticleHandler, authService *service.AuthenticationDomainService) {
 	api := r.Group(constants.APIBasePath)
 	{
 
@@ -24,7 +25,7 @@ func InitializeArticleRoutes(r *gin.Engine, articleHandler *handler.ArticleHandl
 
 		// Articles routes requiring authentication and role-based access control
 		protected := api.Group("/admin/articles")
-		protected.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+		protected.Use(middleware.JwtAuthMiddleware(authService), middleware.RBACMiddleware(constants.RoleAdmin))
 		{
 			protected.POST("", articleHandler.CreateArticle)
 			protected.PUT("/:id", articleHandler.UpdateArticle)

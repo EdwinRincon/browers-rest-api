@@ -4,10 +4,11 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
-func InitializeSeasonRoutes(r *gin.Engine, seasonHandler *handler.SeasonHandler) {
+func InitializeSeasonRoutes(r *gin.Engine, seasonHandler *handler.SeasonHandler, authService *service.AuthenticationDomainService) {
 	api := r.Group(constants.APIBasePath)
 
 	// Seasons endpoints (read-only, no authentication required)
@@ -20,7 +21,7 @@ func InitializeSeasonRoutes(r *gin.Engine, seasonHandler *handler.SeasonHandler)
 
 	// Admin routes (authenticated + role check)
 	adminSeasons := api.Group("/admin/seasons")
-	adminSeasons.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+	adminSeasons.Use(middleware.JwtAuthMiddleware(authService), middleware.RBACMiddleware(constants.RoleAdmin))
 	{
 		adminSeasons.POST("", seasonHandler.CreateSeason)
 		adminSeasons.PUT("/:id", seasonHandler.UpdateSeason)

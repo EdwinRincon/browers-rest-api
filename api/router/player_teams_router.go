@@ -1,18 +1,19 @@
 package api
 
 import (
+	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/handler"
 	"github.com/EdwinRincon/browersfc-api/api/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func InitializePlayerTeamRoutes(r *gin.Engine, playerTeamHandler *handler.PlayerTeamHandler) {
+func InitializePlayerTeamRoutes(r *gin.Engine, playerTeamHandler *handler.PlayerTeamHandler, authService *service.AuthenticationDomainService) {
 	api := r.Group(constants.APIBasePath)
 
 	// All authenticated routes
 	authenticatedRoutes := api.Group("")
-	authenticatedRoutes.Use(middleware.JwtAuthMiddleware())
+	authenticatedRoutes.Use(middleware.JwtAuthMiddleware(authService))
 	{
 		// player-team operations
 		playerTeams := authenticatedRoutes.Group("/player-teams")
@@ -29,7 +30,7 @@ func InitializePlayerTeamRoutes(r *gin.Engine, playerTeamHandler *handler.Player
 
 	// Admin-only
 	adminRoutes := api.Group("/admin")
-	adminRoutes.Use(middleware.JwtAuthMiddleware(), middleware.RBACMiddleware(constants.RoleAdmin))
+	adminRoutes.Use(middleware.JwtAuthMiddleware(authService), middleware.RBACMiddleware(constants.RoleAdmin))
 	{
 		admin := adminRoutes.Group("/player-teams")
 		{
