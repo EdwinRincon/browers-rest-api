@@ -262,11 +262,12 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 	// Update season
 	err = h.SeasonDomainService.UpdateSeason(ctx, id, updatedSeason)
 	if err != nil {
-		if err == constants.ErrRecordNotFound {
+		switch err {
+		case constants.ErrRecordNotFound:
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
-		} else if err == constants.ErrRecordAlreadyExists {
+		case constants.ErrRecordAlreadyExists:
 			helper.WriteErrorResponse(c, helper.NewConflictError("year", "A season with this year already exists"))
-		} else {
+		default:
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return

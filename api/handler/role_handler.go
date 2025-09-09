@@ -148,11 +148,12 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 
 	updatedRole, err := h.RoleDomainService.UpdateRole(ctx, updateDomain)
 	if err != nil {
-		if err == constants.ErrRecordNotFound {
+		switch err {
+		case constants.ErrRecordNotFound:
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("role"))
-		} else if err == constants.ErrRecordAlreadyExists {
+		case constants.ErrRecordAlreadyExists:
 			helper.WriteErrorResponse(c, helper.NewConflictError("role", "A role with these details already exists"))
-		} else {
+		default:
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
 		return

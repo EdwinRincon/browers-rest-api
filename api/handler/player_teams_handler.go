@@ -16,6 +16,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Domain-specific constants for player teams
+const (
+	msgPlayerTeamRelationship             = "player-team relationship"
+	msgPlayerTeamRelationshipRetrievedOK  = "Player-team relationship retrieved successfully"
+	msgPlayerTeamRelationshipCreatedOK    = "Player-team relationship created successfully"
+	msgPlayerTeamRelationshipUpdatedOK    = "Player-team relationship updated successfully"
+	msgPlayerTeamRelationshipsRetrievedOK = "Player-team relationships retrieved successfully"
+)
+
 type PlayerTeamHandler struct {
 	PlayerTeamDomainService *domainservice.PlayerTeamDomainService
 	PlayerTeamMapper        *httpMapper.PlayerTeamHTTPMapper
@@ -77,7 +86,7 @@ func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 	}
 
 	playerTeamResponse := h.PlayerTeamMapper.DomainToDTO(createdPlayerTeam)
-	helper.WriteSuccessResponse(c, http.StatusCreated, playerTeamResponse, "Player-team relationship created successfully")
+	helper.WriteSuccessResponse(c, http.StatusCreated, playerTeamResponse, msgPlayerTeamRelationshipCreatedOK)
 }
 
 // GetPlayerTeamByID godoc
@@ -94,7 +103,7 @@ func (h *PlayerTeamHandler) CreatePlayerTeam(c *gin.Context) {
 func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", constants.MsgInvalidIDSimple))
 		return
 	}
 
@@ -105,7 +114,7 @@ func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 	playerTeam, err := h.PlayerTeamDomainService.GetPlayerTeamByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError(msgPlayerTeamRelationship))
 		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}
@@ -114,7 +123,7 @@ func (h *PlayerTeamHandler) GetPlayerTeamByID(c *gin.Context) {
 
 	playerTeamResponse := h.PlayerTeamMapper.DomainToDTO(playerTeam)
 
-	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponse, "Player-team relationship retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponse, msgPlayerTeamRelationshipRetrievedOK)
 }
 
 // GetPlayerTeamsByPlayerID godoc
@@ -142,21 +151,16 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByPlayerID(c *gin.Context) {
 
 	playerTeams, err := h.PlayerTeamDomainService.GetPlayerTeamsByPlayerID(ctx, playerID)
 	if err != nil {
+		if errors.Is(err, constants.ErrPlayerNotFound) {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
+			return
+		}
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	playerTeamResponses := h.PlayerTeamMapper.DomainListToDTO(playerTeams)
-	if err != nil {
-		if errors.Is(err, constants.ErrPlayerNotFound) {
-			helper.WriteErrorResponse(c, helper.NewNotFoundError("player"))
-		} else {
-			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
-		}
-		return
-	}
-
-	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, msgPlayerTeamRelationshipRetrievedOK)
 }
 
 // GetPlayerTeamsByTeamID godoc
@@ -184,21 +188,16 @@ func (h *PlayerTeamHandler) GetPlayerTeamsByTeamID(c *gin.Context) {
 
 	playerTeams, err := h.PlayerTeamDomainService.GetPlayerTeamsByTeamID(ctx, teamID)
 	if err != nil {
+		if errors.Is(err, constants.ErrTeamNotFound) {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
+			return
+		}
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	playerTeamResponses := h.PlayerTeamMapper.DomainListToDTO(playerTeams)
-	if err != nil {
-		if errors.Is(err, constants.ErrTeamNotFound) {
-			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
-		} else {
-			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
-		}
-		return
-	}
-
-	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, msgPlayerTeamRelationshipRetrievedOK)
 }
 
 // GetPlayerTeamsBySeasonID godoc
@@ -226,21 +225,16 @@ func (h *PlayerTeamHandler) GetPlayerTeamsBySeasonID(c *gin.Context) {
 
 	playerTeams, err := h.PlayerTeamDomainService.GetPlayerTeamsBySeasonID(ctx, seasonID)
 	if err != nil {
+		if errors.Is(err, constants.ErrSeasonNotFound) {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
+			return
+		}
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	playerTeamResponses := h.PlayerTeamMapper.DomainListToDTO(playerTeams)
-	if err != nil {
-		if errors.Is(err, constants.ErrSeasonNotFound) {
-			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
-		} else {
-			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
-		}
-		return
-	}
-
-	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponses, msgPlayerTeamRelationshipRetrievedOK)
 }
 
 // GetPaginatedPlayerTeams godoc
@@ -296,7 +290,7 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 		TotalCount: total,
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusOK, response, "Player-team relationships retrieved successfully")
+	helper.WriteSuccessResponse(c, http.StatusOK, response, msgPlayerTeamRelationshipRetrievedOK)
 }
 
 // UpdatePlayerTeam godoc
@@ -317,7 +311,7 @@ func (h *PlayerTeamHandler) GetPaginatedPlayerTeams(c *gin.Context) {
 func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", constants.MsgInvalidIDSimple))
 		return
 	}
 
@@ -331,10 +325,14 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Get existing player team first
+	// Get existing player team
 	existingPlayerTeam, err := h.PlayerTeamDomainService.GetPlayerTeamByID(ctx, id)
 	if err != nil {
-		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		if errors.Is(err, constants.ErrRecordNotFound) {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError(msgPlayerTeamRelationship))
+		} else {
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		}
 		return
 	}
 
@@ -348,15 +346,9 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 
 	playerTeam, err := h.PlayerTeamDomainService.UpdatePlayerTeam(ctx, id, existingPlayerTeam)
 	if err != nil {
-		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
-		return
-	}
-
-	playerTeamResponse := h.PlayerTeamMapper.DomainToDTO(playerTeam)
-	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
-			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError(msgPlayerTeamRelationship))
 			return
 		case errors.Is(err, constants.ErrOverlappingDates):
 			helper.WriteErrorResponse(c, helper.NewConflictError("date_range", "Date range overlaps with an existing record"))
@@ -367,7 +359,8 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 		}
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponse, "Player-team relationship updated successfully")
+	playerTeamResponse := h.PlayerTeamMapper.DomainToDTO(playerTeam)
+	helper.WriteSuccessResponse(c, http.StatusOK, playerTeamResponse, msgPlayerTeamRelationshipUpdatedOK)
 }
 
 // DeletePlayerTeam godoc
@@ -384,7 +377,7 @@ func (h *PlayerTeamHandler) UpdatePlayerTeam(c *gin.Context) {
 func (h *PlayerTeamHandler) DeletePlayerTeam(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", "Invalid ID"))
+		helper.WriteErrorResponse(c, helper.NewBadRequestError("id", constants.MsgInvalidIDSimple))
 		return
 	}
 
@@ -395,7 +388,7 @@ func (h *PlayerTeamHandler) DeletePlayerTeam(c *gin.Context) {
 	err = h.PlayerTeamDomainService.DeletePlayerTeam(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
-			helper.WriteErrorResponse(c, helper.NewNotFoundError("player-team relationship"))
+			helper.WriteErrorResponse(c, helper.NewNotFoundError(msgPlayerTeamRelationship))
 		} else {
 			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		}

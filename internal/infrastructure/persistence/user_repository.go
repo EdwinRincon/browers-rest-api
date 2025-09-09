@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	persistenceMapper "github.com/EdwinRincon/browersfc-api/adapter/persistence"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/domain"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"gorm.io/gorm"
 )
 
@@ -38,7 +39,7 @@ func (ur *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username st
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting user by username: %w", result.Error)
 	}
-	
+
 	return ur.mapper.ModelToDomain(&userModel), nil
 }
 
@@ -47,7 +48,7 @@ func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*doma
 	var userModel model.User
 	result := ur.db.WithContext(ctx).
 		Preload("Role").
-		Where("id = ?", id).
+		Where(constants.QueryIDEquals, id).
 		First(&userModel)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -56,7 +57,7 @@ func (ur *UserRepositoryImpl) GetUserByID(ctx context.Context, id string) (*doma
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	
+
 	return ur.mapper.ModelToDomain(&userModel), nil
 }
 
@@ -101,11 +102,11 @@ func (ur *UserRepositoryImpl) UpdateUser(ctx context.Context, id string, user *d
 	userModel := ur.mapper.DomainToModel(user)
 	return ur.db.WithContext(ctx).
 		Model(&model.User{}).
-		Where("id = ?", id).
+		Where(constants.QueryIDEquals, id).
 		Select("*").
 		Updates(userModel).Error
 }
 
 func (ur *UserRepositoryImpl) DeleteUser(ctx context.Context, id string) error {
-	return ur.db.WithContext(ctx).Delete(&model.User{}, "id = ?", id).Error
+	return ur.db.WithContext(ctx).Delete(&model.User{}, constants.QueryIDEquals, id).Error
 }

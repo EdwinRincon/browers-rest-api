@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/domain"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"gorm.io/gorm"
 )
 
@@ -33,9 +34,9 @@ func (r *LineupRepositoryImpl) GetLineupByID(ctx context.Context, id uint64) (*d
 	result := r.db.WithContext(ctx).
 		Preload("Player").
 		Preload("Match").
-		Preload("Match.HomeTeam").
-		Preload("Match.AwayTeam").
-		Where("id = ?", id).
+		Preload(constants.PreloadMatchHomeTeam).
+		Preload(constants.PreloadMatchAwayTeam).
+		Where(constants.QueryIDEquals, id).
 		First(&lineupModel)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -67,8 +68,8 @@ func (r *LineupRepositoryImpl) GetLineupsByPlayerID(ctx context.Context, playerI
 	var lineupModels []model.Lineup
 	result := r.db.WithContext(ctx).
 		Preload("Match").
-		Preload("Match.HomeTeam").
-		Preload("Match.AwayTeam").
+		Preload(constants.PreloadMatchHomeTeam).
+		Preload(constants.PreloadMatchAwayTeam).
 		Where("player_id = ?", playerID).
 		Find(&lineupModels)
 
@@ -93,12 +94,12 @@ func (r *LineupRepositoryImpl) GetPaginatedLineups(ctx context.Context, sort str
 	query := r.db.WithContext(ctx).Model(&model.Lineup{}).
 		Preload("Player").
 		Preload("Match").
-		Preload("Match.HomeTeam").
-		Preload("Match.AwayTeam")
+		Preload(constants.PreloadMatchHomeTeam).
+		Preload(constants.PreloadMatchAwayTeam)
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
 	}
 
 	// Apply pagination
@@ -117,13 +118,13 @@ func (r *LineupRepositoryImpl) UpdateLineup(ctx context.Context, id uint64, line
 	lineupModel := r.mapper.DomainToModel(lineup)
 	return r.db.WithContext(ctx).
 		Model(&model.Lineup{}).
-		Where("id = ?", id).
+		Where(constants.QueryIDEquals, id).
 		Select("*").
 		Updates(lineupModel).Error
 }
 
 func (r *LineupRepositoryImpl) DeleteLineup(ctx context.Context, id uint64) error {
-	return r.db.WithContext(ctx).Delete(&model.Lineup{}, "id = ?", id).Error
+	return r.db.WithContext(ctx).Delete(&model.Lineup{}, constants.QueryIDEquals, id).Error
 }
 
 func (r *LineupRepositoryImpl) GetStartingLineupsByMatchID(ctx context.Context, matchID uint64) ([]domain.Lineup, error) {

@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
+	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/domain"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"gorm.io/gorm"
 )
 
@@ -36,7 +37,7 @@ func (mr *MatchRepositoryImpl) GetMatchByID(ctx context.Context, id uint64) (*do
 		Preload("HomeTeam").
 		Preload("AwayTeam").
 		Preload("MVPPlayer").
-		Where("id = ?", id).
+		Where(constants.QueryIDEquals, id).
 		First(&match)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -60,7 +61,7 @@ func (mr *MatchRepositoryImpl) GetDetailedMatchByID(ctx context.Context, id uint
 		Preload("Lineups.Player").
 		Preload("PlayerStats").
 		Preload("PlayerStats.Player").
-		Where("id = ?", id).
+		Where(constants.QueryIDEquals, id).
 		First(&match)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -93,7 +94,7 @@ func (mr *MatchRepositoryImpl) GetPaginatedMatches(ctx context.Context, sort str
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {
 		// Escape the sort field with backticks to handle reserved words
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
 	}
 
 	// Apply pagination
@@ -129,7 +130,7 @@ func (mr *MatchRepositoryImpl) GetMatchesBySeasonID(ctx context.Context, seasonI
 	// Apply sorting
 	if sort != "" && (order == "asc" || order == "desc") {
 		// Escape the sort field with backticks to handle reserved words
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
 	} else {
 		// Default sort by date
 		query = query.Order("`date` desc")
@@ -170,7 +171,7 @@ func (mr *MatchRepositoryImpl) GetMatchesByTeamID(ctx context.Context, teamID ui
 	// Apply sorting
 	if sort != "" && (order == "asc" || order == "desc") {
 		// Escape the sort field with backticks to handle reserved words
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
 	} else {
 		// Default sort by date
 		query = query.Order("`date` desc")
@@ -215,7 +216,7 @@ func (mr *MatchRepositoryImpl) UpdateMatch(ctx context.Context, id uint64, match
 	modelMatch := mr.mapper.DomainToModel(match)
 	return mr.db.WithContext(ctx).
 		Model(&model.Match{}).
-		Where("id = ?", id).
+		Where(constants.QueryIDEquals, id).
 		Updates(modelMatch).Error
 }
 

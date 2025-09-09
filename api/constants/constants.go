@@ -32,6 +32,21 @@ const (
 	MsgLineupRetrieved   = "Lineup retrieved successfully"
 	MsgLineupsRetrieved  = "Lineups retrieved successfully"
 	MsgLineupUpdated     = "Lineup updated successfully"
+
+	// Common validation messages
+	MsgInvalidIDSimple = "Invalid ID"
+)
+
+// Database query constants
+const (
+	QueryIDEquals    = "id = ?"
+	QueryOrderFormat = "`%s` %s"
+)
+
+// Database preload constants for GORM
+const (
+	PreloadMatchHomeTeam = "Match.HomeTeam"
+	PreloadMatchAwayTeam = "Match.AwayTeam"
 )
 
 // Error messages
