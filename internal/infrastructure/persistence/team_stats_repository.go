@@ -5,34 +5,30 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
-type TeamStatsRepository interface {
-	CreateTeamStats(ctx context.Context, teamStats *model.TeamStat) error
-	GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamStat, error)
-	GetTeamStatsBySeasonAndTeam(ctx context.Context, seasonID, teamID uint64) (*model.TeamStat, error)
-	GetTeamStatsBySeasonID(ctx context.Context, seasonID uint64) ([]model.TeamStat, error)
-	GetTeamStatsByTeamID(ctx context.Context, teamID uint64) ([]model.TeamStat, error)
-	GetPaginatedTeamStats(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.TeamStat, int64, error)
-	UpdateTeamStats(ctx context.Context, id uint64, teamStats *model.TeamStat) error
-	DeleteTeamStats(ctx context.Context, id uint64) error
-}
-
 type TeamStatsRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.TeamStatsMapper
 }
 
-func NewTeamStatsRepository(db *gorm.DB) TeamStatsRepository {
-	return &TeamStatsRepositoryImpl{db: db}
+func NewTeamStatsRepository(db *gorm.DB) *TeamStatsRepositoryImpl {
+	return &TeamStatsRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewTeamStatsMapper(),
+	}
 }
 
-func (tsr *TeamStatsRepositoryImpl) CreateTeamStats(ctx context.Context, teamStats *model.TeamStat) error {
-	return tsr.db.WithContext(ctx).Create(teamStats).Error
+func (tsr *TeamStatsRepositoryImpl) CreateTeamStats(ctx context.Context, teamStats *domain.TeamStats) error {
+	modelTeamStats := tsr.mapper.DomainToModel(teamStats)
+	return tsr.db.WithContext(ctx).Create(modelTeamStats).Error
 }
 
-func (tsr *TeamStatsRepositoryImpl) GetTeamStatsByID(ctx context.Context, id uint64) (*model.TeamStat, error) {
+func (tsr *TeamStatsRepositoryImpl) GetTeamStatsByID(ctx context.Context, id uint64) (*domain.TeamStats, error) {
 	var teamStats model.TeamStat
 	result := tsr.db.WithContext(ctx).
 		Preload("Team").
@@ -43,10 +39,13 @@ func (tsr *TeamStatsRepositoryImpl) GetTeamStatsByID(ctx context.Context, id uin
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	return &teamStats, result.Error
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return tsr.mapper.ModelToDomain(&teamStats), nil
 }
 
-func (tsr *TeamStatsRepositoryImpl) GetTeamStatsBySeasonAndTeam(ctx context.Context, seasonID, teamID uint64) (*model.TeamStat, error) {
+func (tsr *TeamStatsRepositoryImpl) GetTeamStatsBySeasonAndTeam(ctx context.Context, seasonID, teamID uint64) (*domain.TeamStats, error) {
 	var teamStats model.TeamStat
 	result := tsr.db.WithContext(ctx).
 		Preload("Team").
@@ -60,10 +59,10 @@ func (tsr *TeamStatsRepositoryImpl) GetTeamStatsBySeasonAndTeam(ctx context.Cont
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting team stats by season and team: %w", result.Error)
 	}
-	return &teamStats, nil
+	return tsr.mapper.ModelToDomain(&teamStats), nil
 }
 
-func (tsr *TeamStatsRepositoryImpl) GetTeamStatsBySeasonID(ctx context.Context, seasonID uint64) ([]model.TeamStat, error) {
+func (tsr *TeamStatsRepositoryImpl) GetTeamStatsBySeasonID(ctx context.Context, seasonID uint64) ([]domain.TeamStats, error) {
 	var teamStats []model.TeamStat
 	result := tsr.db.WithContext(ctx).
 		Preload("Team").
@@ -75,10 +74,10 @@ func (tsr *TeamStatsRepositoryImpl) GetTeamStatsBySeasonID(ctx context.Context, 
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting team stats by season: %w", result.Error)
 	}
-	return teamStats, nil
+	return tsr.mapper.ModelListToDomain(teamStats), nil
 }
 
-func (tsr *TeamStatsRepositoryImpl) GetTeamStatsByTeamID(ctx context.Context, teamID uint64) ([]model.TeamStat, error) {
+func (tsr *TeamStatsRepositoryImpl) GetTeamStatsByTeamID(ctx context.Context, teamID uint64) ([]domain.TeamStats, error) {
 	var teamStats []model.TeamStat
 	result := tsr.db.WithContext(ctx).
 		Preload("Team").
@@ -90,11 +89,11 @@ func (tsr *TeamStatsRepositoryImpl) GetTeamStatsByTeamID(ctx context.Context, te
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting team stats by team: %w", result.Error)
 	}
-	return teamStats, nil
+	return tsr.mapper.ModelListToDomain(teamStats), nil
 }
 
 // GetPaginatedTeamStats retrieves a paginated list of team stats with their relationships and total count.
-func (tsr *TeamStatsRepositoryImpl) GetPaginatedTeamStats(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.TeamStat, int64, error) {
+func (tsr *TeamStatsRepositoryImpl) GetPaginatedTeamStats(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.TeamStats, int64, error) {
 	var teamStats []model.TeamStat
 	var total int64
 
@@ -120,15 +119,16 @@ func (tsr *TeamStatsRepositoryImpl) GetPaginatedTeamStats(ctx context.Context, s
 		return nil, 0, fmt.Errorf("error fetching team stats: %w", err)
 	}
 
-	return teamStats, total, nil
+	return tsr.mapper.ModelListToDomain(teamStats), total, nil
 }
 
-func (tsr *TeamStatsRepositoryImpl) UpdateTeamStats(ctx context.Context, id uint64, teamStats *model.TeamStat) error {
+func (tsr *TeamStatsRepositoryImpl) UpdateTeamStats(ctx context.Context, id uint64, teamStats *domain.TeamStats) error {
+	modelTeamStats := tsr.mapper.DomainToModel(teamStats)
 	return tsr.db.WithContext(ctx).
 		Model(&model.TeamStat{}).
 		Where("id = ?", id).
 		Select("*").
-		Updates(teamStats).Error
+		Updates(modelTeamStats).Error
 }
 
 func (tsr *TeamStatsRepositoryImpl) DeleteTeamStats(ctx context.Context, id uint64) error {

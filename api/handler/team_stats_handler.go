@@ -7,22 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type TeamStatsHandler struct {
-	TeamStatsService service.TeamStatsService
+	TeamStatsDomainService *domainservice.TeamStatsDomainService
+	TeamStatsMapper        *mapper.TeamStatsMapper
 }
 
-func NewTeamStatsHandler(teamStatsService service.TeamStatsService) *TeamStatsHandler {
+func NewTeamStatsHandler(teamStatsDomainService *domainservice.TeamStatsDomainService) *TeamStatsHandler {
 	return &TeamStatsHandler{
-		TeamStatsService: teamStatsService,
+		TeamStatsDomainService: teamStatsDomainService,
+		TeamStatsMapper:        mapper.NewTeamStatsMapper(),
 	}
 }
 
@@ -52,10 +54,10 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Map DTO to model
-	teamStats := mapper.ToTeamStats(&createRequest)
+	// Map DTO to domain entity
+	teamStats := h.TeamStatsMapper.CreateRequestToDomain(&createRequest)
 
-	createdTeamStats, err := h.TeamStatsService.CreateTeamStats(ctx, teamStats)
+	err := h.TeamStatsDomainService.CreateTeamStats(ctx, teamStats)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordAlreadyExists):
@@ -73,7 +75,9 @@ func (h *TeamStatsHandler) CreateTeamStats(c *gin.Context) {
 		}
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusCreated, createdTeamStats, "Team stats created successfully")
+	// Return the created team stats as a short response
+	createdTeamStatsShort := h.TeamStatsMapper.DomainToShortDTO(teamStats)
+	helper.WriteSuccessResponse(c, http.StatusCreated, createdTeamStatsShort, "Team stats created successfully")
 }
 
 // GetTeamStatsByID godoc
@@ -100,7 +104,7 @@ func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	teamStats, err := h.TeamStatsService.GetTeamStatsByID(ctx, id)
+	teamStats, err := h.TeamStatsDomainService.GetTeamStatsByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("team_stats"))
@@ -110,7 +114,7 @@ func (h *TeamStatsHandler) GetTeamStatsByID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToTeamStatsResponse(teamStats)
+	response := h.TeamStatsMapper.DomainToResponse(teamStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats retrieved successfully")
 }
 
@@ -138,7 +142,7 @@ func (h *TeamStatsHandler) GetTeamStatsBySeasonID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	teamStats, err := h.TeamStatsService.GetTeamStatsBySeasonID(ctx, seasonID)
+	teamStats, err := h.TeamStatsDomainService.GetTeamStatsBySeasonID(ctx, seasonID)
 	if err != nil {
 		if errors.Is(err, constants.ErrSeasonNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("season"))
@@ -148,7 +152,7 @@ func (h *TeamStatsHandler) GetTeamStatsBySeasonID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToTeamStatsResponseList(teamStats)
+	response := h.TeamStatsMapper.DomainListToResponse(teamStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats for season retrieved successfully")
 }
 
@@ -176,7 +180,7 @@ func (h *TeamStatsHandler) GetTeamStatsByTeamID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	teamStats, err := h.TeamStatsService.GetTeamStatsByTeamID(ctx, teamID)
+	teamStats, err := h.TeamStatsDomainService.GetTeamStatsByTeamID(ctx, teamID)
 	if err != nil {
 		if errors.Is(err, constants.ErrTeamNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("team"))
@@ -186,7 +190,7 @@ func (h *TeamStatsHandler) GetTeamStatsByTeamID(c *gin.Context) {
 		return
 	}
 
-	response := mapper.ToTeamStatsResponseList(teamStats)
+	response := h.TeamStatsMapper.DomainListToResponse(teamStats)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats for team retrieved successfully")
 }
 
@@ -231,14 +235,14 @@ func (h *TeamStatsHandler) GetPaginatedTeamStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	teamStats, total, err := h.TeamStatsService.GetPaginatedTeamStats(ctx, sort, order, page, pageSize)
+	teamStats, total, err := h.TeamStatsDomainService.GetPaginatedTeamStats(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToTeamStatsResponseList(teamStats),
+		Items:      h.TeamStatsMapper.DomainListToResponse(teamStats),
 		TotalCount: total,
 	}
 
@@ -279,7 +283,21 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	updatedTeamStats, err := h.TeamStatsService.UpdateTeamStats(ctx, &updateRequest, id)
+	// Get the current team stats to apply partial updates
+	currentTeamStats, err := h.TeamStatsDomainService.GetTeamStatsByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, constants.ErrRecordNotFound) {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("team_stats"))
+		} else {
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		}
+		return
+	}
+
+	// Apply the updates to the domain entity
+	updatedTeamStats := h.TeamStatsMapper.UpdateRequestToDomain(currentTeamStats, &updateRequest)
+
+	updatedResult, err := h.TeamStatsDomainService.UpdateTeamStats(ctx, id, updatedTeamStats)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
@@ -300,7 +318,7 @@ func (h *TeamStatsHandler) UpdateTeamStats(c *gin.Context) {
 		}
 	}
 
-	response := mapper.ToTeamStatsResponse(updatedTeamStats)
+	response := h.TeamStatsMapper.DomainToResponse(updatedResult)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Team stats updated successfully")
 }
 
@@ -327,7 +345,7 @@ func (h *TeamStatsHandler) DeleteTeamStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	err = h.TeamStatsService.DeleteTeamStats(ctx, id)
+	err = h.TeamStatsDomainService.DeleteTeamStats(ctx, id)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
