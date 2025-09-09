@@ -42,7 +42,7 @@ type Repositories struct {
 	Season     domain.SeasonRepository
 	Lineup     domain.LineupRepository
 	Match      domain.MatchRepository
-	Article    persistence.ArticleRepository
+	Article    domain.ArticleRepository
 	TeamStat   domain.TeamStatsRepository
 	PlayerStat domain.PlayerStatsRepository
 }
@@ -50,14 +50,6 @@ type Repositories struct {
 type Services struct {
 	JWT  *jwt.JWTService
 	Auth service.AuthService
-	// Note: Following services removed until their entities are migrated to hexagonal architecture:
-	// Player     service.PlayerService
-	// PlayerTeam service.PlayerTeamService
-	// Article    service.ArticleService
-	// TeamStat   service.TeamStatsService
-	// PlayerStat service.PlayerStatsService
-	// Lineup     service.LineupService
-
 	// Domain-based services (hexagonal architecture)
 	PlayerDomain     *domainservice.PlayerDomainService
 	PlayerTeamDomain *domainservice.PlayerTeamDomainService
@@ -69,6 +61,7 @@ type Services struct {
 	LineupDomain     *domainservice.LineupDomainService
 	TeamStatDomain   *domainservice.TeamStatsDomainService
 	PlayerStatDomain *domainservice.PlayerStatsDomainService
+	ArticleDomain    *domainservice.ArticleDomainService
 }
 
 type Handlers struct {
@@ -82,6 +75,7 @@ type Handlers struct {
 	Match      *handler.MatchHandler
 	TeamStat   *handler.TeamStatsHandler
 	PlayerStat *handler.PlayerStatsHandler
+	Article    *handler.ArticleHandler
 }
 
 // NewServer creates and configures a new server instance with middleware and security settings.
@@ -263,18 +257,11 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 	matchDomainService := CreateMatchDomainService(repos.Match)
 	teamStatsDomainService := CreateTeamStatsDomainService(repos.TeamStat, repos.Team, repos.Season)
 	playerStatsDomainService := CreatePlayerStatsDomainService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team)
+	articleDomainService := CreateArticleDomainService(repos.Article, repos.Season)
 
 	return &Services{
 		JWT:  jwtService,
 		Auth: service.NewAuthService(jwtService),
-		// Note: Following services will fail compilation until their entities are migrated:
-		// Player:     service.NewPlayerService(repos.Player, repos.PlayerTeam, repos.Season),
-		// PlayerTeam: service.NewPlayerTeamService(repos.PlayerTeam, repos.Player, repos.Team, repos.Season),
-		// Article:    service.NewArticleService(repos.Article, seasonService),
-		// TeamStat:   service.NewTeamStatsService(repos.TeamStat, repos.Team, repos.Season),
-		// Lineup:     service.NewLineupService(repos.Lineup, matchService),
-		// PlayerStat: service.NewPlayerStatsService(repos.PlayerStat, repos.Player, repos.Match, repos.Season, repos.Team),
-
 		// Domain-based services (hexagonal architecture)
 		PlayerDomain:     playerDomainService,
 		PlayerTeamDomain: playerTeamDomainService,
@@ -286,6 +273,7 @@ func initializeServices(repos *Repositories, jwtSecret []byte) *Services {
 		MatchDomain:      matchDomainService,
 		TeamStatDomain:   teamStatsDomainService,
 		PlayerStatDomain: playerStatsDomainService,
+		ArticleDomain:    articleDomainService,
 	}
 }
 
@@ -298,8 +286,7 @@ func initializeHandlers(services *Services) *Handlers {
 		PlayerTeam: handler.NewPlayerTeamHandler(services.PlayerTeamDomain),
 		Season:     handler.NewSeasonHandler(services.SeasonDomain),
 		Lineup:     handler.NewLineupHandler(services.LineupDomain),
-		// Article:    handler.NewArticleHandler(services.Article),
-		// Lineup:     handler.NewLineupHandler(services.Lineup, services.Player, services.Match),
+		Article:    handler.NewArticleHandler(services.ArticleDomain),
 		Match:      handler.NewMatchHandler(services.MatchDomain),
 		TeamStat:   handler.NewTeamStatsHandler(services.TeamStatDomain),
 		PlayerStat: handler.NewPlayerStatsHandler(services.PlayerStatDomain),
@@ -314,8 +301,7 @@ func initializeRoutes(r *gin.Engine, handlers *Handlers) {
 	router.InitializePlayerTeamRoutes(r, handlers.PlayerTeam)
 	router.InitializeSeasonRoutes(r, handlers.Season)
 	router.InitializeLineupRoutes(r, handlers.Lineup)
-	// router.InitializeArticleRoutes(r, handlers.Article)
-	// router.InitializeLineupRoutes(r, handlers.Lineup)
+	router.InitializeArticleRoutes(r, handlers.Article)
 	router.InitializeMatchRoutes(r, handlers.Match)
 	router.InitializeTeamStatsRoutes(r, handlers.TeamStat)
 	router.InitializePlayerStatsRoutes(r, handlers.PlayerStat)

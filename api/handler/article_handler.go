@@ -7,22 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/api/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
-	"github.com/EdwinRincon/browersfc-api/api/service"
 	"github.com/EdwinRincon/browersfc-api/helper"
+	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
 )
 
 type ArticleHandler struct {
-	ArticleService service.ArticleService
+	ArticleDomainService *domainservice.ArticleDomainService
+	ArticleMapper        *mapper.ArticleMapper
 }
 
-func NewArticleHandler(articleService service.ArticleService) *ArticleHandler {
+func NewArticleHandler(articleDomainService *domainservice.ArticleDomainService) *ArticleHandler {
 	return &ArticleHandler{
-		ArticleService: articleService,
+		ArticleDomainService: articleDomainService,
+		ArticleMapper:        mapper.NewArticleMapper(),
 	}
 }
 
@@ -51,10 +53,10 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Map the request to an Article model
-	article := mapper.ToArticle(&createRequest)
+	// Map the request to a domain Article entity
+	article := h.ArticleMapper.DTOToDomain(&createRequest)
 
-	createdArticle, err := h.ArticleService.CreateArticle(ctx, article)
+	err := h.ArticleDomainService.CreateArticle(ctx, article)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrSeasonNotFound):
@@ -66,7 +68,8 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 		}
 	}
 
-	helper.WriteSuccessResponse(c, http.StatusCreated, createdArticle, "Article created successfully")
+	createdArticleResponse := h.ArticleMapper.DomainToShortDTO(article)
+	helper.WriteSuccessResponse(c, http.StatusCreated, createdArticleResponse, "Article created successfully")
 }
 
 // GetArticleByID godoc
@@ -92,7 +95,7 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	article, err := h.ArticleService.GetArticleByID(ctx, id)
+	article, err := h.ArticleDomainService.GetArticleByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrRecordNotFound) {
 			helper.WriteErrorResponse(c, helper.NewNotFoundError("article"))
@@ -102,7 +105,7 @@ func (h *ArticleHandler) GetArticleByID(c *gin.Context) {
 		return
 	}
 
-	articleResponse := mapper.ToArticleResponse(article)
+	articleResponse := h.ArticleMapper.DomainToDTO(article)
 	helper.WriteSuccessResponse(c, http.StatusOK, articleResponse, "Article retrieved successfully")
 }
 
@@ -149,14 +152,14 @@ func (h *ArticleHandler) GetPaginatedArticles(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	articles, total, err := h.ArticleService.GetPaginatedArticles(ctx, sort, order, page, pageSize)
+	articles, total, err := h.ArticleDomainService.GetPaginatedArticles(ctx, sort, order, page, pageSize)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToArticleResponseList(articles),
+		Items:      h.ArticleMapper.DomainListToDTO(articles),
 		TotalCount: total,
 	}
 
@@ -211,7 +214,7 @@ func (h *ArticleHandler) GetArticlesBySeasonID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	articles, total, err := h.ArticleService.GetArticlesBySeasonID(ctx, seasonID, sort, order, page, pageSize)
+	articles, total, err := h.ArticleDomainService.GetArticlesBySeasonID(ctx, seasonID, sort, order, page, pageSize)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrSeasonNotFound):
@@ -224,7 +227,7 @@ func (h *ArticleHandler) GetArticlesBySeasonID(c *gin.Context) {
 	}
 
 	response := helper.PaginatedResponse{
-		Items:      mapper.ToArticleResponseList(articles),
+		Items:      h.ArticleMapper.DomainListToDTO(articles),
 		TotalCount: total,
 	}
 
@@ -264,7 +267,21 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	updatedArticle, err := h.ArticleService.UpdateArticle(ctx, &articleUpdateDTO, id)
+	// Get existing article first for the update mapper
+	existingArticle, err := h.ArticleDomainService.GetArticleByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, constants.ErrRecordNotFound) {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("article"))
+			return
+		}
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		return
+	}
+
+	// Apply the update using the mapper
+	updatedArticle := h.ArticleMapper.UpdateDTOToDomain(&articleUpdateDTO, existingArticle)
+
+	finalArticle, err := h.ArticleDomainService.UpdateArticle(ctx, id, updatedArticle)
 	if err != nil {
 		switch {
 		case errors.Is(err, constants.ErrRecordNotFound):
@@ -279,7 +296,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 		}
 	}
 
-	response := mapper.ToArticleShort(updatedArticle)
+	response := h.ArticleMapper.DomainToShortDTO(finalArticle)
 	helper.WriteSuccessResponse(c, http.StatusOK, response, "Article updated successfully")
 }
 
@@ -305,7 +322,7 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	err = h.ArticleService.DeleteArticle(ctx, id)
+	err = h.ArticleDomainService.DeleteArticle(ctx, id)
 	if err != nil && !errors.Is(err, constants.ErrRecordNotFound) {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return

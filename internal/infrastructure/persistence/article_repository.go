@@ -5,43 +5,50 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/model"
+	"github.com/EdwinRincon/browersfc-api/domain"
 	"gorm.io/gorm"
 )
 
-type ArticleRepository interface {
-	CreateArticle(ctx context.Context, article *model.Article) error
-	GetArticleByID(ctx context.Context, id uint64) (*model.Article, error)
-	GetPaginatedArticles(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Article, int64, error)
-	GetArticlesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]model.Article, int64, error)
-	UpdateArticle(ctx context.Context, id uint64, article *model.Article) error
-	DeleteArticle(ctx context.Context, id uint64) error
-}
+const (
+	whereIDClause = "id = ?"
+)
 
+// ArticleRepositoryImpl implements domain.ArticleRepository interface.
 type ArticleRepositoryImpl struct {
-	db *gorm.DB
+	db     *gorm.DB
+	mapper *mapper.ArticleMapper
 }
 
-func NewArticleRepository(db *gorm.DB) ArticleRepository {
-	return &ArticleRepositoryImpl{db: db}
+// NewArticleRepository creates a new ArticleRepositoryImpl.
+func NewArticleRepository(db *gorm.DB) *ArticleRepositoryImpl {
+	return &ArticleRepositoryImpl{
+		db:     db,
+		mapper: mapper.NewArticleMapper(),
+	}
 }
 
 // GetArticleByID retrieves an article by its ID, preloading the Season.
-func (ar *ArticleRepositoryImpl) GetArticleByID(ctx context.Context, id uint64) (*model.Article, error) {
+func (ar *ArticleRepositoryImpl) GetArticleByID(ctx context.Context, id uint64) (*domain.Article, error) {
 	var article model.Article
 	result := ar.db.WithContext(ctx).
 		Preload("Season").
-		Where("id = ?", id).
+		Where(whereIDClause, id).
 		First(&article)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	return &article, result.Error
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return ar.mapper.ModelToDomain(&article), nil
 }
 
 // GetPaginatedArticles retrieves a paginated list of articles with their seasons and total count.
-func (ar *ArticleRepositoryImpl) GetPaginatedArticles(ctx context.Context, sort string, order string, page int, pageSize int) ([]model.Article, int64, error) {
+func (ar *ArticleRepositoryImpl) GetPaginatedArticles(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Article, int64, error) {
 	var articles []model.Article
 	var total int64
 
@@ -65,10 +72,10 @@ func (ar *ArticleRepositoryImpl) GetPaginatedArticles(ctx context.Context, sort 
 		return nil, 0, fmt.Errorf("error fetching articles: %w", err)
 	}
 
-	return articles, total, nil
+	return ar.mapper.ModelListToDomain(articles), total, nil
 }
 
-func (ar *ArticleRepositoryImpl) GetArticlesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]model.Article, int64, error) {
+func (ar *ArticleRepositoryImpl) GetArticlesBySeasonID(ctx context.Context, seasonID uint64, sort string, order string, page int, pageSize int) ([]domain.Article, int64, error) {
 	var articles []model.Article
 	var total int64
 
@@ -93,21 +100,23 @@ func (ar *ArticleRepositoryImpl) GetArticlesBySeasonID(ctx context.Context, seas
 		return nil, 0, fmt.Errorf("error fetching articles for season: %w", err)
 	}
 
-	return articles, total, nil
+	return ar.mapper.ModelListToDomain(articles), total, nil
 }
 
-func (ar *ArticleRepositoryImpl) CreateArticle(ctx context.Context, article *model.Article) error {
-	return ar.db.WithContext(ctx).Create(article).Error
+func (ar *ArticleRepositoryImpl) CreateArticle(ctx context.Context, article *domain.Article) error {
+	modelArticle := ar.mapper.DomainToModel(article)
+	return ar.db.WithContext(ctx).Create(modelArticle).Error
 }
 
-func (ar *ArticleRepositoryImpl) UpdateArticle(ctx context.Context, id uint64, article *model.Article) error {
+func (ar *ArticleRepositoryImpl) UpdateArticle(ctx context.Context, id uint64, article *domain.Article) error {
+	modelArticle := ar.mapper.DomainToModel(article)
 	return ar.db.WithContext(ctx).
 		Model(&model.Article{}).
-		Where("id = ?", id).
+		Where(whereIDClause, id).
 		Select("*").
-		Updates(article).Error
+		Updates(modelArticle).Error
 }
 
 func (ar *ArticleRepositoryImpl) DeleteArticle(ctx context.Context, id uint64) error {
-	return ar.db.WithContext(ctx).Delete(&model.Article{}, "id = ?", id).Error
+	return ar.db.WithContext(ctx).Delete(&model.Article{}, whereIDClause, id).Error
 }
