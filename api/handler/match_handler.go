@@ -159,7 +159,7 @@ func (h *MatchHandler) GetDetailedMatchByID(c *gin.Context) {
 // @Failure 500 {object} helper.AppError "Internal server error"
 // @Router /matches [get]
 func (h *MatchHandler) GetPaginatedMatches(c *gin.Context) {
-	sort := c.DefaultQuery("sort", "date")
+	sort := c.DefaultQuery("sort", "kickoff")
 	order := c.DefaultQuery("order", "desc")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -220,7 +220,7 @@ func (h *MatchHandler) GetMatchesBySeasonID(c *gin.Context) {
 		return
 	}
 
-	sort := c.DefaultQuery("sort", "date")
+	sort := c.DefaultQuery("sort", "kickoff")
 	order := c.DefaultQuery("order", "desc")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -275,7 +275,7 @@ func (h *MatchHandler) GetMatchesByTeamID(c *gin.Context) {
 		return
 	}
 
-	sort := c.DefaultQuery("sort", "date")
+	sort := c.DefaultQuery("sort", "kickoff")
 	order := c.DefaultQuery("order", "desc")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))

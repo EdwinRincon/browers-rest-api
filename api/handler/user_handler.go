@@ -11,6 +11,7 @@ import (
 
 	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
+	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
 	"github.com/EdwinRincon/browersfc-api/pkg/security"
@@ -413,7 +414,7 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	}
 
 	// Validate sort field
-	if err := helper.ValidateSort(domain.User{}, sort); err != nil {
+	if err := helper.ValidateSort(model.User{}, sort); err != nil {
 		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}

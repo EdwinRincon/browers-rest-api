@@ -201,7 +201,7 @@ func (h *LineupHandler) DeleteLineup(c *gin.Context) {
 func (h *LineupHandler) GetPaginatedLineups(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	sort := c.DefaultQuery("sort", "")
+	sort := c.DefaultQuery("sort", "id")
 	order := c.DefaultQuery("order", "asc")
 
 	lineups, total, err := h.LineupDomainService.GetPaginatedLineups(c.Request.Context(), sort, order, page, pageSize)

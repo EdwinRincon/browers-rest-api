@@ -10,7 +10,7 @@ import (
 	"github.com/EdwinRincon/browersfc-api/adapter/mapper"
 	"github.com/EdwinRincon/browersfc-api/api/constants"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
-	"github.com/EdwinRincon/browersfc-api/domain"
+	"github.com/EdwinRincon/browersfc-api/api/model"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
 	"github.com/gin-gonic/gin"
@@ -135,7 +135,7 @@ func (h *TeamHandler) GetPaginatedTeams(c *gin.Context) {
 	}
 
 	// Validate sort field
-	if err := helper.ValidateSort(domain.Team{}, sort); err != nil {
+	if err := helper.ValidateSort(model.Team{}, sort); err != nil {
 		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
 		return
 	}
