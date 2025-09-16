@@ -22,6 +22,7 @@ func InitializeUserRoutes(r *gin.Engine, userHandler *handler.UserHandler, authS
 		users := api.Group("/users")
 		users.Use(middleware.JwtAuthMiddleware(authService))
 		{
+			users.GET("/me", userHandler.GetCurrentUser)
 			users.GET("", userHandler.GetPaginatedUsers)
 			users.GET("/:username", userHandler.GetUserByUsername)
 		}

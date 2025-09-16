@@ -23,23 +23,32 @@ const (
 )
 
 // JwtAuthMiddleware authenticates requests using JWT tokens through the domain service.
+// It supports both cookie-based authentication (preferred) and Authorization header for API calls.
 func JwtAuthMiddleware(authService *service.AuthenticationDomainService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Authorization header is required"))
-			c.Abort()
-			return
-		}
+		var tokenString string
 
-		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid authorization header format"))
-			c.Abort()
-			return
-		}
+		// First, try to get token from cookie (preferred method)
+		if cookie, err := c.Cookie("token"); err == nil && cookie != "" {
+			tokenString = cookie
+		} else {
+			// Fallback to Authorization header for API calls
+			authHeader := c.GetHeader("Authorization")
+			if authHeader == "" {
+				helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Authentication required"))
+				c.Abort()
+				return
+			}
 
-		// Extract token without the "Bearer " prefix
-		tokenString := strings.TrimPrefix(authHeader, bearerPrefix)
+			if !strings.HasPrefix(authHeader, bearerPrefix) {
+				helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Invalid authorization header format"))
+				c.Abort()
+				return
+			}
+
+			// Extract token without the "Bearer " prefix
+			tokenString = strings.TrimPrefix(authHeader, bearerPrefix)
+		}
 
 		// Validate token using domain service
 		authClaims, err := authService.ValidateAuthentication(c.Request.Context(), tokenString)
@@ -136,7 +145,7 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Host check in development only - allow any localhost port
 		if config.Config.IsDevelopment {
-			if !strings.HasPrefix(c.Request.Host, "localhost:") {
+			if !strings.HasPrefix(c.Request.Host, "localhost") {
 				logger.Warn(c, "Invalid host header in development",
 					"host", c.Request.Host,
 					"ip", c.ClientIP())

@@ -64,39 +64,17 @@ func NewUserHandler(authService *domainservice.AuthenticationDomainService, user
 	}
 }
 
-// setAuthenticationResponse generates a JWT token and sets it in the response headers and cookies.
-func (h *UserHandler) setAuthenticationResponse(c *gin.Context, user *domain.User) {
-	// Get role name for JWT token
-	roleName := ""
-	if user.RoleID > 0 {
-		role, err := h.RoleDomainService.GetRoleByID(c.Request.Context(), user.RoleID)
-		if err == nil && role != nil {
-			roleName = role.Name
-		}
-	}
-
+// setAuthenticationCookie generates a JWT token and sets it as a secure HTTP-only cookie.
+// This is used for OAuth callbacks where we only need to set the cookie without sending a JSON response.
+func (h *UserHandler) setAuthenticationCookie(c *gin.Context, user *domain.User) {
 	jwtToken, err := h.AuthenticationDomainService.GenerateToken(c.Request.Context(), user)
 	if err != nil {
 		helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
 		return
 	}
 
-	authUserResponse := dto.AuthUserResponse{
-		ID:         user.ID,
-		Name:       user.Name,
-		LastName:   user.LastName,
-		Username:   user.Username,
-		ImgProfile: user.ImgProfile,
-		RoleName:   roleName,
-	}
-
-	c.Header("Authorization", "Bearer "+jwtToken)
+	// Set secure HTTP-only cookie for session management
 	security.SetSecureCookie(c, "token", jwtToken, int(time.Hour/time.Second))
-
-	helper.WriteSuccessResponse(c, http.StatusOK, gin.H{
-		"token": jwtToken,
-		"user":  authUserResponse,
-	}, "User logged in successfully")
 }
 
 // fetchGoogleUserInfo retrieves user information from Google using the provided OAuth2 token.
@@ -250,7 +228,72 @@ func (h *UserHandler) GoogleCallback(c *gin.Context) {
 		}
 	}
 
-	h.setAuthenticationResponse(c, user)
+	// Set authentication cookie and redirect to Angular app
+	h.setAuthenticationCookie(c, user)
+
+	// Redirect to Angular app after successful authentication
+	// The cookie is already set, so Angular will detect the authenticated state
+	redirectURL := "https://app.browersfc.com/admin"
+	if config.Config.IsDevelopment {
+		redirectURL = "http://localhost:4200/admin"
+	}
+	c.Redirect(http.StatusFound, redirectURL)
+}
+
+// GetCurrentUser godoc
+// @Summary Get current authenticated user
+// @Tags users
+// @ID getCurrentUser
+// @Produce json
+// @Success 200 {object} dto.UserResponse "Current user retrieved successfully"
+// @Failure 401 {object} helper.AppError "Unauthorized"
+// @Failure 404 {object} helper.AppError "User not found"
+// @Failure 500 {object} helper.AppError "Internal server error"
+// @Router /users/me [get]
+// @Security BearerAuth
+func (h *UserHandler) GetCurrentUser(c *gin.Context) {
+	// Get username from JWT middleware context
+	username, exists := c.Get("username")
+	if !exists {
+		helper.WriteErrorResponse(c, helper.NewUnauthorizedError("Authentication required"))
+		return
+	}
+
+	usernameStr, ok := username.(string)
+	if !ok {
+		helper.WriteErrorResponse(c, helper.NewInternalServerError(errors.New("invalid username format")))
+		return
+	}
+
+	// Wrap context with timeout for DB/service calls
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	user, err := h.UserDomainService.GetUserByUsername(ctx, usernameStr)
+	if err != nil {
+		if errors.Is(err, constants.ErrRecordNotFound) {
+			helper.WriteErrorResponse(c, helper.NewNotFoundError("user"))
+		} else {
+			helper.WriteErrorResponse(c, helper.NewInternalServerError(err))
+		}
+		return
+	}
+
+	// Fetch user's role information
+	var roleShort *dto.RoleShort
+	if user.RoleID > 0 {
+		role, err := h.RoleDomainService.GetRoleByID(ctx, user.RoleID)
+		if err == nil && role != nil {
+			roleShort = &dto.RoleShort{
+				ID:   role.ID,
+				Name: role.Name,
+			}
+		}
+	}
+
+	// Map domain user to DTO response with role information
+	userResponse := h.UserMapper.DomainToDTO(user, roleShort)
+	helper.WriteSuccessResponse(c, http.StatusOK, userResponse, "Current user retrieved successfully")
 }
 
 // LoginWithGoogle godoc

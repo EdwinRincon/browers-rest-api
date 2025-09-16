@@ -61,7 +61,7 @@ var Config = func() SecurityConfig {
 		CookieConfig: CookieSecurityConfig{
 			Secure:   !isDev,
 			HTTPOnly: true,
-			SameSite: "Strict",
+			SameSite: "Lax",
 			Path:     "/",
 			Domain:   "",
 			MaxAge:   24 * time.Hour,
