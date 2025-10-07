@@ -8,8 +8,8 @@ type Player struct {
 	ID            uint64       `gorm:"primaryKey" json:"id" form:"id"`
 	NickName      string       `gorm:"type:varchar(20)" json:"nick_name" form:"nick_name" binding:"required,max=20"`
 	Height        uint16       `gorm:"type:smallint;not null;check:height >= 100 AND height <= 250" json:"height" form:"height" binding:"required,gte=100,lte=250"`
-	Country       string       `gorm:"type:varchar(3);not null" json:"country" form:"country" binding:"required,len=3"`
-	Country2      string       `gorm:"type:varchar(3)" json:"country2,omitempty" form:"country2"`
+	Country       string       `gorm:"type:varchar(2);not null" json:"country_iso2" form:"country_iso2" binding:"required,len=2"`
+	SecondaryCountry string    `gorm:"type:varchar(2)" json:"secondary_country_iso2,omitempty" form:"secondary_country_iso2"`
 	Foot          string       `gorm:"type:varchar(1);not null" json:"foot" form:"foot" binding:"required,oneof=L R"`
 	Age           uint8        `gorm:"type:tinyint;not null;check:age >= 16 AND age <= 50" json:"age" form:"age" binding:"required,gte=16,lte=50"`
 	SquadNumber   uint8        `gorm:"type:tinyint;not null;check:squad_number >= 1 AND squad_number <= 99" json:"squad_number" form:"squad_number" binding:"required,gte=1,lte=99"`
@@ -20,7 +20,7 @@ type Player struct {
 	Goals         uint16       `gorm:"type:smallint;not null;default:0;" json:"goals" form:"goals"`
 	Assists       uint16       `gorm:"type:smallint;not null;default:0;" json:"assists" form:"assists"`
 	Saves         uint16       `gorm:"type:smallint;not null;default:0;" json:"saves" form:"saves"`
-	Position      string       `gorm:"type:varchar(5);not null;" json:"position" form:"position" binding:"required,oneof=por ceni cend lati med latd del deli deld"`
+	Position      string       `gorm:"type:varchar(5);not null;" json:"position" form:"position" binding:"required,oneof=por ceni cenm cend lati med latd del deli deld"`
 	Injured       bool         `gorm:"default:false;" json:"injured" form:"injured"`
 	CareerSummary string       `gorm:"type:varchar(1000);not null;" json:"career_summary,omitempty" form:"career_summary"`
 	PlayerTeams   []PlayerTeam `json:"player_teams,omitempty" swaggerignore:"true"`

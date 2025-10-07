@@ -113,11 +113,14 @@ func (s *TeamDomainService) UpdateTeam(ctx context.Context, id uint64, updates *
 	if updates.Shield != "" {
 		existingTeam.Shield = updates.Shield
 	}
-	if updates.Color != "" {
-		existingTeam.Color = updates.Color
+	if updates.PrimaryColor != "" {
+		existingTeam.PrimaryColor = updates.PrimaryColor
 	}
-	if updates.Color2 != "" {
-		existingTeam.Color2 = updates.Color2
+	if updates.SecondaryColor != "" {
+		existingTeam.SecondaryColor = updates.SecondaryColor
+	}
+	if updates.NextMatchID != nil {
+		existingTeam.NextMatchID = updates.NextMatchID
 	}
 
 	// Validate updated entity

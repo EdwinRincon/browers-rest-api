@@ -6,7 +6,7 @@ import "time"
 // This entity contains only business-relevant fields
 type Lineup struct {
 	ID        uint64
-	Position  string // por, ceni, cend, lati, med, latd, del, deli, deld
+	Position  string // por ceni cenm cend lati med latd del deli deld
 	PlayerID  uint64
 	MatchID   uint64
 	Starting  bool
@@ -23,6 +23,7 @@ func (l *Lineup) IsValid() bool {
 	validPositions := map[string]bool{
 		"por":  true, // portero
 		"ceni": true, // central izquierdo
+		"cenm": true, // central medio
 		"cend": true, // central derecho
 		"lati": true, // lateral izquierdo
 		"latd": true, // lateral derecho

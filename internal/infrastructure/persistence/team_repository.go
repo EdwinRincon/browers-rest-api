@@ -37,7 +37,7 @@ func (tr *TeamRepositoryImpl) CreateTeam(ctx context.Context, team *domain.Team)
 
 func (tr *TeamRepositoryImpl) GetTeamByID(ctx context.Context, id uint64) (*domain.Team, error) {
 	var team model.Team
-	result := tr.db.WithContext(ctx).First(&team, id)
+	result := tr.db.WithContext(ctx).Preload("NextMatch").First(&team, id)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -76,8 +76,8 @@ func (tr *TeamRepositoryImpl) GetPaginatedTeams(ctx context.Context, sort string
 		return nil, 0, fmt.Errorf("error counting total teams: %w", err)
 	}
 
-	// Build the data query
-	query := tr.db.WithContext(ctx).Model(&model.Team{})
+	// Build the data query with preloading NextMatch
+	query := tr.db.WithContext(ctx).Model(&model.Team{}).Preload("NextMatch")
 
 	// Apply sorting if provided
 	if sort != "" && (order == "asc" || order == "desc") {

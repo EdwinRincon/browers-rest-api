@@ -62,7 +62,7 @@ func (m *UserHTTPMapper) UpdateDTOToDomain(userDTO *dto.UpdateUserRequest) *doma
 }
 
 // DomainToDTO converts a domain.User to UserResponse DTO
-func (m *UserHTTPMapper) DomainToDTO(user *domain.User, role *dto.RoleShort) *dto.UserResponse {
+func (m *UserHTTPMapper) DomainToDTO(user *domain.User, _ *dto.RoleShort) *dto.UserResponse {
 	if user == nil {
 		return nil
 	}
@@ -82,9 +82,12 @@ func (m *UserHTTPMapper) DomainToDTO(user *domain.User, role *dto.RoleShort) *dt
 		response.Birthdate = *user.Birthdate
 	}
 
-	// Set role if provided
-	if role != nil {
-		response.Role = *role
+	// Map role if present
+	if user.Role != nil {
+		response.Role = dto.RoleShort{
+			ID:   user.Role.ID,
+			Name: user.Role.Name,
+		}
 	}
 
 	return response

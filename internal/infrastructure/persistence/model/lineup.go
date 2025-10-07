@@ -6,7 +6,7 @@ import (
 
 type Lineup struct {
 	ID        uint64    `gorm:"primaryKey" json:"id" form:"id"`
-	Position  string    `gorm:"type:varchar(5);not null" json:"position" form:"position" binding:"required,oneof=por ceni cend lati med latd del deli deld"`
+	Position  string    `gorm:"type:varchar(5);not null" json:"position" form:"position" binding:"required,oneof=por ceni cenm cend lati med latd del deli deld"`
 	PlayerID  uint64    `gorm:"index;not null;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"player_id" form:"player_id" binding:"required"`
 	Player    *Player   `gorm:"foreignKey:PlayerID" json:"player,omitempty" form:"player"`
 	MatchID   uint64    `gorm:"index;not null;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"match_id" form:"match_id" binding:"required"`

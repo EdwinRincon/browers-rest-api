@@ -38,7 +38,7 @@ func (m *MatchPersistenceMapper) ModelToDomain(model *model.Match) *domain.Match
 		return nil
 	}
 
-	return &domain.Match{
+	domainMatch := &domain.Match{
 		ID:          model.ID,
 		Status:      model.Status,
 		Kickoff:     model.Kickoff,
@@ -52,6 +52,29 @@ func (m *MatchPersistenceMapper) ModelToDomain(model *model.Match) *domain.Match
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,
 	}
+
+	// Map preloaded relationships if they exist
+	if model.HomeTeam != nil {
+		teamMapper := NewTeamPersistenceMapper()
+		domainMatch.HomeTeam = teamMapper.ModelToDomain(model.HomeTeam)
+	}
+
+	if model.AwayTeam != nil {
+		teamMapper := NewTeamPersistenceMapper()
+		domainMatch.AwayTeam = teamMapper.ModelToDomain(model.AwayTeam)
+	}
+
+	if model.Season != nil {
+		seasonMapper := NewSeasonPersistenceMapper()
+		domainMatch.Season = seasonMapper.ModelToDomain(model.Season)
+	}
+
+	if model.MVPPlayer != nil {
+		playerMapper := NewPlayerPersistenceMapper()
+		domainMatch.MVPPlayer = playerMapper.ModelToDomain(model.MVPPlayer)
+	}
+
+	return domainMatch
 }
 
 func (m *MatchPersistenceMapper) ModelListToDomain(models []model.Match) []domain.Match {

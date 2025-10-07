@@ -84,8 +84,35 @@ func (m *MatchHTTPMapper) DomainToDTO(entity *domain.Match) *dto.MatchResponse {
 		UpdatedAt: entity.UpdatedAt,
 	}
 
-	// Note: HomeTeam, AwayTeam, Season, and MVPPlayer will be populated
-	// by the handler using separate mappers when needed
+	// Map related entities if they are preloaded
+	if entity.HomeTeam != nil {
+		teamMapper := NewTeamHTTPMapper()
+		if homeTeam := teamMapper.DomainToShortDTO(entity.HomeTeam); homeTeam != nil {
+			response.HomeTeam = *homeTeam
+		}
+	}
+
+	if entity.AwayTeam != nil {
+		teamMapper := NewTeamHTTPMapper()
+		if awayTeam := teamMapper.DomainToShortDTO(entity.AwayTeam); awayTeam != nil {
+			response.AwayTeam = *awayTeam
+		}
+	}
+
+	if entity.Season != nil {
+		seasonMapper := NewSeasonHTTPMapper()
+		if season := seasonMapper.DomainToDTO(entity.Season); season != nil {
+			response.Season = dto.SeasonShort{
+				ID:   season.ID,
+				Year: season.Year,
+			}
+		}
+	}
+
+	if entity.MVPPlayer != nil {
+		playerMapper := NewPlayerHTTPMapper()
+		response.MVPPlayer = playerMapper.DomainToShortDTO(entity.MVPPlayer)
+	}
 
 	return response
 }

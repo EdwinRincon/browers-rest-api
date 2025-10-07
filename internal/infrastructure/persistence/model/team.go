@@ -6,11 +6,11 @@ import (
 
 type Team struct {
 	ID          uint64    `gorm:"primaryKey" json:"id"`
-	FullName    string    `gorm:"type:varchar(35);not null;uniqueIndex" json:"full_name" form:"full_name" binding:"required,max=35"`
-	ShortName   string    `gorm:"type:varchar(5);unique;not null" json:"short_name" form:"short_name" binding:"required,max=5"`
-	Color       string    `gorm:"type:varchar(10);not null" json:"color" form:"color" binding:"required,max=10"`
-	Color2      string    `gorm:"type:varchar(10);not null" json:"color2" form:"color2" binding:"required,max=10"`
-	Shield      string    `gorm:"type:varchar(200);not null" json:"shield" form:"shield" binding:"required,url"`
+	FullName       string    `gorm:"type:varchar(35);not null;uniqueIndex" json:"full_name" form:"full_name" binding:"required,max=35"`
+	ShortName      string    `gorm:"type:varchar(5);unique;not null" json:"short_name" form:"short_name" binding:"required,max=5"`
+	PrimaryColor   string    `gorm:"type:varchar(10);not null" json:"primary_color" form:"primary_color" binding:"required,max=10"`
+	SecondaryColor string    `gorm:"type:varchar(10);not null" json:"secondary_color" form:"secondary_color" binding:"required,max=10"`
+	Shield         string    `gorm:"type:varchar(200);not null" json:"shield" form:"shield" binding:"required,url"`
 	NextMatchID *uint64   `gorm:"index" json:"next_match_id,omitempty"`
 	NextMatch   *Match    `gorm:"foreignKey:NextMatchID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"next_match,omitempty" swaggerignore:"true"`
 

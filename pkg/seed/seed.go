@@ -138,11 +138,11 @@ func seedTeams(db *gorm.DB) ([]model.Team, error) {
 
 	for i := range teams {
 		teams[i] = model.Team{
-			FullName:  gofakeit.Company(),
-			ShortName: gofakeit.LetterN(3),
-			Color:     teamColors[i],
-			Color2:    teamSecondColors[i],
-			Shield:    gofakeit.URL(),
+			FullName:       gofakeit.Company(),
+			ShortName:      gofakeit.LetterN(3),
+			PrimaryColor:   teamColors[i],
+			SecondaryColor: teamSecondColors[i],
+			Shield:         gofakeit.URL(),
 			// NextMatchID will be set after matches are created
 		}
 	}
@@ -180,10 +180,10 @@ func seedSeasons(db *gorm.DB) ([]model.Season, error) {
 	return seasons, nil
 }
 
-// seedPlayers creates 5 players in the database
+// seedPlayers creates 15 players in the database
 func seedPlayers(db *gorm.DB, users []model.User) ([]model.Player, error) {
-	players := make([]model.Player, 5)
-	positions := []string{"por", "ceni", "cend", "lati", "med"}
+	players := make([]model.Player, 15)
+	positions := []string{"por", "ceni", "cenm", "cend", "lati", "med", "latd", "del", "deli", "deld"}
 	feet := []string{"L", "R"}
 
 	for i := range players {
@@ -193,26 +193,30 @@ func seedPlayers(db *gorm.DB, users []model.User) ([]model.Player, error) {
 			userID = &users[i].ID
 		}
 
+		summary := gofakeit.Paragraph(3, 5, 10, " ")
+		if len(summary) > 1000 {
+			summary = summary[:1000]
+		}
 		players[i] = model.Player{
-			NickName:      gofakeit.Username(),
-			Height:        uint16(160 + rand.Intn(91)), // Height between 160-250 cm
-			Country:       gofakeit.CountryAbr(),
-			Country2:      gofakeit.CountryAbr(),
-			Foot:          feet[rand.Intn(len(feet))],
-			Age:           uint8(18 + rand.Intn(20)),
-			SquadNumber:   uint8(1 + rand.Intn(99)),
-			Rating:        uint8(50 + rand.Intn(51)),
-			Matches:       uint16(rand.Intn(100)),
-			YCards:        uint8(rand.Intn(10)),
-			RCards:        uint8(rand.Intn(3)),
-			Goals:         uint16(rand.Intn(50)),
-			Assists:       uint16(rand.Intn(30)),
-			Saves:         uint16(rand.Intn(100)),
-			Position:      positions[i%len(positions)],
-			Injured:       rand.Float32() < 0.2, // 20% chance of being injured
-			CareerSummary: gofakeit.Paragraph(3, 5, 10, " "),
-			MVPCount:      uint8(rand.Intn(10)),
-			UserID:        userID,
+			NickName:         gofakeit.Username(),
+			Height:           uint16(160 + rand.Intn(40)), // Height between 160-200 cm
+			Country:          gofakeit.CountryAbr(),
+			SecondaryCountry: gofakeit.CountryAbr(),
+			Foot:             feet[rand.Intn(len(feet))],
+			Age:              uint8(18 + rand.Intn(20)),
+			SquadNumber:      uint8(1 + rand.Intn(99)),
+			Rating:           uint8(50 + rand.Intn(51)),
+			Matches:          uint16(rand.Intn(100)),
+			YCards:           uint8(rand.Intn(10)),
+			RCards:           uint8(rand.Intn(3)),
+			Goals:            uint16(rand.Intn(50)),
+			Assists:          uint16(rand.Intn(30)),
+			Saves:            uint16(rand.Intn(100)),
+			Position:         positions[i%len(positions)],
+			Injured:          rand.Float32() < 0.2, // 20% chance of being injured
+			CareerSummary:    summary,
+			MVPCount:         uint8(rand.Intn(10)),
+			UserID:           userID,
 		}
 	}
 
@@ -225,7 +229,7 @@ func seedPlayers(db *gorm.DB, users []model.User) ([]model.Player, error) {
 
 // seedPlayerTeams creates player-team associations
 func seedPlayerTeams(db *gorm.DB, players []model.Player, teams []model.Team, seasons []model.Season) error {
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 15; i++ {
 		playerIndex := i % len(players)
 		teamIndex := i % len(teams)
 		seasonIndex := i % len(seasons)
@@ -353,10 +357,10 @@ func seedMatches(db *gorm.DB, teams []model.Team, seasons []model.Season, player
 // seedLineups creates lineups for matches
 func seedLineups(db *gorm.DB, players []model.Player, matches []model.Match) error {
 	lineups := make([]model.Lineup, 0)
-	positions := []string{"por", "ceni", "cend", "lati", "med", "latd", "del", "deli", "deld"}
+	positions := []string{"por", "ceni", "cenm", "cend", "lati", "med", "latd", "del", "deli", "deld"}
 
-	// Create 5 lineups
-	for i := 0; i < 5; i++ {
+	// Create 14 lineups
+	for i := 0; i < 14; i++ {
 		matchIndex := i % len(matches)
 		playerIndex := i % len(players)
 
@@ -430,7 +434,7 @@ func getShuffledPlayers(players []model.Player) []model.Player {
 
 // generatePlayerStat creates a player stat with random but realistic values
 func generatePlayerStat(player model.Player, match model.Match, seasonID uint64, isMVP bool) model.PlayerStat {
-	positions := []string{"por", "ceni", "cend", "lati", "med", "latd", "del", "deli", "deld"}
+	positions := []string{"por", "ceni", "cenm", "cend", "lati", "med", "latd", "del", "deli", "deld"}
 
 	// Generate random stats
 	goals := uint8(rand.Intn(3))   // 0-2 goals
@@ -573,7 +577,7 @@ func seedPlayerStats(db *gorm.DB, players []model.Player, matches []model.Match,
 		}
 
 		// Create stats for the selected players
-		numPlayersToGenerate := min(5, len(shuffledPlayers))
+		numPlayersToGenerate := min(15, len(shuffledPlayers))
 		for i := 0; i < numPlayersToGenerate; i++ {
 			player := shuffledPlayers[i]
 

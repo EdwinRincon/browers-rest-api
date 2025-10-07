@@ -16,6 +16,7 @@ type User struct {
 	ImgProfile string
 	ImgBanner  string
 	RoleID     uint64
+	Role       *Role
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }

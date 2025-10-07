@@ -44,6 +44,7 @@ func (ps *PlayerStat) isValidPosition() bool {
 	validPositions := map[string]bool{
 		"por":  true, // portero
 		"ceni": true, // central izquierdo
+		"cenm": true, // central medio
 		"cend": true, // central derecho
 		"lati": true, // lateral izquierdo
 		"latd": true, // lateral derecho

@@ -109,8 +109,8 @@ func (s *PlayerDomainService) UpdatePlayer(ctx context.Context, id uint64, playe
 	if player.Country != "" {
 		existingPlayer.Country = player.Country
 	}
-	if player.Country2 != "" {
-		existingPlayer.Country2 = player.Country2
+	if player.SecondaryCountry != "" {
+		existingPlayer.SecondaryCountry = player.SecondaryCountry
 	}
 	if player.Foot != "" {
 		existingPlayer.Foot = player.Foot

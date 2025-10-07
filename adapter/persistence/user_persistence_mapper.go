@@ -50,6 +50,12 @@ func (m *UserPersistenceMapper) ModelToDomain(modelUser *model.User) *domain.Use
 		return nil
 	}
 
+	var role *domain.Role
+	if modelUser.Role != nil {
+		roleMapper := NewRolePersistenceMapper()
+		role = roleMapper.ModelToDomain(modelUser.Role)
+	}
+
 	return &domain.User{
 		ID:         modelUser.ID,
 		Name:       modelUser.Name,
@@ -59,6 +65,7 @@ func (m *UserPersistenceMapper) ModelToDomain(modelUser *model.User) *domain.Use
 		ImgProfile: modelUser.ImgProfile,
 		ImgBanner:  modelUser.ImgBanner,
 		RoleID:     modelUser.RoleID,
+		Role:       role,
 		CreatedAt:  modelUser.CreatedAt,
 		UpdatedAt:  modelUser.UpdatedAt,
 	}

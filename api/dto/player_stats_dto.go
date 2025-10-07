@@ -16,7 +16,7 @@ type CreatePlayerStatRequest struct {
 	Starting      bool    `json:"starting" example:"true"`
 	MinutesPlayed uint8   `json:"minutes_played" binding:"gte=0,lte=120" example:"90"`
 	IsMVP         bool    `json:"is_mvp" example:"false"`
-	Position      string  `json:"position" binding:"omitempty,oneof=por ceni cend lati med latd del deli deld" example:"del"`
+	Position      string  `json:"position" binding:"omitempty,oneof=por ceni cenm cend lati med latd del deli deld" example:"del"`
 }
 
 type UpdatePlayerStatRequest struct {
@@ -30,7 +30,7 @@ type UpdatePlayerStatRequest struct {
 	Starting      *bool   `json:"starting,omitempty" example:"true"`
 	MinutesPlayed *uint8  `json:"minutes_played,omitempty" binding:"omitempty,gte=0,lte=120" example:"85"`
 	IsMVP         *bool   `json:"is_mvp,omitempty" example:"true"`
-	Position      *string `json:"position,omitempty" binding:"omitempty,oneof=por ceni cend lati med latd del deli deld" example:"del"`
+	Position      *string `json:"position,omitempty" binding:"omitempty,oneof=por ceni cenm cend lati med latd del deli deld" example:"del"`
 }
 
 type PlayerStatResponse struct {

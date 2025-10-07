@@ -18,15 +18,15 @@ func (m *TeamPersistenceMapper) DomainToModel(entity *domain.Team) *model.Team {
 	}
 
 	return &model.Team{
-		ID:          entity.ID,
-		FullName:    entity.FullName,
-		ShortName:   entity.ShortName,
-		Color:       entity.Color,
-		Color2:      entity.Color2,
-		Shield:      entity.Shield,
-		NextMatchID: entity.NextMatchID,
-		CreatedAt:   entity.CreatedAt,
-		UpdatedAt:   entity.UpdatedAt,
+		ID:             entity.ID,
+		FullName:       entity.FullName,
+		ShortName:      entity.ShortName,
+		PrimaryColor:   entity.PrimaryColor,
+		SecondaryColor: entity.SecondaryColor,
+		Shield:         entity.Shield,
+		NextMatchID:    entity.NextMatchID,
+		CreatedAt:      entity.CreatedAt,
+		UpdatedAt:      entity.UpdatedAt,
 	}
 }
 
@@ -35,17 +35,31 @@ func (m *TeamPersistenceMapper) ModelToDomain(model *model.Team) *domain.Team {
 		return nil
 	}
 
-	return &domain.Team{
-		ID:          model.ID,
-		FullName:    model.FullName,
-		ShortName:   model.ShortName,
-		Color:       model.Color,
-		Color2:      model.Color2,
-		Shield:      model.Shield,
-		NextMatchID: model.NextMatchID,
-		CreatedAt:   model.CreatedAt,
-		UpdatedAt:   model.UpdatedAt,
+	team := &domain.Team{
+		ID:             model.ID,
+		FullName:       model.FullName,
+		ShortName:      model.ShortName,
+		PrimaryColor:   model.PrimaryColor,
+		SecondaryColor: model.SecondaryColor,
+		Shield:         model.Shield,
+		NextMatchID:    model.NextMatchID,
+		CreatedAt:      model.CreatedAt,
+		UpdatedAt:      model.UpdatedAt,
 	}
+
+	// Convert NextMatch if it exists
+	if model.NextMatch != nil {
+		team.NextMatch = &domain.TeamNextMatch{
+			ID:        model.NextMatch.ID,
+			Status:    model.NextMatch.Status,
+			Kickoff:   model.NextMatch.Kickoff,
+			Location:  model.NextMatch.Location,
+			HomeGoals: model.NextMatch.HomeGoals,
+			AwayGoals: model.NextMatch.AwayGoals,
+		}
+	}
+
+	return team
 }
 
 func (m *TeamPersistenceMapper) ModelListToDomain(models []model.Team) []domain.Team {

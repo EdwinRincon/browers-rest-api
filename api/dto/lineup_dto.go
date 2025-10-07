@@ -5,14 +5,14 @@ import (
 )
 
 type CreateLineupRequest struct {
-	Position string `json:"position" binding:"required,oneof=por ceni cend lati med latd del deli deld"`
+	Position string `json:"position" binding:"required,oneof=por ceni cenm cend lati med latd del deli deld"`
 	PlayerID uint64 `json:"player_id" binding:"required"`
 	MatchID  uint64 `json:"match_id" binding:"required"`
 	Starting bool   `json:"starting"`
 }
 
 type UpdateLineupRequest struct {
-	Position *string `json:"position,omitempty" binding:"omitempty,oneof=por ceni cend lati med latd del deli deld"`
+	Position *string `json:"position,omitempty" binding:"omitempty,oneof=por ceni cenm cend lati med latd del deli deld"`
 	PlayerID *uint64 `json:"player_id,omitempty" binding:"omitempty"`
 	MatchID  *uint64 `json:"match_id,omitempty" binding:"omitempty"`
 	Starting *bool   `json:"starting,omitempty"`

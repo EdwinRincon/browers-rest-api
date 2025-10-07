@@ -20,14 +20,14 @@ func (m *TeamHTTPMapper) DTOToDomain(dto *dto.CreateTeamRequest) *domain.Team {
 	}
 
 	return &domain.Team{
-		FullName:    dto.FullName,
-		ShortName:   dto.ShortName,
-		Color:       dto.Color,
-		Color2:      dto.Color2,
-		Shield:      dto.Shield,
-		NextMatchID: dto.NextMatchID,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		FullName:       dto.FullName,
+		ShortName:      dto.ShortName,
+		PrimaryColor:   dto.PrimaryColor,
+		SecondaryColor: dto.SecondaryColor,
+		Shield:         dto.Shield,
+		NextMatchID:    dto.NextMatchID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 }
 
@@ -44,11 +44,11 @@ func (m *TeamHTTPMapper) UpdateDTOToDomain(dto *dto.UpdateTeamRequest) *domain.T
 	if dto.ShortName != nil {
 		team.ShortName = *dto.ShortName
 	}
-	if dto.Color != nil {
-		team.Color = *dto.Color
+	if dto.PrimaryColor != nil {
+		team.PrimaryColor = *dto.PrimaryColor
 	}
-	if dto.Color2 != nil {
-		team.Color2 = *dto.Color2
+	if dto.SecondaryColor != nil {
+		team.SecondaryColor = *dto.SecondaryColor
 	}
 	if dto.Shield != nil {
 		team.Shield = *dto.Shield
@@ -65,17 +65,31 @@ func (m *TeamHTTPMapper) DomainToDTO(entity *domain.Team) *dto.TeamResponse {
 		return nil
 	}
 
-	return &dto.TeamResponse{
-		ID:          entity.ID,
-		FullName:    entity.FullName,
-		ShortName:   entity.ShortName,
-		Color:       entity.Color,
-		Color2:      entity.Color2,
-		Shield:      entity.Shield,
-		NextMatchID: entity.NextMatchID,
-		CreatedAt:   entity.CreatedAt,
-		UpdatedAt:   entity.UpdatedAt,
+	response := &dto.TeamResponse{
+		ID:             entity.ID,
+		FullName:       entity.FullName,
+		ShortName:      entity.ShortName,
+		PrimaryColor:   entity.PrimaryColor,
+		SecondaryColor: entity.SecondaryColor,
+		Shield:         entity.Shield,
+		NextMatchID:    entity.NextMatchID,
+		CreatedAt:      entity.CreatedAt,
+		UpdatedAt:      entity.UpdatedAt,
 	}
+
+	// Convert NextMatch if it exists
+	if entity.NextMatch != nil {
+		response.NextMatch = &dto.MatchShort{
+			ID:        entity.NextMatch.ID,
+			Status:    entity.NextMatch.Status,
+			Kickoff:   entity.NextMatch.Kickoff,
+			Location:  entity.NextMatch.Location,
+			HomeGoals: entity.NextMatch.HomeGoals,
+			AwayGoals: entity.NextMatch.AwayGoals,
+		}
+	}
+
+	return response
 }
 
 func (m *TeamHTTPMapper) DomainListToDTO(entities []domain.Team) []dto.TeamResponse {

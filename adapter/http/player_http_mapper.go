@@ -18,16 +18,16 @@ func (m *PlayerHTTPMapper) DTOToDomain(dto *dto.CreatePlayerRequest) *domain.Pla
 	}
 
 	return &domain.Player{
-		NickName:      dto.NickName,
-		Height:        dto.Height,
-		Country:       dto.Country,
-		Country2:      dto.Country2,
-		Foot:          dto.Foot,
-		Age:           dto.Age,
-		SquadNumber:   dto.SquadNumber,
-		Position:      dto.Position,
-		CareerSummary: dto.CareerSummary,
-		UserID:        dto.UserID,
+		NickName:         dto.NickName,
+		Height:           dto.Height,
+		Country:          dto.Country,
+		SecondaryCountry: dto.SecondaryCountry,
+		Foot:             dto.Foot,
+		Age:              dto.Age,
+		SquadNumber:      dto.SquadNumber,
+		Position:         dto.Position,
+		CareerSummary:    dto.CareerSummary,
+		UserID:           dto.UserID,
 	}
 }
 
@@ -47,8 +47,8 @@ func (m *PlayerHTTPMapper) UpdateDTOToDomain(dto *dto.UpdatePlayerRequest) *doma
 	if dto.Country != nil {
 		player.Country = *dto.Country
 	}
-	if dto.Country2 != nil {
-		player.Country2 = *dto.Country2
+	if dto.SecondaryCountry != nil {
+		player.SecondaryCountry = *dto.SecondaryCountry
 	}
 	if dto.Foot != nil {
 		player.Foot = *dto.Foot
@@ -84,27 +84,27 @@ func (m *PlayerHTTPMapper) DomainToDTO(entity *domain.Player) *dto.PlayerRespons
 	}
 
 	return &dto.PlayerResponse{
-		ID:            entity.ID,
-		NickName:      entity.NickName,
-		Height:        entity.Height,
-		Country:       entity.Country,
-		Country2:      entity.Country2,
-		Foot:          entity.Foot,
-		Age:           entity.Age,
-		SquadNumber:   entity.SquadNumber,
-		Rating:        entity.Rating,
-		Matches:       entity.Matches,
-		YCards:        entity.YCards,
-		RCards:        entity.RCards,
-		Goals:         entity.Goals,
-		Assists:       entity.Assists,
-		Saves:         entity.Saves,
-		Position:      entity.Position,
-		Injured:       entity.Injured,
-		CareerSummary: entity.CareerSummary,
-		MVPCount:      entity.MVPCount,
-		CreatedAt:     entity.CreatedAt,
-		UpdatedAt:     entity.UpdatedAt,
+		ID:               entity.ID,
+		NickName:         entity.NickName,
+		Height:           entity.Height,
+		Country:          entity.Country,
+		SecondaryCountry: entity.SecondaryCountry,
+		Foot:             entity.Foot,
+		Age:              entity.Age,
+		SquadNumber:      entity.SquadNumber,
+		Rating:           entity.Rating,
+		Matches:          entity.Matches,
+		YCards:           entity.YCards,
+		RCards:           entity.RCards,
+		Goals:            entity.Goals,
+		Assists:          entity.Assists,
+		Saves:            entity.Saves,
+		Position:         entity.Position,
+		Injured:          entity.Injured,
+		CareerSummary:    entity.CareerSummary,
+		MVPCount:         entity.MVPCount,
+		CreatedAt:        entity.CreatedAt,
+		UpdatedAt:        entity.UpdatedAt,
 	}
 }
 

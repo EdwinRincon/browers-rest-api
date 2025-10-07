@@ -33,6 +33,32 @@ func (m *LineupPersistenceMapper) ModelToDomain(model *model.Lineup) *domain.Lin
 		return nil
 	}
 
+	playerMapper := NewPlayerPersistenceMapper()
+	matchMapper := NewMatchPersistenceMapper()
+
+	var player *domain.Player
+	if model.Player != nil {
+		player = playerMapper.ModelToDomain(model.Player)
+	}
+
+	var match *domain.Match
+	if model.Match != nil {
+		match = matchMapper.ModelToDomain(model.Match)
+		// Optionally map HomeTeam and AwayTeam if present
+		if model.Match.HomeTeam != nil {
+			if match != nil {
+				teamMapper := NewTeamPersistenceMapper()
+				match.HomeTeam = teamMapper.ModelToDomain(model.Match.HomeTeam)
+			}
+		}
+		if model.Match.AwayTeam != nil {
+			if match != nil {
+				teamMapper := NewTeamPersistenceMapper()
+				match.AwayTeam = teamMapper.ModelToDomain(model.Match.AwayTeam)
+			}
+		}
+	}
+
 	return &domain.Lineup{
 		ID:        model.ID,
 		Position:  model.Position,
@@ -41,6 +67,8 @@ func (m *LineupPersistenceMapper) ModelToDomain(model *model.Lineup) *domain.Lin
 		Starting:  model.Starting,
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
+		Player:    player,
+		Match:     match,
 	}
 }
 
