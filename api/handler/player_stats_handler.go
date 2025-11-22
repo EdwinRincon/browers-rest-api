@@ -12,7 +12,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -240,12 +239,6 @@ func (h *PlayerStatsHandler) GetPaginatedPlayerStats(c *gin.Context) {
 	}
 	if order != "asc" && order != "desc" {
 		order = "asc"
-	}
-
-	// Validate sort field
-	if err := helper.ValidateSort(model.PlayerStat{}, sort); err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
-		return
 	}
 
 	// Wrap context with timeout for DB/service calls

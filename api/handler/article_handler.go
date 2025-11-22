@@ -12,7 +12,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	domainservice "github.com/EdwinRincon/browersfc-api/internal/domain/service"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -142,12 +141,6 @@ func (h *ArticleHandler) GetPaginatedArticles(c *gin.Context) {
 		order = "asc"
 	}
 
-	// Validate sort field
-	if err := helper.ValidateSort(model.Article{}, sort); err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
-		return
-	}
-
 	// Wrap context with timeout for DB/service calls
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
@@ -202,12 +195,6 @@ func (h *ArticleHandler) GetArticlesBySeasonID(c *gin.Context) {
 	}
 	if order != "asc" && order != "desc" {
 		order = "asc"
-	}
-
-	// Validate sort field
-	if err := helper.ValidateSort(model.Article{}, sort); err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
-		return
 	}
 
 	// Wrap context with timeout for DB/service calls

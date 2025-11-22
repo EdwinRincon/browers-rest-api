@@ -134,10 +134,16 @@ func (r *PlayerTeamRepositoryImpl) GetPaginatedPlayerTeams(ctx context.Context, 
 		Preload("Team").
 		Preload("Season")
 
-	// Apply sorting if provided
-	if sort != "" && (order == "asc" || order == "desc") {
-		// Escape the sort field with backticks to handle reserved words
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityPlayerTeam, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
+	} else {
+		query = query.Order(col)
 	}
 
 	// Apply pagination

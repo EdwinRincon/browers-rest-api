@@ -32,11 +32,34 @@ func (m *PlayerTeamPersistenceMapper) ModelToDomain(model *model.PlayerTeam) *do
 		return nil
 	}
 
+	var player *domain.Player
+	if model.Player != nil {
+		playerMapper := NewPlayerPersistenceMapper()
+		player = playerMapper.ModelToDomain(model.Player)
+	}
+
+	var team *domain.Team
+	if model.Team != nil {
+		teamMapper := NewTeamPersistenceMapper()
+		team = teamMapper.ModelToDomain(model.Team)
+	}
+
+	var season *domain.Season
+	if model.Season != nil {
+		seasonMapper := NewSeasonPersistenceMapper()
+		season = seasonMapper.ModelToDomain(model.Season)
+	}
+
 	return &domain.PlayerTeam{
 		ID:        model.ID,
 		PlayerID:  model.PlayerID,
 		TeamID:    model.TeamID,
 		SeasonID:  model.SeasonID,
+		Player:    player,
+		Team:      team,
+		Season:    season,
+		StartDate: model.StartDate,
+		EndDate:   model.EndDate,
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
 	}

@@ -89,9 +89,16 @@ func (rr *RoleRepositoryImpl) GetPaginatedRoles(ctx context.Context, sort string
 
 	dataQuery := rr.db.WithContext(ctx).Model(&model.Role{})
 
-	if sort != "" && (order == "asc" || order == "desc") {
-		// Escape the sort field with backticks to handle reserved words
-		dataQuery = dataQuery.Order(fmt.Sprintf("`%s` %s", sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityRole, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		dataQuery = dataQuery.Order(raw)
+	} else {
+		dataQuery = dataQuery.Order(col)
 	}
 
 	offset := page * pageSize

@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/EdwinRincon/browersfc-api/adapter/persistence"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/domain"
+	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"gorm.io/gorm"
 )
 
@@ -48,28 +48,52 @@ func (ar *ArticleRepositoryImpl) GetArticleByID(ctx context.Context, id uint64) 
 }
 
 // GetPaginatedArticles retrieves a paginated list of articles with their seasons and total count.
-func (ar *ArticleRepositoryImpl) GetPaginatedArticles(ctx context.Context, sort string, order string, page int, pageSize int) ([]domain.Article, int64, error) {
-	var articles []model.Article
-	var total int64
+func (ar *ArticleRepositoryImpl) GetPaginatedArticles(
+	ctx context.Context,
+	sort string,
+	order string,
+	page int,
+	pageSize int,
+) ([]domain.Article, int64, error) {
+	var (
+		articles []model.Article
+		total    int64
+	)
 
 	// Count total records
-	countQuery := ar.db.WithContext(ctx).Model(&model.Article{})
-	if err := countQuery.Count(&total).Error; err != nil {
+	if err := ar.db.WithContext(ctx).Model(&model.Article{}).Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("error counting total articles: %w", err)
 	}
 
-	query := ar.db.WithContext(ctx).Model(&model.Article{}).
+	// Build base query with eager loading
+	query := ar.db.WithContext(ctx).
+		Model(&model.Article{}).
 		Preload("Season")
 
-	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityArticle, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
 	}
 
+	if raw != "" {
+		query = query.Order(raw)
+	} else {
+		query = query.Order(col)
+	}
+
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	if page < 0 {
+		page = 0
+	}
 	offset := page * pageSize
 	query = query.Offset(offset).Limit(pageSize)
 
+	// Execute and map result
 	if err := query.Find(&articles).Error; err != nil {
-		return nil, 0, fmt.Errorf("error fetching articles: %w", err)
+		return nil, 0, fmt.Errorf("error fetching paginated articles: %w", err)
 	}
 
 	return ar.mapper.ModelListToDomain(articles), total, nil
@@ -89,8 +113,17 @@ func (ar *ArticleRepositoryImpl) GetArticlesBySeasonID(ctx context.Context, seas
 		Preload("Season").
 		Where("season_id = ?", seasonID)
 
-	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+	if sort != "" {
+		col, raw, err := BuildOrderClause(EntityArticle, sort, order)
+		if err != nil {
+			return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+		}
+
+		if raw != "" {
+			query = query.Order(raw)
+		} else {
+			query = query.Order(col)
+		}
 	}
 
 	offset := page * pageSize

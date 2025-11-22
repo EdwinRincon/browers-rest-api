@@ -97,9 +97,16 @@ func (r *LineupRepositoryImpl) GetPaginatedLineups(ctx context.Context, sort str
 		Preload(constants.PreloadMatchHomeTeam).
 		Preload(constants.PreloadMatchAwayTeam)
 
-	// Apply sorting if provided
-	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityLineup, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
+	} else {
+		query = query.Order(col)
 	}
 
 	// Apply pagination

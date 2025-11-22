@@ -76,9 +76,16 @@ func (ur *UserRepositoryImpl) GetPaginatedUsers(ctx context.Context, sort string
 	query := ur.db.WithContext(ctx).Model(&model.User{}).
 		Preload("Role")
 
-	// Apply sorting if provided
-	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityUser, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
+	} else {
+		query = query.Order(col)
 	}
 
 	// Apply pagination

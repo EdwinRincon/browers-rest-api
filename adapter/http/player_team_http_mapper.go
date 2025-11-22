@@ -31,11 +31,39 @@ func (m *PlayerTeamHTTPMapper) DomainToDTO(entity *domain.PlayerTeam) *dto.Playe
 
 	response := &dto.PlayerTeamResponse{
 		ID:        entity.ID,
+		PlayerID:  entity.PlayerID,
+		TeamID:    entity.TeamID,
+		SeasonID:  entity.SeasonID,
+		StartDate: entity.StartDate,
+		EndDate:   entity.EndDate,
 		CreatedAt: entity.CreatedAt,
 		UpdatedAt: entity.UpdatedAt,
 	}
 
-	// Player, Team, and Season will be populated by handler if needed
+	// Map related entities if present
+	if entity.Player != nil {
+		playerMapper := NewPlayerHTTPMapper()
+		playerShort := playerMapper.DomainToShortDTO(entity.Player)
+		if playerShort != nil {
+			response.Player = *playerShort
+		}
+	}
+
+	if entity.Team != nil {
+		teamMapper := NewTeamHTTPMapper()
+		teamShort := teamMapper.DomainToShortDTO(entity.Team)
+		if teamShort != nil {
+			response.Team = *teamShort
+		}
+	}
+
+	if entity.Season != nil {
+		seasonMapper := NewSeasonHTTPMapper()
+		seasonShort := seasonMapper.DomainToShortDTO(entity.Season)
+		if seasonShort != nil {
+			response.Season = *seasonShort
+		}
+	}
 
 	return response
 }

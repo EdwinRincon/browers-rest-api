@@ -79,7 +79,13 @@ func (m *ArticleHTTPMapper) DomainToDTO(entity *domain.Article) *dto.ArticleResp
 		UpdatedAt: entity.UpdatedAt,
 	}
 
-	// Season will be populated by handler if needed
+	// Map Season if present
+	if entity.Season != nil {
+		response.Season = dto.SeasonShort{
+			ID:   entity.Season.ID,
+			Year: entity.Season.Year,
+		}
+	}
 
 	return response
 }

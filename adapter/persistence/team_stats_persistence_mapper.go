@@ -38,6 +38,18 @@ func (m *TeamStatsPersistenceMapper) ModelToDomain(model *model.TeamStat) *domai
 		return nil
 	}
 
+	var team *domain.Team
+	if model.Team != nil {
+		teamMapper := NewTeamPersistenceMapper()
+		team = teamMapper.ModelToDomain(model.Team)
+	}
+
+	var season *domain.Season
+	if model.Season != nil {
+		seasonMapper := NewSeasonPersistenceMapper()
+		season = seasonMapper.ModelToDomain(model.Season)
+	}
+
 	return &domain.TeamStats{
 		ID:           model.ID,
 		Wins:         model.Wins,
@@ -49,6 +61,8 @@ func (m *TeamStatsPersistenceMapper) ModelToDomain(model *model.TeamStat) *domai
 		Rank:         model.Rank,
 		SeasonID:     model.SeasonID,
 		TeamID:       model.TeamID,
+		Team:         team,
+		Season:       season,
 		CreatedAt:    model.CreatedAt,
 		UpdatedAt:    model.UpdatedAt,
 	}

@@ -12,7 +12,6 @@ import (
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/helper"
 	"github.com/EdwinRincon/browersfc-api/internal/domain/service"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -172,12 +171,6 @@ func (h *MatchHandler) GetPaginatedMatches(c *gin.Context) {
 	}
 	if order != "asc" && order != "desc" {
 		order = "desc"
-	}
-
-	// Validate sort field
-	if err := helper.ValidateSort(model.Match{}, sort); err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
-		return
 	}
 
 	// Wrap context with timeout for DB/service calls

@@ -36,6 +36,19 @@ func (m *ArticlePersistenceMapper) ModelToDomain(model *model.Article) *domain.A
 		return nil
 	}
 
+       var season *domain.Season
+       if model.Season != nil {
+	       season = &domain.Season{
+		       ID:        model.Season.ID,
+		       Year:      model.Season.Year,
+		       StartDate: model.Season.StartDate,
+		       EndDate:   model.Season.EndDate,
+		       IsCurrent: model.Season.IsCurrent,
+		       CreatedAt: model.Season.CreatedAt,
+		       UpdatedAt: model.Season.UpdatedAt,
+	       }
+       }
+
 	return &domain.Article{
 		ID:        model.ID,
 		Title:     model.Title,
@@ -43,6 +56,7 @@ func (m *ArticlePersistenceMapper) ModelToDomain(model *model.Article) *domain.A
 		ImgBanner: model.ImgBanner,
 		Date:      model.Date,
 		SeasonID:  model.SeasonID,
+		Season:    season,
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
 	}

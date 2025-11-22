@@ -79,9 +79,16 @@ func (tr *TeamRepositoryImpl) GetPaginatedTeams(ctx context.Context, sort string
 	// Build the data query with preloading NextMatch
 	query := tr.db.WithContext(ctx).Model(&model.Team{}).Preload("NextMatch")
 
-	// Apply sorting if provided
-	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityTeam, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
+	} else {
+		query = query.Order(col)
 	}
 
 	// Apply pagination

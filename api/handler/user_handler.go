@@ -12,7 +12,6 @@ import (
 	httpMapper "github.com/EdwinRincon/browersfc-api/adapter/http"
 	"github.com/EdwinRincon/browersfc-api/api/dto"
 	"github.com/EdwinRincon/browersfc-api/domain"
-	"github.com/EdwinRincon/browersfc-api/internal/infrastructure/persistence/model"
 	"github.com/EdwinRincon/browersfc-api/pkg/logger"
 	"github.com/EdwinRincon/browersfc-api/pkg/security"
 
@@ -453,12 +452,6 @@ func (h *UserHandler) GetPaginatedUsers(c *gin.Context) {
 	}
 	if order != "asc" && order != "desc" {
 		order = "asc"
-	}
-
-	// Validate sort field
-	if err := helper.ValidateSort(model.User{}, sort); err != nil {
-		helper.WriteErrorResponse(c, helper.NewBadRequestError("sort", err.Error()))
-		return
 	}
 
 	// Wrap context with timeout for DB/service calls

@@ -91,10 +91,16 @@ func (mr *MatchRepositoryImpl) GetPaginatedMatches(ctx context.Context, sort str
 		Preload("AwayTeam").
 		Preload("MVPPlayer")
 
-	// Apply sorting if provided
-	if sort != "" && (order == "asc" || order == "desc") {
-		// Escape the sort field with backticks to handle reserved words
-		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityMatch, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
+	} else {
+		query = query.Order(col)
 	}
 
 	// Apply pagination
@@ -127,13 +133,16 @@ func (mr *MatchRepositoryImpl) GetMatchesBySeasonID(ctx context.Context, seasonI
 		Preload("Season").
 		Where("season_id = ?", seasonID)
 
-	// Apply sorting
-	if sort != "" && (order == "asc" || order == "desc") {
-		// Escape the sort field with backticks to handle reserved words
-		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityMatch, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
 	} else {
-		// Default sort by date
-		query = query.Order("`date` desc")
+		query = query.Order(col)
 	}
 
 	// Apply pagination
@@ -168,13 +177,16 @@ func (mr *MatchRepositoryImpl) GetMatchesByTeamID(ctx context.Context, teamID ui
 		Preload("Season").
 		Where("home_team_id = ? OR away_team_id = ?", teamID, teamID)
 
-	// Apply sorting
-	if sort != "" && (order == "asc" || order == "desc") {
-		// Escape the sort field with backticks to handle reserved words
-		query = query.Order(fmt.Sprintf(constants.QueryOrderFormat, sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntityMatch, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
 	} else {
-		// Default sort by date
-		query = query.Order("`date` desc")
+		query = query.Order(col)
 	}
 
 	// Apply pagination

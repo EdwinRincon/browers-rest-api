@@ -120,12 +120,16 @@ func (sr *SeasonRepositoryImpl) GetPaginatedSeasons(ctx context.Context, sort st
 	// Build the data query
 	query := sr.db.WithContext(ctx).Model(&model.Season{})
 
-	// Apply sorting if provided
-	if sort != "" && (order == "asc" || order == "desc") {
-		query = query.Order(fmt.Sprintf("`%s` %s", sort, order))
+	// Apply sorting (safe and validated)
+	col, raw, err := BuildOrderClause(EntitySeason, sort, order)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error building sort clause: %w", err)
+	}
+
+	if raw != "" {
+		query = query.Order(raw)
 	} else {
-		// Default ordering by year in descending order
-		query = query.Order("year desc")
+		query = query.Order(col)
 	}
 
 	// Apply pagination
