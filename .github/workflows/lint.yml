@@ -23,6 +23,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Generate Swagger docs
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@latest
+          swag init -g server/server.go --output docs
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
