@@ -1,0 +1,23 @@
+# CODEOWNERS - Define code owners for automatic review requests
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+* @EdwinRincon
+
+# GitHub Actions workflows
+.github/workflows/ @EdwinRincon
+
+# Dependabot configuration
+.github/dependabot.yml @EdwinRincon
+
+# Go source files
+*.go @EdwinRincon
+go.mod @EdwinRincon
+go.sum @EdwinRincon
+
+# Docker
+Dockerfile @EdwinRincon
+docker-compose.yml @EdwinRincon
+
+# Security policy
+SECURITY.md @EdwinRincon
