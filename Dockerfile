@@ -6,7 +6,7 @@ ARG BUILDPLATFORM=linux/amd64
 # =========================
 # STAGE 1: Builder
 # =========================
-FROM --platform=$BUILDPLATFORM golang:1.24.4-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.3-alpine AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
