@@ -26,6 +26,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1.0
+                  install-mode: goinstall
+          version: latest
           args: --timeout=5m
           only-new-issues: true
