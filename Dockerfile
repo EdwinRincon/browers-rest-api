@@ -35,7 +35,7 @@ RUN GOOS=linux GOARCH="$TARGETARCH" go build -ldflags="-s -w" -o /app/app ./cmd/
 # =========================
 # STAGE 2: Production
 # =========================
-FROM --platform=$BUILDPLATFORM alpine:3.22
+FROM --platform=$BUILDPLATFORM alpine:3.23
 
 RUN apk add --no-cache ca-certificates tzdata curl && \
     addgroup -S appgroup && adduser -S appuser -G appgroup
