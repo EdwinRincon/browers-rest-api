@@ -20,7 +20,7 @@ func SeedDatabase() error {
 	}
 
 	// Initialize gofakeit with a seed for reproducibility
-	gofakeit.Seed(42)
+	_ = gofakeit.Seed(42)
 
 	// Create seed data in the correct order to respect dependencies
 	roles, err := seedRoles(db)

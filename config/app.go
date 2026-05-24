@@ -54,7 +54,7 @@ func InitLogConfig() LoggingConfig {
 	// Configure slow query threshold
 	slowQueryTime := 200 // Default 200ms
 	if os.Getenv("SLOW_QUERY_TIME") != "" {
-		fmt.Sscanf(os.Getenv("SLOW_QUERY_TIME"), "%d", &slowQueryTime)
+		_, _ = fmt.Sscanf(os.Getenv("SLOW_QUERY_TIME"), "%d", &slowQueryTime)
 	}
 
 	// Set global config
