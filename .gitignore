@@ -55,6 +55,7 @@ logs/
 *.tmp
 *.temp
 *.bak
+IGNORE.md
 
 # Version control
 .git/

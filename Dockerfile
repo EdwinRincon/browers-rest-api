@@ -37,14 +37,14 @@ RUN GOOS=linux GOARCH="$TARGETARCH" go build -ldflags="-s -w" -o /app/app ./cmd/
 # =========================
 FROM --platform=$BUILDPLATFORM alpine:3.22
 
-RUN apk add --no-cache ca-certificates tzdata && \
+RUN apk add --no-cache ca-certificates tzdata curl && \
     addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/app /usr/local/bin/app
 
 WORKDIR /home/appuser
 
-ENV GIN_MODE=release TZ=UTC
+ENV GIN_MODE=test TZ=UTC
 
 EXPOSE 5050
 

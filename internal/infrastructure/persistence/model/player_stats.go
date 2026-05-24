@@ -12,14 +12,14 @@ type PlayerStat struct {
 	SeasonID uint64  `gorm:"index;not null;index:idx_player_season" json:"season_id"`
 	TeamID   *uint64 `gorm:"index" json:"team_id,omitempty"`
 
-	Goals         uint8  `gorm:"type:tinyint;not null;default:0" json:"goals"`
-	Assists       uint8  `gorm:"type:tinyint;not null;default:0" json:"assists"`
-	Saves         uint8  `gorm:"type:tinyint;not null;default:0" json:"saves"`
-	YellowCards   uint8  `gorm:"type:tinyint;not null;default:0" json:"yellow_cards"`
-	RedCards      uint8  `gorm:"type:tinyint;not null;default:0" json:"red_cards"`
-	Rating        uint8  `gorm:"type:tinyint;not null;default:0;check:rating <= 100" json:"rating"`
+	Goals         uint8  `gorm:"type:smallint;not null;default:0" json:"goals"`
+	Assists       uint8  `gorm:"type:smallint;not null;default:0" json:"assists"`
+	Saves         uint8  `gorm:"type:smallint;not null;default:0" json:"saves"`
+	YellowCards   uint8  `gorm:"type:smallint;not null;default:0" json:"yellow_cards"`
+	RedCards      uint8  `gorm:"type:smallint;not null;default:0" json:"red_cards"`
+	Rating        uint8  `gorm:"type:smallint;not null;default:0;check:rating <= 100" json:"rating"`
 	IsStarting    bool   `gorm:"default:false" json:"starting"`
-	MinutesPlayed uint8  `gorm:"type:tinyint;not null;default:0" json:"minutes_played"`
+	MinutesPlayed uint8  `gorm:"type:smallint;not null;default:0" json:"minutes_played"`
 	IsMVP         bool   `gorm:"default:false" json:"is_mvp"`
 	Position      string `gorm:"type:varchar(5)" json:"position"`
 

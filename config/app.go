@@ -67,13 +67,23 @@ func InitLogConfig() LoggingConfig {
 	return AppLogConfig
 }
 
-// getSecretFromFile reads and returns the content of a secret file as a string
+// getSecretFromFile reads and returns the content of a secret file as a string.
+// It trims whitespace and ignores lines starting with '#' (comments).
 func getSecretFromFile(filePath string) (string, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("error reading secret file: %v", err)
 	}
-	return string(data), nil
+
+	// Trim whitespace
+	content := strings.TrimSpace(string(data))
+
+	// If the content starts with '#', it's a comment - return error to prompt user to update
+	if strings.HasPrefix(content, "#") {
+		return "", fmt.Errorf("connection string appears to be a comment/template. Please update secrets/db_url.txt")
+	}
+
+	return content, nil
 }
 
 // getSecretBytesFromFile reads and returns the content of a secret file as bytes

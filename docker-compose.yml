@@ -33,11 +33,6 @@ services:
       - jwt_secret
       - oauth_client_secret
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   nginx:
     image: nginx:1.29.1-alpine
@@ -64,11 +59,6 @@ services:
     depends_on:
       - api
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nginx", "-t"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 volumes:
   nginx_logs:
