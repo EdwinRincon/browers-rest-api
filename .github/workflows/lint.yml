@@ -2,12 +2,13 @@ name: Lint
 
 on:
   push:
-    branches: [ "main", "feat/**", "fix/**" ]
+    branches: ["main", "feat/**", "fix/**"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   golangci-lint:
@@ -15,17 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache: false
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
-          args: --timeout=5m --out-format=colored-line-number
+          version: v2.1.0
+          args: --timeout=5m
           only-new-issues: true
